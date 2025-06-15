@@ -25,5 +25,13 @@
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0",
     "react-leaflet-cluster": "^2.1.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "esbuild-rails": "^1.0.7",
+    "postcss": "^8.5.5",
+    "postcss-cli": "^11.0.1",
+    "postcss-import": "^16.1.0",
+    "tailwindcss": "^4.1.10"
   }
 }

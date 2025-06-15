@@ -126,33 +126,40 @@ const MapView = ({ gigs }) => {
               position={[parseFloat(venue.latitude), parseFloat(venue.longitude)]}
               icon={comedyIcon}
             >
-              <Popup>
-                <div className="max-w-sm">
-                  <h3 className="text-lg font-bold mb-2">{venue.name}</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    {venue.city}, {venue.country}
-                  </p>
-                  
-                  <div className="space-y-4">
-                    {gigs.map(gig => (
-                      <div key={gig.id} className="border-t pt-3 first:border-t-0 first:pt-0">
-                        <h4 className="font-semibold text-gray-900">{gig.name}</h4>
-                        <p className="text-sm text-gray-600 mt-1">{formatDate(gig.start_time)}</p>
-                        {gig.description && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{gig.description}</p>
-                        )}
-                        <div className="mt-2">
-                          <a
-                            href={gig.ticket_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors"
-                          >
-                            Get Tickets
-                          </a>
+              <Popup maxWidth={300} maxHeight={400}>
+                <div className="w-[280px] relative">
+                  <div className="mt-2 max-h-[320px] overflow-y-auto">
+                    <div className="sticky top-0 z-10 bg-white -mt-2 -mx-2 px-2 pt-2 pb-3">
+                      <h3 className="text-lg font-bold">{venue.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {venue.city}, {venue.country}
+                      </p>
+                      <div className="absolute left-0 right-0 bottom-0 h-4 bg-gradient-to-b from-white to-transparent"></div>
+                    </div>
+                    <div className="space-y-4 pr-2">
+                      {gigs.map(gig => (
+                        <div 
+                          key={gig.id} 
+                          className="border-t pt-3 first:border-t-0 first:pt-0 hover:bg-gray-50 -mx-2 px-2"
+                        >
+                          <h4 className="font-semibold text-gray-900">{gig.name}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{formatDate(gig.start_time)}</p>
+                          {gig.description && (
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{gig.description}</p>
+                          )}
+                          <div className="mt-2">
+                            <a
+                              href={gig.ticket_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors"
+                            >
+                              Get Tickets
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </Popup>
