@@ -65,7 +65,7 @@ const MapView = ({ gigs }) => {
       <MapContainer
         center={[51.505, -0.09]}
         zoom={13}
-        style={{ height: '600px', width: '100%' }}
+        className="h-full w-full"
         zoomControl={false}
       >
         <ZoomControl position="topright" />
@@ -107,7 +107,7 @@ const MapView = ({ gigs }) => {
     <div className="h-full w-full">
       <MapContainer
         bounds={bounds}
-        style={{ height: '600px', width: '100%' }}
+        className="h-full w-full"
         zoomControl={false}
       >
         <ZoomControl position="topright" />
@@ -126,12 +126,12 @@ const MapView = ({ gigs }) => {
               position={[parseFloat(venue.latitude), parseFloat(venue.longitude)]}
               icon={comedyIcon}
             >
-              <Popup maxWidth={300} maxHeight={400}>
-                <div className="w-[280px] relative">
-                  <div className="mt-2 max-h-[320px] overflow-y-auto">
-                    <div className="sticky top-0 z-10 bg-white -mt-2 -mx-2 px-2 pt-2 pb-3">
-                      <h3 className="text-lg font-bold">{venue.name}</h3>
-                      <p className="text-sm text-gray-600">
+              <Popup maxWidth={350} maxHeight={500} className="venue-popup">
+                <div className="w-full sm:w-[330px] relative">
+                  <div className="mt-2 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <div className="sticky top-0 z-10 bg-white -mt-2 -mx-2 px-2 pt-2 pb-3 backdrop-blur-sm bg-opacity-90">
+                      <h3 className="text-lg sm:text-xl font-bold leading-tight">{venue.name}</h3>
+                      <p className="text-sm sm:text-base text-gray-600 mt-1">
                         {venue.city}, {venue.country}
                       </p>
                       <div className="absolute left-0 right-0 bottom-0 h-4 bg-gradient-to-b from-white to-transparent"></div>
