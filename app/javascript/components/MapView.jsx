@@ -1,7 +1,55 @@
-import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl, ScaleControl } from 'react-leaflet';
+import React, { useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, ScaleControl, useMap, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
+
+// URL parameter handling
+const getMapParamsFromUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    lat: parseFloat(params.get('lat')) || null,
+    lng: parseFloat(params.get('lng')) || null,
+    zoom: parseInt(params.get('zoom')) || null
+  };
+};
+
+const updateUrlParams = (lat, lng, zoom) => {
+  const params = new URLSearchParams(window.location.search);
+  params.set('lat', lat.toFixed(6));
+  params.set('lng', lng.toFixed(6));
+  params.set('zoom', zoom);
+  window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+};
+
+// Map event handler component
+const MapEventHandler = () => {
+  const map = useMapEvents({
+    moveend: () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      updateUrlParams(center.lat, center.lng, zoom);
+    },
+    zoomend: () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      updateUrlParams(center.lat, center.lng, zoom);
+    }
+  });
+  return null;
+};
+
+// Initial map position setter
+const InitialMapPosition = ({ center, zoom }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (center && zoom) {
+      map.setView(center, zoom, { animate: false });
+    }
+  }, [map, center, zoom]);
+
+  return null;
+};
 
 // Custom comedy marker icon
 const comedyIcon = L.icon({
@@ -59,15 +107,23 @@ const MapView = ({ gigs }) => {
   // Memoize the grouped gigs to prevent unnecessary recalculation
   const venueGroups = useMemo(() => groupGigsByVenue(gigs), [gigs]);
 
+  const defaultCenter = [51.505, -0.09];
+  const defaultZoom = 13;
+  const urlParams = getMapParamsFromUrl();
+
   if (!gigs || gigs.length === 0) {
-    // Default to London if no gigs
+    const initialCenter = urlParams.lat && urlParams.lng ? [urlParams.lat, urlParams.lng] : defaultCenter;
+    const initialZoom = urlParams.zoom || defaultZoom;
+
     return (
       <MapContainer
-        center={[51.505, -0.09]}
-        zoom={13}
+        center={initialCenter}
+        zoom={initialZoom}
         className="h-full w-full"
         zoomControl={false}
       >
+        <MapEventHandler />
+        <InitialMapPosition center={initialCenter} zoom={initialZoom} />
         <ZoomControl position="topright" />
         <ScaleControl position="bottomright" />
         <TileLayer
@@ -103,13 +159,23 @@ const MapView = ({ gigs }) => {
   bounds[1][0] += latDiff * paddingFactor;
   bounds[1][1] += lngDiff * paddingFactor;
 
+  // Use URL params for initial view
+  const initialCenter = urlParams.lat && urlParams.lng ? [urlParams.lat, urlParams.lng] : null;
+  const initialZoom = urlParams.zoom || null;
+
   return (
     <div className="h-full w-full">
       <MapContainer
-        bounds={bounds}
+        bounds={initialCenter ? null : bounds}
+        center={initialCenter || undefined}
+        zoom={initialZoom || undefined}
         className="h-full w-full"
         zoomControl={false}
       >
+        <MapEventHandler />
+        {initialCenter && initialZoom && (
+          <InitialMapPosition center={initialCenter} zoom={initialZoom} />
+        )}
         <ZoomControl position="topright" />
         <ScaleControl position="bottomright" />
         <TileLayer
@@ -128,8 +194,8 @@ const MapView = ({ gigs }) => {
             >
               <Popup maxWidth={350} maxHeight={500} className="venue-popup">
                 <div className="w-full sm:w-[330px] relative">
-                  <div className="mt-2 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    <div className="sticky top-0 z-10 bg-white -mt-2 -mx-2 px-2 pt-2 pb-3 backdrop-blur-sm bg-opacity-90">
+                  <div className="mt-5 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <div className="sticky top-0 z-10 bg-white px-2 pt-2 pb-3 backdrop-blur-sm bg-opacity-90">
                       <h3 className="text-lg sm:text-xl font-bold leading-tight">{venue.name}</h3>
                       <p className="text-sm sm:text-base text-gray-600 mt-1">
                         {venue.city}, {venue.country}
@@ -140,7 +206,7 @@ const MapView = ({ gigs }) => {
                       {gigs.map(gig => (
                         <div 
                           key={gig.id} 
-                          className="border-t pt-3 first:border-t-0 first:pt-0 hover:bg-gray-50 -mx-2 px-2"
+                          className="border-t py-2 first:border-t-0 first:pt-0 hover:bg-gray-50 px-2"
                         >
                           <h4 className="font-semibold text-gray-900">{gig.name}</h4>
                           <p className="text-sm text-gray-600 mt-1">{formatDate(gig.start_time)}</p>
