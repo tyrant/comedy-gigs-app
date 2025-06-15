@@ -1,0 +1,14 @@
+<h1>Cleanup Error</h1>
+
+<h2>Error Details</h2>
+<p><strong>Error Type:</strong> <%= @error[:class] %></p>
+<p><strong>Message:</strong> <%= @error[:message] %></p>
+
+<h2>Cleanup Statistics</h2>
+<ul>
+  <li>Start Time: <%= @stats[:start_time].strftime("%Y-%m-%d %H:%M:%S %Z") %></li>
+  <li>End Time: <%= @stats[:end_time].strftime("%Y-%m-%d %H:%M:%S %Z") %></li>
+  <li>Duration: <%= (@stats[:end_time] - @stats[:start_time]).round(2) %> seconds</li>
+  <li>Old Events Removed: <%= @stats[:old_events_removed] %></li>
+  <li>Cancelled Events Removed: <%= @stats[:cancelled_events_removed] %></li>
+</ul>

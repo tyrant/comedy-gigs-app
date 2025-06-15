@@ -1,0 +1,21 @@
+<h1>Import Error</h1>
+
+<h2>Error Details</h2>
+<p><strong>Error Type:</strong> <%= @error[:class] %></p>
+<p><strong>Message:</strong> <%= @error[:message] %></p>
+
+<% if @event %>
+<h2>Event Details</h2>
+<pre><%= JSON.pretty_generate(@event) %></pre>
+<% end %>
+
+<h2>Import Statistics</h2>
+<ul>
+  <li>Total Processed: <%= @import_stats[:total_processed] %></li>
+  <li>Successful: <%= @import_stats[:successful] %></li>
+  <li>Failed: <%= @import_stats[:failed] %></li>
+  <li>Skipped: <%= @import_stats[:skipped] %></li>
+</ul>
+
+<h2>Backtrace</h2>
+<pre><%= @error[:backtrace].join("\n") %></pre>

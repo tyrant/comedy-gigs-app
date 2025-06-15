@@ -1,0 +1,27 @@
+:concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 5) %>
+:timeout: 30
+
+:queues:
+  - [critical, 3]
+  - [default, 2]
+  - [low, 1]
+  - [mailers, 1]
+
+# Scheduler configuration
+:scheduler:
+  :enabled: true
+  :dynamic: true
+  :verbose: false
+  :schedule:
+    ticketmaster_import:
+      cron: '0 */4 * * *'  # Every 4 hours
+      class: TicketmasterImportJob
+      queue: default
+      description: 'Import comedy events from Ticketmaster'
+    ticketmaster_cleanup:
+      cron: '0 0 * * *'    # Daily at midnight
+      class: TicketmasterCleanupJob
+      queue: low
+      description: 'Clean up old and cancelled events'
+
+:timeout: 30

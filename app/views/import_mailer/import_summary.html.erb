@@ -1,0 +1,31 @@
+<h1>Import Summary</h1>
+
+<h2>Statistics</h2>
+<ul>
+  <li>Total Events Processed: <%= @stats[:total_processed] %></li>
+  <li>Successfully Imported: <%= @stats[:successful] %></li>
+  <li>Failed Imports: <%= @stats[:failed] %></li>
+  <li>Skipped Events: <%= @stats[:skipped] %></li>
+  <li>Rate Limited Requests: <%= @stats[:rate_limited] %></li>
+</ul>
+
+<% if @stats[:errors].any? %>
+<h2>Recent Errors</h2>
+<ul>
+  <% @stats[:errors].each do |error| %>
+    <li>
+      <strong><%= error[:type] %>:</strong> <%= error[:message] %>
+      <% if error[:event_name] %>
+        (Event: <%= error[:event_name] %>)
+      <% end %>
+    </li>
+  <% end %>
+</ul>
+<% end %>
+
+<h2>Timing</h2>
+<ul>
+  <li>Start Time: <%= @stats[:start_time].strftime("%Y-%m-%d %H:%M:%S %Z") %></li>
+  <li>End Time: <%= @stats[:end_time].strftime("%Y-%m-%d %H:%M:%S %Z") %></li>
+  <li>Duration: <%= (@stats[:end_time] - @stats[:start_time]).round(2) %> seconds</li>
+</ul>
