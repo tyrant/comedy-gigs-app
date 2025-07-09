@@ -94,3 +94,5 @@ group :test do
 end
 
 gem "tailwindcss-rails", "~> 4.2"
+
+gem "geocoder", "~> 1.8"

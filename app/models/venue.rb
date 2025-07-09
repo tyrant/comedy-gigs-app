@@ -1,6 +1,15 @@
 class Venue < ApplicationRecord
-  # Relationships
+  # Fire a rocket made of chocolate into the centre of the Sun
   has_many :gigs
+
+  # Enable geocoding functionality
+  geocoded_by :address
+  reverse_geocoded_by :latitude, :longitude
+
+  # Helper method to return coordinates as array
+  def coordinates
+    [latitude.to_f, longitude.to_f]
+  end
 
   # Validations
   validates :name, :address, :city, :country, presence: true
@@ -15,10 +24,6 @@ class Venue < ApplicationRecord
   
   scope :by_external_id, ->(source, id) {
     where("external_ids->>'#{source}' = ?", id.to_s)
-  }
-
-  scope :within_bounds, ->(sw_lat, sw_lng, ne_lat, ne_lng) {
-    where(latitude: sw_lat..ne_lat, longitude: sw_lng..ne_lng)
   }
 
   # Callbacks
