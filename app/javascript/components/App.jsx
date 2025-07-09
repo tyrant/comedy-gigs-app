@@ -8,17 +8,30 @@ const App = () => {
   const [error, setError] = useState(null);
   const lastBoundsRef = useRef(null);
 
-  // Helper to compare bounds
+  // Helper to compare bounds with special handling for antimeridian crossing
   const areBoundsSame = (bounds1, bounds2) => {
     if (!bounds1 || !bounds2) return false;
     const precision = 4; // 4 decimal places
     
     const round = (num) => Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision);
     
+    // Normalize east/west for comparison to handle antimeridian crossing
+    const east1 = normalizeLongitude(bounds1.getEast());
+    const west1 = normalizeLongitude(bounds1.getWest());
+    const east2 = normalizeLongitude(bounds2.getEast());
+    const west2 = normalizeLongitude(bounds2.getWest());
+    
+    // Special case for bounds that cross the antimeridian
+    const crossesAntimeridian1 = west1 > east1;
+    const crossesAntimeridian2 = west2 > east2;
+    
+    // If one crosses and the other doesn't, they're definitely different
+    if (crossesAntimeridian1 !== crossesAntimeridian2) return false;
+    
     return round(bounds1.getNorth()) === round(bounds2.getNorth()) &&
            round(bounds1.getSouth()) === round(bounds2.getSouth()) &&
-           round(bounds1.getEast()) === round(bounds2.getEast()) &&
-           round(bounds1.getWest()) === round(bounds2.getWest());
+           round(east1) === round(east2) &&
+           round(west1) === round(west2);
   };
 
   const handleBoundsChange = useCallback(async (bounds) => {

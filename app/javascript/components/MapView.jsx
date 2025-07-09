@@ -56,7 +56,8 @@ const InitialMapPosition = ({ center, zoom }) => {
   
   useEffect(() => {
     if (center && zoom) {
-      map.setView(center, zoom, { animate: false });
+      // Add worldCopyJump option to handle antimeridian crossing smoothly
+      map.setView(center, zoom, { animate: false, worldCopyJump: true });
     }
   }, [map, center, zoom]);
 
@@ -211,6 +212,7 @@ const MapView = ({ gigs, onBoundsChange }) => {
       )}
       className="h-full w-full"
       zoomControl={false}
+      worldCopyJump={true}
     >
       <MapEventHandler onBoundsChange={onBoundsChange} />
       {!initialPosition.bounds && initialPosition.center && initialPosition.zoom && (
