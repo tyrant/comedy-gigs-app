@@ -84,18 +84,25 @@ RSpec.describe Api::TicketmasterImporter do
         subject
       end
 
-      it 'sends error notifications' do
+      it 'sends error notifications with serialized error data' do
         expect(notification_service).to have_received(:notify_import_error)
-          .with hash_including(error: instance_of(StandardError),
-                               stats: hash_including(
-                                 total_processed: 0,
-                                 successful: 0,
-                                 failed: 0,
-                                 skipped: 0,
-                                 rate_limited: 0,
-                                 start_time: kind_of(Time),
-                                 end_time: kind_of(Time),
-                                 event: nil))
+          .with hash_including(
+            error: {
+              message: 'API Error',
+              class: 'StandardError',
+              backtrace: kind_of(Array)
+            },
+            stats: hash_including(
+              total_processed: 0,
+              successful: 0,
+              failed: 0,
+              skipped: 0,
+              rate_limited: 0,
+              start_time: kind_of(Time),
+              end_time: kind_of(Time),
+              event: nil
+            )
+          )
       end
 
       it { expect(metrics).to have_received(:record_import)
@@ -129,16 +136,23 @@ RSpec.describe Api::TicketmasterImporter do
         it { expect(subject[:total_processed]).to eq 0 }
 
         it { expect(notification_service).to have_received(:notify_import_error)
-               .with hash_including(error: instance_of(Api::RateLimitError),
-                                    stats: hash_including(
-                                      total_processed: 0,
-                                      successful: 0,
-                                      failed: 0,
-                                      skipped: 0,
-                                      rate_limited: 1,
-                                      start_time: kind_of(Time),
-                                      end_time: kind_of(Time),
-                                      event: nil)) }
+               .with hash_including(
+                 error: {
+                   message: 'Rate limit exceeded',
+                   class: 'Api::RateLimitError',
+                   backtrace: kind_of(Array)
+                 },
+                 stats: hash_including(
+                   total_processed: 0,
+                   successful: 0,
+                   failed: 0,
+                   skipped: 0,
+                   rate_limited: 1,
+                   start_time: kind_of(Time),
+                   end_time: kind_of(Time),
+                   event: nil
+                 )
+               ) }
 
         it { expect(metrics).to have_received(:record_import).twice
                .with hash_including(total_processed: 0,
@@ -152,12 +166,11 @@ RSpec.describe Api::TicketmasterImporter do
     end
 
     context 'when event is invalid' do
+      let(:invalid_event) { { 'name' => 'Invalid Event' } } # Missing required fields
       let(:api_response_with_invalid_event) do
         {
           '_embedded' => {
-            'events' => [
-              { 'name' => 'Invalid Event' } # Missing required fields
-            ]
+            'events' => [invalid_event]
           },
           'page' => {
             'totalPages' => 1
@@ -175,7 +188,6 @@ RSpec.describe Api::TicketmasterImporter do
       end
 
       describe 'skipping invalid events' do
-
         it { expect(subject[:skipped]).to eq 1 }
         it { expect(subject[:successful]).to eq 0 }
         it { expect(subject[:total_processed]).to eq 1 }
@@ -187,6 +199,33 @@ RSpec.describe Api::TicketmasterImporter do
                                     rate_limited: 0,
                                     start_time: kind_of(Time),
                                     end_time: kind_of(Time)) }
+      end
+
+      describe 'notify_error method' do
+        let(:error) { StandardError.new('Event processing error') }
+        let(:event) { { 'name' => 'Test Event', 'id' => '123' } }
+        let(:stats) { { total_processed: 10, successful: 8, failed: 2 } }
+        
+        it 'converts exceptions to serializable hashes' do
+          # Call the notify_error method directly
+          importer.send(:notify_error, error, event, stats)
+          
+          # Verify the notification service was called with serialized data
+          expect(notification_service).to have_received(:notify_import_error)
+            .with(
+              error: {
+                message: 'Event processing error',
+                class: 'StandardError',
+                backtrace: kind_of(Array)
+              },
+              stats: hash_including(
+                total_processed: 10,
+                successful: 8,
+                failed: 2,
+                event: { 'name' => 'Test Event', 'id' => '123' }
+              )
+            )
+        end
       end
     end
   end

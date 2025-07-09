@@ -78,10 +78,23 @@ module Api
     end
 
     def notify_error(error, event, stats)
-      error_data = error.is_a?(Exception) ? error : { message: error.to_s, class: error.class.to_s }
+      # Convert exception to a serializable hash instead of passing the raw exception
+      error_data = if error.is_a?(Exception)
+        {
+          message: error.message,
+          class: error.class.to_s,
+          backtrace: error.backtrace&.first(10) || []
+        }
+      else
+        { message: error.to_s, class: error.class.to_s }
+      end
+      
+      # Make sure event is also serializable
+      event_data = event.is_a?(Hash) ? event.slice('name', 'id') : nil
+      
       @notification_service.notify_import_error(
         error: error_data,
-        stats: stats.merge(event: event)
+        stats: stats.merge(event: event_data)
       )
     end
 
