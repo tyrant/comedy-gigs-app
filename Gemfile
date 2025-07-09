@@ -40,21 +40,21 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # React integration for Rails
-gem 'react-rails'
+gem "react-rails"
 
 # HTTP client for API requests
-gem 'faraday'
+gem "faraday"
 
 # Background jobs
-gem 'sidekiq'
-gem 'sidekiq-scheduler'
+gem "sidekiq"
+gem "sidekiq-scheduler"
 
 # Notifications
-gem 'slack-notifier'
-gem 'redis'
+gem "slack-notifier"
+gem "redis"
 
 # API documentation
-gem 'rswag'
+gem "rswag"
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
@@ -63,14 +63,14 @@ group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ]
   gem "sqlite3"
-  
+
   # Testing
-  gem 'rspec-rails'
-  gem 'factory_bot_rails'
-  gem 'faker'
-  gem 'shoulda-matchers'
-  gem 'database_cleaner-active_record'
-  gem 'timecop'
+  gem "rspec-rails"
+  gem "factory_bot_rails"
+  gem "faker"
+  gem "shoulda-matchers"
+  gem "database_cleaner-active_record"
+  gem "timecop"
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
@@ -79,7 +79,7 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 
   # Load environment variables from .env file
-  gem 'dotenv-rails'
+  gem "dotenv-rails"
 end
 
 group :development do
