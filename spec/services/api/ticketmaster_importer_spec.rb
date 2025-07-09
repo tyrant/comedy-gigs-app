@@ -40,43 +40,38 @@ RSpec.describe Api::TicketmasterImporter do
       }
     end
 
+    subject { importer.import_events }
+
     context 'when import is successful' do
       before do
         allow(client).to receive(:fetch_comedy_events)
           .and_return(api_response)
         allow(metrics).to receive(:record_import)
         allow(notification_service).to receive(:notify_import_success)
+
+        subject
       end
 
-      it 'processes events and records metrics' do
-        stats = importer.import_events
-
-        expect(stats[:total_processed]).to eq(1)
-        expect(stats[:successful]).to eq(0)
-        expect(stats[:failed]).to eq(0)
-        expect(stats[:skipped]).to eq(1)
-        expect(metrics).to have_received(:record_import).with(
-          hash_including(
-            total_processed: 1,
-            successful: 0,
-            failed: 0,
-            skipped: 1,
-            rate_limited: 0
-          )
-        )
+      describe 'processing events and records metrics' do
+        it { expect(subject[:total_processed]).to eq 1 }
+        it { expect(subject[:successful]).to eq 0 }
+        it { expect(subject[:failed]).to eq 0 }
+        it { expect(subject[:skipped]).to eq 1 }
+        it { expect(metrics).to have_received(:record_import)
+               .with hash_including(total_processed: 1,
+                                    successful: 0,
+                                    failed: 0,
+                                    skipped: 1,
+                                    rate_limited: 0) }
       end
 
       it 'sends success notification' do
-        expect(notification_service).to receive(:notify_import_success)
-          .with(hash_including(
-            total_processed: 1,
-            successful: 0,
-            failed: 0,
-            skipped: 1,
-            rate_limited: 0
-          ))
-
-        importer.import_events
+        expect(notification_service).to have_received(:notify_import_success)
+          .with hash_including(total_processed: 1,
+                               successful: 0,
+                               failed: 0,
+                               skipped: 1,
+                               rate_limited: 0)
       end
     end
 
@@ -85,42 +80,35 @@ RSpec.describe Api::TicketmasterImporter do
         allow(client).to receive(:fetch_comedy_events).and_raise(StandardError.new('API Error'))
         allow(notification_service).to receive(:notify_import_error)
         allow(metrics).to receive(:record_import)
+
+        subject
       end
 
-      it 'handles errors and sends notifications' do
-        stats = importer.import_events
-
-        expect(notification_service).to have_received(:notify_import_error).with(
-          hash_including(
-            error: instance_of(StandardError),
-            stats: hash_including(
-              total_processed: 0,
-              successful: 0,
-              failed: 0,
-              skipped: 0,
-              rate_limited: 0,
-              start_time: kind_of(Time),
-              end_time: kind_of(Time),
-              event: nil
-            )
-          )
-        )
-
-        expect(metrics).to have_received(:record_import).with(
-          hash_including(
-            total_processed: 0,
-            successful: 0,
-            failed: 0,
-            skipped: 0,
-            rate_limited: 0,
-            start_time: kind_of(Time),
-            end_time: kind_of(Time)
-          )
-        )
-
-        expect(stats[:failed]).to eq(0)
-        expect(stats[:total_processed]).to eq(0)
+      it 'sends error notifications' do
+        expect(notification_service).to have_received(:notify_import_error)
+          .with hash_including(error: instance_of(StandardError),
+                               stats: hash_including(
+                                 total_processed: 0,
+                                 successful: 0,
+                                 failed: 0,
+                                 skipped: 0,
+                                 rate_limited: 0,
+                                 start_time: kind_of(Time),
+                                 end_time: kind_of(Time),
+                                 event: nil))
       end
+
+      it { expect(metrics).to have_received(:record_import)
+             .with hash_including(total_processed: 0,
+                                  successful: 0,
+                                  failed: 0,
+                                  skipped: 0,
+                                  rate_limited: 0,
+                                  start_time: kind_of(Time),
+                                  end_time: kind_of(Time)) }
+
+      it { expect(subject[:failed]).to eq(0) }
+      it { expect(subject[:total_processed]).to eq(0) }
     end
 
     context 'when rate limit is hit' do
@@ -131,40 +119,35 @@ RSpec.describe Api::TicketmasterImporter do
         allow(notification_service).to receive(:notify_import_success)
         allow(metrics).to receive(:record_import)
         allow_any_instance_of(Kernel).to receive(:sleep)
+
+        subject
       end
 
-      it 'handles rate limit errors and records stats' do
-        stats = importer.import_events
+      describe 'handling rate limit errors and records stats' do
+        it { expect(subject[:rate_limited]).to eq 1 }
+        it { expect(subject[:successful]).to eq 0 }
+        it { expect(subject[:total_processed]).to eq 0 }
 
-        expect(stats[:rate_limited]).to eq(1)
-        expect(stats[:successful]).to eq(0)
-        expect(stats[:total_processed]).to eq(0)
-        expect(notification_service).to have_received(:notify_import_error).with(
-          hash_including(
-            error: instance_of(Api::RateLimitError),
-            stats: hash_including(
-              total_processed: 0,
-              successful: 0,
-              failed: 0,
-              skipped: 0,
-              rate_limited: 1,
-              start_time: kind_of(Time),
-              end_time: kind_of(Time),
-              event: nil
-            )
-          )
-        )
-        expect(metrics).to have_received(:record_import).twice.with(
-          hash_including(
-            total_processed: 0,
-            successful: 0,
-            failed: 0,
-            skipped: 0,
-            rate_limited: 1,
-            start_time: kind_of(Time),
-            end_time: kind_of(Time)
-          )
-        )
+        it { expect(notification_service).to have_received(:notify_import_error)
+               .with hash_including(error: instance_of(Api::RateLimitError),
+                                    stats: hash_including(
+                                      total_processed: 0,
+                                      successful: 0,
+                                      failed: 0,
+                                      skipped: 0,
+                                      rate_limited: 1,
+                                      start_time: kind_of(Time),
+                                      end_time: kind_of(Time),
+                                      event: nil)) }
+
+        it { expect(metrics).to have_received(:record_import).twice
+               .with hash_including(total_processed: 0,
+                                    successful: 0,
+                                    failed: 0,
+                                    skipped: 0,
+                                    rate_limited: 1,
+                                    start_time: kind_of(Time),
+                                    end_time: kind_of(Time)) }
       end
     end
 
@@ -187,25 +170,23 @@ RSpec.describe Api::TicketmasterImporter do
         allow(notification_service).to receive(:notify_import_error)
         allow(notification_service).to receive(:notify_import_success)
         allow(metrics).to receive(:record_import)
+
+        subject
       end
 
-      it 'skips invalid events' do
-        stats = importer.import_events
+      describe 'skipping invalid events' do
 
-        expect(stats[:skipped]).to eq(1)
-        expect(stats[:successful]).to eq(0)
-        expect(stats[:total_processed]).to eq(1)
-        expect(metrics).to have_received(:record_import).with(
-          hash_including(
-            total_processed: 1,
-            successful: 0,
-            failed: 0,
-            skipped: 1,
-            rate_limited: 0,
-            start_time: kind_of(Time),
-            end_time: kind_of(Time)
-          )
-        )
+        it { expect(subject[:skipped]).to eq 1 }
+        it { expect(subject[:successful]).to eq 0 }
+        it { expect(subject[:total_processed]).to eq 1 }
+        it { expect(metrics).to have_received(:record_import)
+               .with hash_including(total_processed: 1,
+                                    successful: 0,
+                                    failed: 0,
+                                    skipped: 1,
+                                    rate_limited: 0,
+                                    start_time: kind_of(Time),
+                                    end_time: kind_of(Time)) }
       end
     end
   end
