@@ -31,25 +31,36 @@ RSpec.describe Notifiers::SlackNotifier do
       }
     end
 
-    it 'sends error notification to Slack' do
-      expect(notifier_double).to receive(:ping)
-        .with(
-          include('*Import Error*', 'StandardError - Test error'),
-          hash_including(
-            channel: channel,
-            username: 'Comedy Gigs Bot',
-            icon_emoji: ':x:'
-          )
-        )
+    describe 'sending error notification' do
+      before do
+        allow(notifier_double).to receive(:ping)
+        subject.notify_import_error(error: error, stats: stats)
+      end
 
-      subject.notify_import_error(error: error, stats: stats)
+      it 'sends message with error details' do
+        expect(notifier_double).to have_received(:ping)
+          .with(
+            include('*Import Error*', 'StandardError - Test error'),
+            hash_including(
+              channel: channel,
+              username: 'Comedy Gigs Bot',
+              icon_emoji: ':x:'
+            )
+          )
+      end
     end
 
-    it 'logs error if Slack notification fails' do
-      allow(notifier_double).to receive(:ping).and_raise('Slack API error')
-      expect(Rails.logger).to receive(:error).with(/Failed to send Slack notification/)
+    describe 'handling Slack API errors' do
+      before do
+        allow(notifier_double).to receive(:ping).and_raise('Slack API error')
+        allow(Rails.logger).to receive(:error)
+        subject.notify_import_error(error: error, stats: stats)
+      end
 
-      subject.notify_import_error(error: error, stats: stats)
+      it 'logs error message' do
+        expect(Rails.logger).to have_received(:error)
+          .with(/Failed to send Slack notification/)
+      end
     end
   end
 
@@ -66,18 +77,23 @@ RSpec.describe Notifiers::SlackNotifier do
       }
     end
 
-    it 'sends success notification to Slack' do
-      expect(notifier_double).to receive(:ping)
-        .with(
-          include('*Import Completed Successfully*', 'Total processed: 20'),
-          hash_including(
-            channel: channel,
-            username: 'Comedy Gigs Bot',
-            icon_emoji: ':white_check_mark:'
-          )
-        )
+    describe 'sending success notification' do
+      before do
+        allow(notifier_double).to receive(:ping)
+        subject.notify_import_success(stats)
+      end
 
-      subject.notify_import_success(stats)
+      it 'sends message with success details' do
+        expect(notifier_double).to have_received(:ping)
+          .with(
+            include('*Import Completed Successfully*', 'Total processed: 20'),
+            hash_including(
+              channel: channel,
+              username: 'Comedy Gigs Bot',
+              icon_emoji: ':white_check_mark:'
+            )
+          )
+      end
     end
   end
 
@@ -91,18 +107,23 @@ RSpec.describe Notifiers::SlackNotifier do
       }
     end
 
-    it 'sends cleanup notification to Slack' do
-      expect(notifier_double).to receive(:ping)
-        .with(
-          include('*Cleanup Completed*', 'Old events removed: 5'),
-          hash_including(
-            channel: channel,
-            username: 'Comedy Gigs Bot',
-            icon_emoji: ':broom:'
-          )
-        )
+    describe 'sending cleanup notification' do
+      before do
+        allow(notifier_double).to receive(:ping)
+        subject.notify_cleanup_complete(stats)
+      end
 
-      subject.notify_cleanup_complete(stats)
+      it 'sends message with cleanup details' do
+        expect(notifier_double).to have_received(:ping)
+          .with(
+            include('*Cleanup Completed*', 'Old events removed: 5'),
+            hash_including(
+              channel: channel,
+              username: 'Comedy Gigs Bot',
+              icon_emoji: ':broom:'
+            )
+          )
+      end
     end
   end
 end

@@ -34,19 +34,30 @@ RSpec.describe NotificationService do
       }
     end
 
-    it 'sends notifications to all configured notifiers' do
-      # Email notification expectations
-      mailer = double('mailer')
-      expect(ImportMailer).to receive(:error_notification)
-        .with(hash_including(error: error))
-        .and_return(mailer)
-      expect(mailer).to receive(:deliver_later)
+    describe 'sending notifications' do
+      let(:mailer) { double('mailer') }
 
-      # Slack notification expectations
-      expect(slack_notifier).to receive(:notify_import_error)
-        .with(error: error, stats: stats)
+      before do
+        allow(ImportMailer).to receive(:error_notification)
+          .with(hash_including(error: error))
+          .and_return(mailer)
+        allow(mailer).to receive(:deliver_later)
+        allow(slack_notifier).to receive(:notify_import_error)
+          .with(error: error, stats: stats)
 
-      service.notify_import_error(error: error, stats: stats)
+        service.notify_import_error(error: error, stats: stats)
+      end
+
+      it 'sends email notification' do
+        expect(ImportMailer).to have_received(:error_notification)
+          .with(hash_including(error: error))
+        expect(mailer).to have_received(:deliver_later)
+      end
+
+      it 'sends Slack notification' do
+        expect(slack_notifier).to have_received(:notify_import_error)
+          .with(error: error, stats: stats)
+      end
     end
 
     context 'when Slack is not configured' do
@@ -56,34 +67,60 @@ RSpec.describe NotificationService do
           .and_return(nil)
       end
 
-      it 'only sends email notifications' do
-        mailer = double('mailer')
-        expect(ImportMailer).to receive(:error_notification)
-          .with(hash_including(error: error, stats: stats))
-          .and_return(mailer)
-        expect(mailer).to receive(:deliver_later)
+      describe 'sending notifications' do
+        let(:mailer) { double('mailer') }
 
-        expect(slack_notifier).not_to receive(:notify_import_error)
+        before do
+          allow(ImportMailer).to receive(:error_notification)
+            .with(hash_including(error: error, stats: stats))
+            .and_return(mailer)
+          allow(mailer).to receive(:deliver_later)
+          allow(slack_notifier).to receive(:notify_import_error)
 
-        service.notify_import_error(error: error, stats: stats)
+          service.notify_import_error(error: error, stats: stats)
+        end
+
+        it 'sends email notification' do
+          expect(ImportMailer).to have_received(:error_notification)
+            .with(hash_including(error: error, stats: stats))
+          expect(mailer).to have_received(:deliver_later)
+        end
+
+        it 'does not send Slack notification' do
+          expect(slack_notifier).not_to have_received(:notify_import_error)
+        end
       end
     end
   end
 
   describe '#notify_import_success' do
-    it 'sends notifications to all configured notifiers' do
-      # Email notification expectations
-      mailer = double('mailer')
-      expect(ImportMailer).to receive(:success_notification)
-        .with(stats)
-        .and_return(mailer)
-      expect(mailer).to receive(:deliver_later)
+    describe 'sending notifications' do
+      let(:mailer) { double('mailer') }
 
-      # Slack notification expectations
-      expect(slack_notifier).to receive(:notify_import_success)
-        .with(stats)
+      before do
+        allow(ImportMailer).to receive(:success_notification)
+          .with(stats)
+          .and_return(mailer)
+        allow(mailer).to receive(:deliver_later)
+        allow(slack_notifier).to receive(:notify_import_success)
+          .with(stats)
 
-      service.notify_import_success(stats)
+        service.notify_import_success(stats)
+      end
+
+      it 'sends email notification' do
+        expect(ImportMailer).to have_received(:success_notification)
+          .with(stats)
+      end
+
+      it 'sends email notification with deliver_later' do
+        expect(mailer).to have_received(:deliver_later)
+      end
+
+      it 'sends Slack notification' do
+        expect(slack_notifier).to have_received(:notify_import_success)
+          .with(stats)
+      end
     end
   end
 

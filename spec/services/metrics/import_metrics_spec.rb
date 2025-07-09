@@ -25,49 +25,47 @@ RSpec.describe Metrics::ImportMetrics do
       )
     end
 
-    it 'stores hourly metrics' do
-      metrics.record_import(stats)
+    describe 'storing hourly metrics' do
+      let(:hourly_key) { "metrics:import:hourly:2025-06-14-12" }
+      let(:stored_metrics) { redis.hgetall(hourly_key) }
 
-      hourly_key = "metrics:import:hourly:2025-06-14-12"
-      stored_metrics = redis.hgetall(hourly_key)
+      before { metrics.record_import(stats) }
 
-      expect(stored_metrics["total_processed"]).to eq("10")
-      expect(stored_metrics["successful"]).to eq("8")
-      expect(stored_metrics["failed"]).to eq("1")
-      expect(stored_metrics["skipped"]).to eq("1")
-      expect(stored_metrics["rate_limited"]).to eq("0")
-
-      # Check TTL is set
-      expect(redis.ttl(hourly_key)).to be_between(0, 24.hours.to_i)
+      it { expect(stored_metrics["total_processed"]).to eq("10") }
+      it { expect(stored_metrics["successful"]).to eq("8") }
+      it { expect(stored_metrics["failed"]).to eq("1") }
+      it { expect(stored_metrics["skipped"]).to eq("1") }
+      it { expect(stored_metrics["rate_limited"]).to eq("0") }
+      it { expect(redis.ttl(hourly_key)).to be_between(0, 24.hours.to_i) }
     end
 
-    it 'stores daily metrics' do
-      metrics.record_import(stats)
+    describe 'storing daily metrics' do
+      let(:daily_key) { "metrics:import:daily:2025-06-14" }
+      let(:stored_metrics) { redis.hgetall(daily_key) }
 
-      daily_key = "metrics:import:daily:2025-06-14"
-      stored_metrics = redis.hgetall(daily_key)
+      before { metrics.record_import(stats) }
 
-      expect(stored_metrics["total_processed"]).to eq("10")
-      expect(stored_metrics["successful"]).to eq("8")
-      expect(stored_metrics["failed"]).to eq("1")
-      expect(stored_metrics["skipped"]).to eq("1")
-      expect(stored_metrics["rate_limited"]).to eq("0")
-
-      # Check TTL is set
-      expect(redis.ttl(daily_key)).to be_between(0, 30.days.to_i)
+      it { expect(stored_metrics["total_processed"]).to eq("10") }
+      it { expect(stored_metrics["successful"]).to eq("8") }
+      it { expect(stored_metrics["failed"]).to eq("1") }
+      it { expect(stored_metrics["skipped"]).to eq("1") }
+      it { expect(stored_metrics["rate_limited"]).to eq("0") }
+      it { expect(redis.ttl(daily_key)).to be_between(0, 30.days.to_i) }
     end
 
-    it 'updates running totals' do
-      metrics.record_import(stats)
-      metrics.record_import(stats)  # Record twice
+    describe 'updating running totals' do
+      let(:totals) { redis.hgetall("metrics:import:totals") }
 
-      totals = redis.hgetall("metrics:import:totals")
+      before do
+        metrics.record_import(stats)
+        metrics.record_import(stats)  # Record twice
+      end
 
-      expect(totals["total_processed"]).to eq("20")
-      expect(totals["successful"]).to eq("16")
-      expect(totals["failed"]).to eq("2")
-      expect(totals["skipped"]).to eq("2")
-      expect(totals["rate_limited"]).to eq("0")
+      it { expect(totals["total_processed"]).to eq("20") }
+      it { expect(totals["successful"]).to eq("16") }
+      it { expect(totals["failed"]).to eq("2") }
+      it { expect(totals["skipped"]).to eq("2") }
+      it { expect(totals["rate_limited"]).to eq("0") }
     end
   end
 
@@ -85,38 +83,57 @@ RSpec.describe Metrics::ImportMetrics do
       )
     end
 
-    it 'returns metrics for the specified number of days' do
-      daily_metrics = metrics.get_daily_metrics(3)
-      expect(daily_metrics.size).to eq(3)
-      expect(daily_metrics.first[:total_processed]).to eq(0)
-      expect(daily_metrics.last[:total_processed]).to eq(10)
+    describe 'returning metrics for specified days' do
+      let(:daily_metrics) { metrics.get_daily_metrics(3) }
+
+      it { expect(daily_metrics.size).to eq(3) }
+      it { expect(daily_metrics.first[:total_processed]).to eq(0) }
+      it { expect(daily_metrics.last[:total_processed]).to eq(10) }
     end
 
-    it 'includes empty days in the range' do
-      # Record some test metrics for today
-      current_time = Time.current
-      key = "metrics:import:daily:#{current_time.strftime('%Y-%m-%d')}"
-      redis.hmset(
-        key,
-        'total_processed', 10,
-        'successful', 8,
-        'failed', 1,
-        'skipped', 1
-      )
+    describe 'handling empty days in range' do
+      let(:current_time) { Time.current }
+      let(:key) { "metrics:import:daily:#{current_time.strftime('%Y-%m-%d')}" }
 
-      # Record some test metrics for current hour
-      key = "metrics:import:hourly:#{current_time.strftime('%Y-%m-%d-%H')}"
-      redis.hmset(
-        key,
-        'total_processed', 10,
-        'successful', 8,
-        'failed', 1,
-        'skipped', 1
-      )
+      before do
+        redis.hmset(
+          key,
+          'total_processed', 10,
+          'successful', 8,
+          'failed', 1,
+          'skipped', 1,
+          'rate_limited', 0
+        )
+      end
 
-      daily_metrics = metrics.get_daily_metrics(5)
-      expect(daily_metrics.size).to eq(5)
-      expect(daily_metrics.map { |m| m[:total_processed] }).to include(0)
+      it 'includes days with zero metrics' do
+        daily_metrics = metrics.get_daily_metrics(3)
+        expect(daily_metrics.size).to eq(3)
+        expect(daily_metrics.first[:total_processed]).to eq(0)
+        expect(daily_metrics.last[:total_processed]).to eq(10)
+      end
+
+      it 'includes days with zero metrics' do
+        # Record some test metrics for current hour
+        hourly_key = "metrics:import:hourly:#{current_time.strftime('%Y-%m-%d-%H')}"
+        redis.hmset(
+          hourly_key,
+          'total_processed', 5,
+          'successful', 4,
+          'failed', 1,
+          'skipped', 0,
+          'rate_limited', 0
+        )
+
+        # Set TTLs
+        redis.expire(key, 30.days)
+        redis.expire(hourly_key, 24.hours)
+
+        # Get metrics for the last 5 days
+        daily_metrics = metrics.get_daily_metrics(5)
+        expect(daily_metrics.size).to eq(5)
+        expect(daily_metrics.map { |m| m[:total_processed] }).to include(0)
+      end
     end
   end
 
