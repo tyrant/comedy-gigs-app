@@ -194,7 +194,6 @@ const App = () => {
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-gray-100">
       <header className="bg-white shadow-sm top-0">
         <div className="w-full px-4 py-3 flex flex-wrap items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-900">Comedy Gigs App</h1>
           
           {/* Integrated Search Form */}
           <div className="flex flex-1 flex-wrap items-center gap-3">
