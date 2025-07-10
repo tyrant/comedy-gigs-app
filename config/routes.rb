@@ -7,7 +7,8 @@ Rails.application.routes.draw do
 
   # API routes
   namespace :api do
-    resources :gigs, only: [:index]
+    resources :gigs, only: [ :index ]
+    resources :acts, only: [ :index ]
   end
 
   # Defines the root path route ("/")

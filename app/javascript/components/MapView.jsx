@@ -117,7 +117,16 @@ const VenueMarkers = ({ venueGroups }) => {
       >
         <Popup maxWidth={350} maxHeight={500} className="venue-popup">
           <div className="w-full sm:w-[330px] relative">
-            <div className="mt-5 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            {venue.primary_image_url && (
+              <div className="w-full h-40 overflow-hidden">
+                <img 
+                  src={venue.primary_image_url} 
+                  alt={venue.name} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="mt-2 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <div className="sticky top-0 z-10 bg-white px-2 pt-2 pb-3 backdrop-blur-sm bg-opacity-90">
                 <h3 className="text-lg sm:text-xl font-bold leading-tight">{venue.name}</h3>
                 <p className="text-sm sm:text-base text-gray-600 mt-1">
@@ -129,18 +138,42 @@ const VenueMarkers = ({ venueGroups }) => {
                 {gigs.map(gig => (
                   <div 
                     key={gig.id} 
-                    className="border-t py-2 first:border-t-0 first:pt-0 hover:bg-gray-50 px-2"
+                    className="border-t py-3 first:border-t-0 first:pt-0 hover:bg-gray-50 px-2"
                   >
                     <h4 className="font-semibold text-gray-900">{gig.name}</h4>
                     <p className="text-gray-600 text-sm">
                       {formatDate(gig.start_time)}
                     </p>
+                    
+                    {/* Display acts with images */}
+                    {gig.acts && gig.acts.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500 mb-1">Featuring:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {gig.acts.map(act => (
+                            <div key={act.id} className="flex items-center bg-purple-50 rounded-md p-1">
+                              {act.primary_image_url && (
+                                <div className="w-8 h-8 rounded-full overflow-hidden mr-1">
+                                  <img 
+                                    src={act.primary_image_url} 
+                                    alt={act.name} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              <span className="text-xs text-purple-800 font-medium">{act.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     {gig.ticket_url && (
                       <a
                         href={gig.ticket_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:text-blue-800"
+                        className="mt-2 inline-block px-3 py-1 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
                       >
                         Get Tickets
                       </a>

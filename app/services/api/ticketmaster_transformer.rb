@@ -76,7 +76,8 @@ module Api
         capacity: venue['capacity']&.to_i,
         external_ids: {
           'ticketmaster' => venue['id']
-        }
+        },
+        images: extract_images(venue['images'])
       }
     end
 
@@ -90,7 +91,8 @@ module Api
           social_links: extract_social_links(act),
           external_ids: {
             'ticketmaster' => act['id']
-          }
+          },
+          images: extract_images(act['images'])
         }
       end
     end
@@ -116,6 +118,30 @@ module Api
         'postponed' => 'postponed',
         'offsale' => 'sold_out'
       }[status_code] || 'scheduled'
+    end
+    
+    def self.extract_images(images_data)
+      return {} unless images_data.is_a?(Array) && images_data.any?
+      
+      result = {}
+      
+      # Process images by ratio/size
+      images_data.each do |img|
+        next unless img['url'].present? && !img['fallback']
+        
+        # Map common ratios to size names
+        size_key = case img['ratio']
+          when '16_9', '16_9_large' then 'large'
+          when '3_2', '4_3' then 'medium'
+          when '1_1' then 'square'
+          else 'standard'
+        end
+        
+        # Only store the first image of each size (typically the best quality)
+        result[size_key] ||= img['url']
+      end
+      
+      result
     end
   end
 end

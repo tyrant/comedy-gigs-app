@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_14_101045) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_09_103734) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,7 +21,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_14_101045) do
     t.jsonb "external_ids", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "images", default: {}
     t.index ["external_ids"], name: "index_acts_on_external_ids", using: :gin
+    t.index ["images"], name: "index_acts_on_images", using: :gin
     t.index ["name"], name: "index_acts_on_name"
   end
 
@@ -75,9 +77,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_14_101045) do
     t.jsonb "external_ids", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "images", default: {}
     t.index ["city"], name: "index_venues_on_city"
     t.index ["country"], name: "index_venues_on_country"
     t.index ["external_ids"], name: "index_venues_on_external_ids", using: :gin
+    t.index ["images"], name: "index_venues_on_images", using: :gin
     t.index ["latitude", "longitude"], name: "index_venues_on_latitude_and_longitude"
     t.index ["name"], name: "index_venues_on_name"
   end
