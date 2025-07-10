@@ -1,6 +1,8 @@
 # Clear existing data
 puts 'Clearing existing data...'
-[Act, Venue, Gig].each(&:delete_all)
+# Clear join table first to avoid foreign key constraint errors
+ActiveRecord::Base.connection.execute("DELETE FROM acts_gigs")
+[Gig, Act, Venue].each(&:delete_all)
 
 # Create Venues
 puts 'Creating venues...'
@@ -14,7 +16,13 @@ venues = {
     longitude: 174.7633,
     capacity: 200,
     description: 'Auckland\'s premier comedy club since 1988',
-    external_ids: { 'ticketmaster': 'ven_classic_akl' }
+    external_ids: { 'ticketmaster': 'ven_classic_akl' },
+    images: {
+      'standard': 'https://images.unsplash.com/photo-1603739903239-8b6e64c3b185?w=800&q=80',
+      'large': 'https://images.unsplash.com/photo-1603739903239-8b6e64c3b185?w=1200&q=80',
+      'medium': 'https://images.unsplash.com/photo-1603739903239-8b6e64c3b185?w=600&q=80',
+      'square': 'https://images.unsplash.com/photo-1603739903239-8b6e64c3b185?w=400&h=400&fit=crop&q=80'
+    }
   ),
   
   fringe: Venue.create!(
@@ -26,7 +34,13 @@ venues = {
     longitude: 174.7730,
     capacity: 120,
     description: 'Wellington\'s home of alternative comedy',
-    external_ids: { 'ticketmaster': 'ven_fringe_wlg' }
+    external_ids: { 'ticketmaster': 'ven_fringe_wlg' },
+    images: {
+      'standard': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
+      'large': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&q=80',
+      'medium': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&q=80',
+      'square': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop&q=80'
+    }
   ),
 
   basement: Venue.create!(
@@ -38,7 +52,13 @@ venues = {
     longitude: 174.7645,
     capacity: 150,
     description: 'Underground comedy venue in the heart of the city',
-    external_ids: { 'ticketmaster': 'ven_basement_akl' }
+    external_ids: { 'ticketmaster': 'ven_basement_akl' },
+    images: {
+      'standard': 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&q=80',
+      'large': 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=1200&q=80',
+      'medium': 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&q=80',
+      'square': 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=400&h=400&fit=crop&q=80'
+    }
   )
 }
 
@@ -52,7 +72,13 @@ acts = {
       'twitter': '@Rose_Matafeo',
       'instagram': '@rose_matafeo'
     },
-    external_ids: { 'ticketmaster': 'act_rose_matafeo' }
+    external_ids: { 'ticketmaster': 'act_rose_matafeo' },
+    images: {
+      'standard': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80',
+      'large': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&q=80',
+      'medium': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80',
+      'square': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&q=80'
+    }
   ),
 
   rhys: Act.create!(
@@ -62,7 +88,13 @@ acts = {
       'twitter': '@rhysdarby',
       'instagram': '@rhysdarby'
     },
-    external_ids: { 'ticketmaster': 'act_rhys_darby' }
+    external_ids: { 'ticketmaster': 'act_rhys_darby' },
+    images: {
+      'standard': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&q=80',
+      'large': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=1200&q=80',
+      'medium': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=80',
+      'square': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&q=80'
+    }
   ),
 
   guy: Act.create!(
@@ -72,7 +104,13 @@ acts = {
       'twitter': '@guy_montgomery',
       'instagram': '@guy_montgomery'
     },
-    external_ids: { 'ticketmaster': 'act_guy_montgomery' }
+    external_ids: { 'ticketmaster': 'act_guy_montgomery' },
+    images: {
+      'standard': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+      'large': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=80',
+      'medium': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80',
+      'square': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&q=80'
+    }
   )
 }
 
