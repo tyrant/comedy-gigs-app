@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import MapView from './MapView';
 import { normalizeLongitude } from '../fiddly-bits';
+import Select from 'react-select';
 
 // Debug flag to log API calls
 const DEBUG = true;
@@ -13,12 +14,12 @@ const App = () => {
   
   // Search filters state
   const [searchFilters, setSearchFilters] = useState({
-    actId: '',
+    actIds: [],
     startDate: '',
     endDate: ''
   });
   
-  // Acts dropdown data
+  // Acts data for the dropdown
   const [acts, setActs] = useState([]);
   const [loadingActs, setLoadingActs] = useState(false);
 
@@ -56,7 +57,15 @@ const App = () => {
         const response = await fetch('/api/acts');
         if (!response.ok) throw new Error('Failed to fetch acts');
         const data = await response.json();
-        setActs(data.sort((a, b) => a.name.localeCompare(b.name)));
+        
+        // Format acts data for React Select with value/label format
+        const formattedActs = data.map(act => ({
+          value: act.id,
+          label: act.name,
+          image: act.primary_image_url || null
+        }));
+        
+        setActs(formattedActs.sort((a, b) => a.label.localeCompare(b.label)));
       } catch (err) {
         console.error('Error fetching acts:', err);
       } finally {
@@ -85,8 +94,11 @@ const App = () => {
       });
       
       // Add search filters to params if they exist
-      if (filters.actId) {
-        params.append('act_id', filters.actId);
+      if (filters.actIds && filters.actIds.length > 0) {
+        // For multi-select, pass array of IDs
+        const actIdValues = filters.actIds.map(act => act.value);
+        params.append('act_ids', actIdValues.join(','));
+        if (DEBUG) console.log('Filtering by acts:', actIdValues);
       }
       
       if (filters.startDate) {
@@ -145,11 +157,27 @@ const App = () => {
     }
   }, [fetchGigsForBounds, searchFilters]);
   
+  // Special handler for multi-select acts
+  const handleActsChange = useCallback((selectedOptions) => {
+    if (DEBUG) console.log('Acts selection changed:', selectedOptions);
+    
+    const newFilters = {
+      ...searchFilters,
+      actIds: selectedOptions || [] // Handle null when all options are cleared
+    };
+    
+    setSearchFilters(newFilters);
+    
+    if (lastBoundsRef.current) {
+      fetchGigsForBounds(lastBoundsRef.current, newFilters);
+    }
+  }, [fetchGigsForBounds, searchFilters]);
+  
   // Clear all filters
   const handleClearFilters = useCallback(() => {
     if (DEBUG) console.log('Clearing all filters');
     
-    const clearedFilters = { actId: '', startDate: '', endDate: '' };
+    const clearedFilters = { actIds: [], startDate: '', endDate: '' };
     setSearchFilters(clearedFilters);
     
     if (lastBoundsRef.current) {
@@ -164,25 +192,54 @@ const App = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-gray-100">
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+      <header className="bg-white shadow-sm top-0">
         <div className="w-full px-4 py-3 flex flex-wrap items-center gap-4">
           <h1 className="text-xl font-bold text-gray-900">Comedy Gigs App</h1>
           
           {/* Integrated Search Form */}
           <div className="flex flex-1 flex-wrap items-center gap-3">
-            {/* Act dropdown */}
-            <div className="w-48">
-              <select
-                className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
-                value={searchFilters.actId}
-                onChange={(e) => handleFilterChange('actId', e.target.value)}
-                disabled={loadingActs}
-              >
-                <option value="">All Acts</option>
-                {acts.map(act => (
-                  <option key={act.id} value={act.id}>{act.name}</option>
-                ))}
-              </select>
+            {/* Act multi-select dropdown with thumbnails */}
+            <div className="w-72">
+              <Select
+                isMulti
+                isLoading={loadingActs}
+                options={acts}
+                value={searchFilters.actIds}
+                onChange={handleActsChange}
+                placeholder="Select acts..."
+                noOptionsMessage={() => "No acts found"}
+                classNamePrefix="react-select"
+                // Custom styles for the dropdown
+                styles={{
+                  control: (baseStyles) => ({
+                    ...baseStyles,
+                    borderColor: '#d1d5db',
+                    fontSize: '0.875rem'
+                  }),
+                  multiValue: (baseStyles) => ({
+                    ...baseStyles,
+                    backgroundColor: '#e5e7eb'
+                  }),
+                  // Fix z-index issue with map
+                  menu: (baseStyles) => ({
+                    ...baseStyles,
+                    zIndex: 9999 // Ensure dropdown appears above the map
+                  })
+                }}
+                // Custom option component with image thumbnails
+                formatOptionLabel={(option) => (
+                  <div className="flex items-center gap-2">
+                    {option.image && (
+                      <img 
+                        src={option.image} 
+                        alt={option.label}
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                    )}
+                    <span>{option.label}</span>
+                  </div>
+                )}
+              />
             </div>
             
             {/* Start date */}
@@ -228,7 +285,7 @@ const App = () => {
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">{gigs.length} gigs found</span>
-                {(searchFilters.actId || searchFilters.startDate || searchFilters.endDate) && (
+                {((searchFilters.actIds && searchFilters.actIds.length > 0) || searchFilters.startDate || searchFilters.endDate) && (
                   <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
                     Filters applied
                   </span>

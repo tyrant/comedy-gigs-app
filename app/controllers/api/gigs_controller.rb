@@ -13,8 +13,13 @@ module Api
         scope = scope.joins(:venue).merge(Venue.within_bounding_box([sw, ne]))
       end
       
-      # Filter by act if act_id is provided
-      if params[:act_id].present?
+      # Filter by act(s) if act_id(s) are provided
+      if params[:act_ids].present?
+        # Handle array of IDs for multi-select
+        act_ids = params[:act_ids].is_a?(Array) ? params[:act_ids] : params[:act_ids].split(',')
+        scope = scope.joins(:acts).where(acts: { id: act_ids }).distinct
+      elsif params[:act_id].present?
+        # Keep backward compatibility with single act_id
         scope = scope.joins(:acts).where(acts: { id: params[:act_id] })
       end
       
