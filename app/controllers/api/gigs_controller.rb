@@ -5,43 +5,43 @@ module Api
 
       # Apply map bounds filter if present
       if bounds_params_present?
-        sw = [params[:south].to_f, params[:west].to_f]
-        ne = [params[:north].to_f, params[:east].to_f]
+        sw = [ params[:south].to_f, params[:west].to_f ]
+        ne = [ params[:north].to_f, params[:east].to_f ]
 
         Rails.logger.info "Searching within bounds: SW=#{sw.inspect}, NE=#{ne.inspect}"
 
-        scope = scope.joins(:venue).merge(Venue.within_bounding_box([sw, ne]))
+        scope = scope.joins(:venue).merge(Venue.within_bounding_box([ sw, ne ]))
       end
-      
+
       # Filter by act(s) if act_id(s) are provided
       if params[:act_ids].present?
         # Handle array of IDs for multi-select
-        act_ids = params[:act_ids].is_a?(Array) ? params[:act_ids] : params[:act_ids].split(',')
+        act_ids = params[:act_ids].is_a?(Array) ? params[:act_ids] : params[:act_ids].split(",")
         scope = scope.joins(:acts).where(acts: { id: act_ids }).distinct
       elsif params[:act_id].present?
         # Keep backward compatibility with single act_id
         scope = scope.joins(:acts).where(acts: { id: params[:act_id] })
       end
-      
+
       # Filter by date range if provided
       if params[:start_date].present?
         start_date = Date.parse(params[:start_date]) rescue nil
-        scope = scope.where('start_time >= ?', start_date.beginning_of_day) if start_date
+        scope = scope.where("start_time >= ?", start_date.beginning_of_day) if start_date
       end
-      
+
       if params[:end_date].present?
         end_date = Date.parse(params[:end_date]) rescue nil
-        scope = scope.where('start_time <= ?', end_date.end_of_day) if end_date
+        scope = scope.where("start_time <= ?", end_date.end_of_day) if end_date
       end
-      
+
       Rails.logger.info "Found #{scope.count} gigs after applying all filters"
-      
+
       @gigs = scope.to_a
-      
+
       render json: @gigs.map { |gig|
         gig_json = gig.as_json
-        gig_json['venue'] = gig.venue.as_json(methods: [:latitude, :longitude, :primary_image_url])
-        gig_json['acts'] = gig.acts.map { |act| act.as_json(methods: [:primary_image_url]) }
+        gig_json["venue"] = gig.venue.as_json(methods: [ :latitude, :longitude, :primary_image_url ])
+        gig_json["acts"] = gig.acts.map { |act| act.as_json(methods: [ :primary_image_url ]) }
         gig_json
       }
     end

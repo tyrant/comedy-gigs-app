@@ -16,7 +16,7 @@ RSpec.describe Notifiers::SlackNotifier do
       {
         class: 'StandardError',
         message: 'Test error',
-        backtrace: ['line 1', 'line 2']
+        backtrace: [ 'line 1', 'line 2' ]
       }
     end
     let(:stats) do

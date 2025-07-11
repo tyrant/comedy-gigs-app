@@ -3,7 +3,7 @@ module Metrics
     METRICS_TTL = 30.days
 
     def initialize
-      @redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
+      @redis = Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/1"))
     end
 
     def record_import(stats)
@@ -27,11 +27,11 @@ module Metrics
         metrics = @redis.hgetall(key)
         metrics.transform_values!(&:to_i)
         {
-          total_processed: metrics['total_processed'] || 0,
-          successful: metrics['successful'] || 0,
-          failed: metrics['failed'] || 0,
-          skipped: metrics['skipped'] || 0,
-          rate_limited: metrics['rate_limited'] || 0
+          total_processed: metrics["total_processed"] || 0,
+          successful: metrics["successful"] || 0,
+          failed: metrics["failed"] || 0,
+          skipped: metrics["skipped"] || 0,
+          rate_limited: metrics["rate_limited"] || 0
         }.merge(date: date)
       end.reverse
     end
@@ -44,34 +44,34 @@ module Metrics
         metrics = @redis.hgetall(key)
         metrics.transform_values!(&:to_i)
         {
-          total_processed: metrics['total_processed'] || 0,
-          successful: metrics['successful'] || 0,
-          failed: metrics['failed'] || 0,
-          skipped: metrics['skipped'] || 0,
-          rate_limited: metrics['rate_limited'] || 0
+          total_processed: metrics["total_processed"] || 0,
+          successful: metrics["successful"] || 0,
+          failed: metrics["failed"] || 0,
+          skipped: metrics["skipped"] || 0,
+          rate_limited: metrics["rate_limited"] || 0
         }.merge(hour: hour)
       end.reverse
     end
 
     def get_totals
-      get_metrics('metrics:import:totals')
+      get_metrics("metrics:import:totals")
     end
 
     private
 
     def store_metrics(key, stats, ttl)
       @redis.multi do |multi|
-        multi.hincrby(key, 'total_processed', stats[:total_processed].to_i)
-        multi.hincrby(key, 'successful', stats[:successful].to_i)
-        multi.hincrby(key, 'failed', stats[:failed].to_i)
-        multi.hincrby(key, 'skipped', stats[:skipped].to_i)
-        multi.hincrby(key, 'rate_limited', stats[:rate_limited].to_i)
+        multi.hincrby(key, "total_processed", stats[:total_processed].to_i)
+        multi.hincrby(key, "successful", stats[:successful].to_i)
+        multi.hincrby(key, "failed", stats[:failed].to_i)
+        multi.hincrby(key, "skipped", stats[:skipped].to_i)
+        multi.hincrby(key, "rate_limited", stats[:rate_limited].to_i)
         multi.expire(key, ttl)
       end
     end
 
     def update_totals(stats)
-      store_metrics('metrics:import:totals', stats, METRICS_TTL)
+      store_metrics("metrics:import:totals", stats, METRICS_TTL)
     end
 
     def get_metrics(key)

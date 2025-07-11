@@ -15,7 +15,7 @@ class CreateVenues < ActiveRecord::Migration[8.0]
     end
 
     add_index :venues, :name
-    add_index :venues, [:latitude, :longitude]
+    add_index :venues, [ :latitude, :longitude ]
     add_index :venues, :external_ids, using: :gin
     add_index :venues, :city
     add_index :venues, :country

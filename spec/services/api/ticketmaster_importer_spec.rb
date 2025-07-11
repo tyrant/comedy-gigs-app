@@ -20,22 +20,22 @@ RSpec.describe Api::TicketmasterImporter do
           'start' => { 'dateTime' => '2025-06-14T20:00:00Z' }
         },
         '_embedded' => {
-          'venues' => [{
+          'venues' => [ {
             'name' => 'Test Venue',
             'city' => { 'name' => 'Auckland' },
             'country' => { 'countryCode' => 'NZ' }
-          }],
-          'attractions' => [{
+          } ],
+          'attractions' => [ {
             'name' => 'Test Comedian',
-            'classifications' => [{ 'segment' => { 'name' => 'Comedy' } }]
-          }]
+            'classifications' => [ { 'segment' => { 'name' => 'Comedy' } } ]
+          } ]
         }
       }
     end
 
     let(:api_response) do
       {
-        '_embedded' => { 'events' => [event_data] },
+        '_embedded' => { 'events' => [ event_data ] },
         'page' => { 'totalPages' => 1 }
       }
     end
@@ -170,7 +170,7 @@ RSpec.describe Api::TicketmasterImporter do
       let(:api_response_with_invalid_event) do
         {
           '_embedded' => {
-            'events' => [invalid_event]
+            'events' => [ invalid_event ]
           },
           'page' => {
             'totalPages' => 1
@@ -205,11 +205,11 @@ RSpec.describe Api::TicketmasterImporter do
         let(:error) { StandardError.new('Event processing error') }
         let(:event) { { 'name' => 'Test Event', 'id' => '123' } }
         let(:stats) { { total_processed: 10, successful: 8, failed: 2 } }
-        
+
         it 'converts exceptions to serializable hashes' do
           # Call the notify_error method directly
           importer.send(:notify_error, error, event, stats)
-          
+
           # Verify the notification service was called with serialized data
           expect(notification_service).to have_received(:notify_import_error)
             .with(

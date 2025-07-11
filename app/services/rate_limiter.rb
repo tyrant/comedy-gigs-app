@@ -3,7 +3,7 @@ class RateLimiter
     @key = key
     @max_requests = max_requests
     @interval = interval
-    @redis = Redis.new(url: ENV['REDIS_URL'] || 'redis://localhost:6379/1')
+    @redis = Redis.new(url: ENV["REDIS_URL"] || "redis://localhost:6379/1")
   end
 
   def with_rate_limit
@@ -12,7 +12,7 @@ class RateLimiter
     wait_time = next_available_slot
     Rails.logger.info "Rate limit reached for #{@key}. Waiting #{wait_time} seconds..."
     sleep(wait_time)
-    
+
     yield
   ensure
     record_request
@@ -31,7 +31,7 @@ class RateLimiter
   def recent_requests
     requests = @redis.zrangebyscore(cache_key, min_time, max_time)
     # Clean up old entries
-    @redis.zremrangebyscore(cache_key, '-inf', min_time)
+    @redis.zremrangebyscore(cache_key, "-inf", min_time)
     requests
   end
 
@@ -44,7 +44,7 @@ class RateLimiter
     return 0 unless oldest_request
 
     time_diff = Time.current.to_f - oldest_request[1]
-    [@interval - time_diff, 0].max
+    [ @interval - time_diff, 0 ].max
   end
 
   def cache_key

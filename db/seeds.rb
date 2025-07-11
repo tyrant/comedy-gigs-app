@@ -2,7 +2,7 @@
 puts 'Clearing existing data...'
 # Clear join table first to avoid foreign key constraint errors
 ActiveRecord::Base.connection.execute("DELETE FROM acts_gigs")
-[Gig, Act, Venue].each(&:delete_all)
+[ Gig, Act, Venue ].each(&:delete_all)
 
 # Create Venues
 puts 'Creating venues...'
@@ -24,7 +24,7 @@ venues = {
       'square': 'https://images.unsplash.com/photo-1603739903239-8b6e64c3b185?w=400&h=400&fit=crop&q=80'
     }
   ),
-  
+
   fringe: Venue.create!(
     name: 'The Fringe Bar',
     address: '26 Allen Street',

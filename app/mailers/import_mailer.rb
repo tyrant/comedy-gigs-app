@@ -1,5 +1,5 @@
 class ImportMailer < ApplicationMailer
-  default from: 'noreply@comedygigs.example.com'
+  default from: "noreply@comedygigs.example.com"
 
   def error_notification(error:, stats:)
     @error = error
@@ -13,7 +13,7 @@ class ImportMailer < ApplicationMailer
 
   def success_notification(stats)
     @stats = stats
-    
+
     mail(
       to: admin_email,
       subject: "[ComedyGigs] Import Summary: #{@stats[:total_processed]} events processed"

@@ -4,7 +4,7 @@ class TicketmasterImportJob < ApplicationJob
 
   def perform
     Rails.logger.info "Starting scheduled Ticketmaster import at #{Time.current}"
-    
+
     importer = Api::TicketmasterImporter.new
     stats = importer.import_events
 
@@ -25,7 +25,7 @@ class TicketmasterImportJob < ApplicationJob
   private
 
   def ensure_next_import_scheduled
-    next_import = Sidekiq::ScheduledSet.new.find_job('ticketmaster_import')
+    next_import = Sidekiq::ScheduledSet.new.find_job("ticketmaster_import")
     unless next_import
       self.class.set(wait: 4.hours).perform_later
       Rails.logger.info "Scheduled next import for #{4.hours.from_now}"

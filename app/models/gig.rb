@@ -12,9 +12,9 @@ class Gig < ApplicationRecord
   attribute :external_ids, :jsonb, default: -> { {} }
 
   # Scopes
-  scope :upcoming, -> { where('start_time > ?', Time.current).order(:start_time) }
-  scope :past, -> { where('start_time <= ?', Time.current).order(start_time: :desc) }
-  
+  scope :upcoming, -> { where("start_time > ?", Time.current).order(:start_time) }
+  scope :past, -> { where("start_time <= ?", Time.current).order(start_time: :desc) }
+
   scope :between, ->(start_date, end_date) {
     where(start_time: start_date..end_date)
   }
@@ -34,6 +34,6 @@ class Gig < ApplicationRecord
   def end_time_after_start_time
     return unless end_time < start_time
 
-    errors.add(:end_time, 'must be after start time')
+    errors.add(:end_time, "must be after start time")
   end
 end

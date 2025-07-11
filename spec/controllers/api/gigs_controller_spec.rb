@@ -5,7 +5,7 @@ RSpec.describe Api::GigsController, type: :controller do
     let!(:venue_tokyo) { create(:venue, name: 'Tokyo Comedy Bar', latitude: 35.6762, longitude: 139.6503) }
     let!(:venue_honolulu) { create(:venue, name: 'Honolulu Comedy Club', latitude: 21.3069, longitude: -157.8583) }
     let!(:venue_fiji) { create(:venue, name: 'Fiji Comedy House', latitude: -17.713371, longitude: 178.065032) }
-    
+
     let!(:gig_tokyo) { create(:gig, venue: venue_tokyo) }
     let!(:gig_honolulu) { create(:gig, venue: venue_honolulu) }
     let!(:gig_fiji) { create(:gig, venue: venue_fiji) }
@@ -49,7 +49,7 @@ RSpec.describe Api::GigsController, type: :controller do
           end
 
           it { expect(JSON.parse(response.body).length).to eq(2) }
-          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort).to eq(['Fiji Comedy House', 'Honolulu Comedy Club']) }
+          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort).to eq([ 'Fiji Comedy House', 'Honolulu Comedy Club' ]) }
         end
 
         describe 'handles bounds crossing antimeridian with wider longitude range' do
@@ -64,7 +64,7 @@ RSpec.describe Api::GigsController, type: :controller do
           end
 
           it { expect(JSON.parse(response.body).length).to eq(2) }
-          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort).to eq(['Fiji Comedy House', 'Honolulu Comedy Club']) }
+          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort).to eq([ 'Fiji Comedy House', 'Honolulu Comedy Club' ]) }
         end
       end
 

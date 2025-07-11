@@ -1,26 +1,26 @@
-require 'slack-notifier'
+require "slack-notifier"
 
 module Notifiers
   class SlackNotifier
     def initialize
       @webhook_url = Rails.application.credentials.slack[:webhook_url]
       @notifier = Slack::Notifier.new(@webhook_url)
-      @channel = Rails.application.credentials.slack[:channel] || '#comedy-gigs-alerts'
+      @channel = Rails.application.credentials.slack[:channel] || "#comedy-gigs-alerts"
     end
 
     def notify_import_error(error:, stats:)
       message = build_error_message(error, stats)
-      send_notification(message, ':x:')
+      send_notification(message, ":x:")
     end
 
     def notify_import_success(stats)
       message = build_success_message(stats)
-      send_notification(message, ':white_check_mark:')
+      send_notification(message, ":white_check_mark:")
     end
 
     def notify_cleanup_complete(stats)
       message = build_cleanup_message(stats)
-      send_notification(message, ':broom:')
+      send_notification(message, ":broom:")
     end
 
     private
@@ -29,7 +29,7 @@ module Notifiers
       @notifier.ping(
         message,
         channel: @channel,
-        username: 'Comedy Gigs Bot',
+        username: "Comedy Gigs Bot",
         icon_emoji: emoji
       )
     rescue StandardError => e
@@ -61,7 +61,7 @@ module Notifiers
     end
 
     def format_stats(stats)
-      return '' unless stats
+      return "" unless stats
 
       <<~STATS
         • Total processed: #{stats[:total_processed]}
