@@ -10,6 +10,48 @@ namespace :ticketmaster do
       puts 'Failed to connect to Ticketmaster API. Please check your API key.'
     end
   end
+  
+  desc 'Debug image data from Ticketmaster API'
+  task debug_images: :environment do
+    puts 'Starting Ticketmaster image data debugging...'
+    client = Api::TicketmasterClient.new
+    
+    # Get a small sample of events
+    response = client.fetch_comedy_events(size: 3, page: 0)
+    
+    if response && response['_embedded'] && response['_embedded']['events']
+      events = response['_embedded']['events']
+      puts "Found #{events.size} events for debugging"
+      
+      events.each do |event|
+        puts "\n=== EVENT: #{event['name']} ==="
+        
+        # Process the event to see logs
+        transformed = Api::TicketmasterTransformer.transform_event(event)
+        
+        # Print summary after transformation
+        if transformed[:venue] && transformed[:venue][:images].present?
+          puts "Venue images found: #{transformed[:venue][:images].keys.join(', ')}"
+        else
+          puts "No venue images found"
+        end
+        
+        if transformed[:acts].present?
+          transformed[:acts].each do |act|
+            if act[:images].present?
+              puts "Act '#{act[:name]}' images found: #{act[:images].keys.join(', ')}"
+            else
+              puts "No images found for act '#{act[:name]}'"
+            end
+          end
+        else
+          puts "No acts found in event"
+        end
+      end
+    else
+      puts "No events found or API error"
+    end
+  end
 
   desc 'Test Ticketmaster API integration with a single import'
   task test_import: :environment do
