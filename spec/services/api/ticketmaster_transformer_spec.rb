@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe Api::TicketmasterTransformer do
   describe '.extract_images' do
     context 'with valid image data' do
-      let(:images_data) do
+      let(:images) do
         [
           {
             'url' => 'https://example.com/image1.jpg',
@@ -36,31 +36,30 @@ RSpec.describe Api::TicketmasterTransformer do
         ]
       end
 
-      it 'extracts images and categorizes them by size' do
-        result = described_class.extract_images(images_data)
-        
-        expect(result).to be_a(Hash)
-        expect(result.keys).to include('large', 'medium', 'square', 'standard')
-        expect(result['large']).to eq('https://example.com/image1.jpg')
-        expect(result['medium']).to eq('https://example.com/image2.jpg')
-        expect(result['square']).to eq('https://example.com/image3.jpg')
-        expect(result['standard']).to eq('https://example.com/image4.jpg')
+      let(:images_data) { images }
+      let(:result) { described_class.extract_images(images_data) }
+
+      it { expect(result).to be_a(Hash) }
+      it { expect(result.keys).to include('large', 'medium', 'square', 'standard') }
+      it { expect(result['large']).to eq('https://example.com/image1.jpg') }
+      it { expect(result['medium']).to eq('https://example.com/image2.jpg') }
+      it { expect(result['square']).to eq('https://example.com/image3.jpg') }
+      it { expect(result['standard']).to eq('https://example.com/image4.jpg') }
+
+      let(:fallback_image) { { 'url' => 'https://example.com/fallback.jpg',
+                               'ratio' => '16_9',
+                               'width' => 1024,
+                               'height' => 576,
+                               'fallback' => true } }
+
+      describe 'preferring non-fallback images for large size' do
+        let(:images_data) { images + [ fallback_image ] }
+        it { expect(result['large']).to eq('https://example.com/image1.jpg') }
       end
-      
-      it 'ignores fallback images' do
-        fallback_image = {
-          'url' => 'https://example.com/fallback.jpg',
-          'ratio' => '16_9',
-          'width' => 1024,
-          'height' => 576,
-          'fallback' => true
-        }
-        
-        images_with_fallback = images_data + [fallback_image]
-        result = described_class.extract_images(images_with_fallback)
-        
-        expect(result['large']).to eq('https://example.com/image1.jpg')
-        expect(result.values).not_to include('https://example.com/fallback.jpg')
+
+      describe 'excluding fallback images from results' do
+        let(:images_data) { images + [ fallback_image ] }
+        it { expect(result.values).not_to include('https://example.com/fallback.jpg') }
       end
     end
 
@@ -76,16 +75,30 @@ RSpec.describe Api::TicketmasterTransformer do
       it 'returns an empty hash when images_data is not an array' do
         expect(described_class.extract_images('not an array')).to eq({})
       end
-      
-      it 'skips images without URLs' do
-        images_data = [
-          { 'ratio' => '16_9', 'width' => 1024, 'height' => 576, 'fallback' => false },
-          { 'url' => 'https://example.com/valid.jpg', 'ratio' => '3_2', 'fallback' => false }
-        ]
-        
-        result = described_class.extract_images(images_data)
+
+      let(:images_data) { [
+        { 'ratio' => '16_9', 'width' => 1024, 'height' => 576, 'fallback' => false },
+        { 'url' => 'https://example.com/valid.jpg', 'ratio' => '3_2', 'fallback' => false }
+      ] }
+      let(:result) { described_class.extract_images(images_data) }
+
+      it 'includes medium size from valid image' do
         expect(result.keys).to include('medium')
-        expect(result.keys).not_to include('large')
+      end
+
+      it 'creates fallback for large size when URL is missing' do
+        expect(result.keys).to include('large')
+      end
+
+      it 'creates fallback for standard size when URL is missing' do
+        expect(result.keys).to include('standard')
+      end
+
+      it 'creates fallback for square size when URL is missing' do
+        expect(result.keys).to include('square')
+      end
+
+      it 'uses valid URL for medium size' do
         expect(result['medium']).to eq('https://example.com/valid.jpg')
       end
     end
@@ -112,23 +125,23 @@ RSpec.describe Api::TicketmasterTransformer do
       }
     end
 
-    it 'includes images in the transformed venue data' do
-      result = described_class.build_venue(venue_data)
-      
-      expect(result).to include(:images)
-      expect(result[:images]).to be_a(Hash)
-      expect(result[:images]['large']).to eq('https://example.com/venue.jpg')
+    describe 'including images in the transformed venue data' do
+      let(:result) { described_class.build_venue(venue_data) }
+
+      it { expect(result).to include(:images) }
+      it { expect(result[:images]).to be_a(Hash) }
+      it { expect(result[:images]['large']).to eq('https://example.com/venue.jpg') }
     end
   end
 
   describe '.build_acts' do
     let(:act_data) do
-      [{
+      [ {
         'name' => 'Funny Person',
         'id' => 'a123',
         'description' => 'Very funny comedian',
         'externalLinks' => {
-          'twitter' => [{ 'url' => 'https://twitter.com/funnyperson' }]
+          'twitter' => [ { 'url' => 'https://twitter.com/funnyperson' } ]
         },
         'images' => [
           {
@@ -137,15 +150,15 @@ RSpec.describe Api::TicketmasterTransformer do
             'fallback' => false
           }
         ]
-      }]
+      } ]
     end
 
-    it 'includes images in the transformed act data' do
-      result = described_class.build_acts(act_data)
-      
-      expect(result.first).to include(:images)
-      expect(result.first[:images]).to be_a(Hash)
-      expect(result.first[:images]['square']).to eq('https://example.com/comedian.jpg')
+    describe 'including images in the transformed act data' do
+      let(:result) { described_class.build_acts(act_data) }
+
+      it { expect(result.first).to include(:images) }
+      it { expect(result.first[:images]).to be_a(Hash) }
+      it { expect(result.first[:images]['square']).to eq('https://example.com/comedian.jpg') }
     end
   end
 end

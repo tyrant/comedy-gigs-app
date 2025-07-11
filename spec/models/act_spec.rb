@@ -11,16 +11,18 @@ RSpec.describe Act, type: :model do
 
   describe 'attributes' do
     it 'defaults images to an empty hash' do
-      act = Act.new
-      expect(act.images).to eq({})
+      expect(Act.new.images).to eq({})
     end
   end
 
   describe '#primary_image_url' do
     let(:act) { create(:act, images: { 'large' => 'https://example.com/large.jpg', 'medium' => 'https://example.com/medium.jpg' }) }
 
-    it 'returns the URL for the specified size' do
+    it 'returns the URL for large size' do
       expect(act.primary_image_url('large')).to eq('https://example.com/large.jpg')
+    end
+
+    it 'returns the URL for medium size' do
       expect(act.primary_image_url('medium')).to eq('https://example.com/medium.jpg')
     end
 
@@ -28,9 +30,9 @@ RSpec.describe Act, type: :model do
       expect(act.primary_image_url('small')).to eq('https://example.com/large.jpg')
     end
 
-    it 'returns nil if no images are available' do
-      act.update(images: {})
-      expect(act.primary_image_url).to be_nil
+    describe 'returning nil if no images are available' do
+      let(:act) { create(:act, images: {}) }
+      it { expect(act.primary_image_url).to be_nil }
     end
   end
 
@@ -40,40 +42,58 @@ RSpec.describe Act, type: :model do
     let(:act2) { create(:act, name: 'Act 2') }
     let(:act3) { create(:act, name: 'Act 3') }
 
-    before do
-      # Create gigs with different dates
-      gig1 = create(:gig, venue: venue, start_time: Date.today.noon)
-      gig2 = create(:gig, venue: venue, start_time: 1.week.from_now.noon)
-      gig3 = create(:gig, venue: venue, start_time: 2.weeks.from_now.noon)
-      
-      # Associate acts with gigs
-      gig1.acts << act1
-      gig2.acts << act2
-      gig3.acts << act3
-      # Act1 also performs in a future gig
-      gig3.acts << act1
+    let!(:gig1) { create(:gig, start_time: Date.today.noon, end_time: Date.today.noon + 2.hours, venue: venue, acts: [ act1 ]) }
+    let!(:gig2) { create(:gig, start_time: 1.week.from_now.noon, end_time: 1.week.from_now.noon + 2.hours, venue: venue, acts: [ act2 ]) }
+    let!(:gig3) { create(:gig, start_time: 2.weeks.from_now.noon, end_time: 2.weeks.from_now.noon + 2.hours, venue: venue, acts: [ act1, act3 ]) }
+
+    let(:end_date) { Date.today }
+    let(:acts) { Act.performing_between(Date.today, end_date) }
+
+    describe 'returning acts performing on the exact date' do
+      it 'returns acts performing on the exact date' do
+        expect(acts).to include(act1)
+      end
     end
 
-    it 'returns acts performing on the exact date' do
-      acts = Act.performing_between(Date.today, Date.today)
-      expect(acts).to include(act1)
-      expect(acts).not_to include(act2, act3)
+    describe 'excluding acts not performing on the exact date' do
+      let(:end_date) { Date.today }
+      it { expect(acts).not_to include(act2) }
+      it { expect(acts).not_to include(act3) }
     end
 
-    it 'returns acts performing within a date range' do
-      acts = Act.performing_between(Date.today, 1.week.from_now)
-      expect(acts).to include(act1, act2)
-      expect(acts).not_to include(act3)
+    describe 'including act1 when performing within a date range' do
+      let(:end_date) { 1.week.from_now }
+      it { expect(acts).to include(act1) }
     end
 
-    it 'returns all acts when the date range covers all gigs' do
-      acts = Act.performing_between(Date.today, 3.weeks.from_now)
-      expect(acts).to include(act1, act2, act3)
+    describe 'including act2 when performing within a date range' do
+      let(:end_date) { 1.week.from_now }
+      it { expect(acts).to include(act2) }
     end
 
-    it 'does not return duplicate acts even if they perform multiple times in the range' do
-      acts = Act.performing_between(Date.today, 3.weeks.from_now)
-      expect(acts.where(name: 'Act 1').count).to eq(1)
+    describe 'excluding act3 when not performing within a date range' do
+      let(:end_date) { 1.week.from_now }
+      it { expect(acts).not_to include(act3) }
+    end
+
+    describe 'including act1 when date range covers all gigs' do
+      let(:end_date) { 3.weeks.from_now }
+      it { expect(acts).to include(act1) }
+    end
+
+    describe 'including act2 when date range covers all gigs' do
+      let(:end_date) { 3.weeks.from_now }
+      it { expect(acts).to include(act2) }
+    end
+
+    describe 'including act3 when date range covers all gigs' do
+      let(:end_date) { 3.weeks.from_now }
+      it { expect(acts).to include(act3) }
+    end
+
+    describe 'not returning duplicate acts even if they perform multiple times in the range' do
+      let(:end_date) { 3.weeks.from_now }
+      it { expect(acts.where(name: 'Act 1').count).to eq(1) }
     end
   end
 end

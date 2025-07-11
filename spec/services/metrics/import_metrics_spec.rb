@@ -106,33 +106,42 @@ RSpec.describe Metrics::ImportMetrics do
         )
       end
 
-      it 'includes days with zero metrics' do
-        daily_metrics = metrics.get_daily_metrics(3)
+      let(:daily_metrics) { metrics.get_daily_metrics(3) }
+
+      it 'returns the requested number of days' do
         expect(daily_metrics.size).to eq(3)
+      end
+
+      it 'includes empty days with zero metrics' do
         expect(daily_metrics.first[:total_processed]).to eq(0)
+      end
+
+      it 'includes days with recorded metrics' do
         expect(daily_metrics.last[:total_processed]).to eq(10)
       end
 
-      it 'includes days with zero metrics' do
-        # Record some test metrics for current hour
-        hourly_key = "metrics:import:hourly:#{current_time.strftime('%Y-%m-%d-%H')}"
-        redis.hmset(
-          hourly_key,
-          'total_processed', 5,
-          'successful', 4,
-          'failed', 1,
-          'skipped', 0,
-          'rate_limited', 0
-        )
+      describe 'returning the requested number of days when hourly data exists' do
+        before do
+          # Record some test metrics for current hour
+          hourly_key = "metrics:import:hourly:#{current_time.strftime('%Y-%m-%d-%H')}"
+          redis.hmset(
+            hourly_key,
+            'total_processed', 5,
+            'successful', 4,
+            'failed', 1,
+            'skipped', 0,
+            'rate_limited', 0
+          )
 
-        # Set TTLs
-        redis.expire(key, 30.days)
-        redis.expire(hourly_key, 24.hours)
+          # Set TTLs
+          redis.expire(key, 30.days)
+          redis.expire(hourly_key, 24.hours)
+        end
 
-        # Get metrics for the last 5 days
-        daily_metrics = metrics.get_daily_metrics(5)
-        expect(daily_metrics.size).to eq(5)
-        expect(daily_metrics.map { |m| m[:total_processed] }).to include(0)
+        let(:daily_metrics) { metrics.get_daily_metrics(5) }
+
+        it { expect(daily_metrics.size).to eq(5) }
+        it { expect(daily_metrics.map { |m| m[:total_processed] }).to include(0) }
       end
     end
   end
@@ -151,26 +160,31 @@ RSpec.describe Metrics::ImportMetrics do
       )
     end
 
-    it 'returns metrics for the specified number of hours' do
-      hourly_metrics = metrics.get_hourly_metrics(3)
-      expect(hourly_metrics.size).to eq(3)
-      expect(hourly_metrics.last[:total_processed]).to eq(10)
+    describe 'returning the requested number of hours' do
+      let(:hourly_metrics) { metrics.get_hourly_metrics(3) }
+      it { expect(hourly_metrics.size).to eq(3) }
     end
 
-    it 'includes empty hours in the range' do
-      # Add a gap in the data
-      Timecop.travel(Time.current - 2.hours) do
-        metrics.record_import(
-          total_processed: 0,
-          successful: 0,
-          failed: 0,
-          skipped: 0,
-          rate_limited: 0
-        )
+    describe 'including the current hour metrics' do
+      let(:hourly_metrics) { metrics.get_hourly_metrics(3) }
+      it { expect(hourly_metrics.last[:total_processed]).to eq(10) }
+    end
+
+    describe 'returns the requested number of hours when there are gaps' do
+      before do
+        Timecop.travel(Time.current - 2.hours) do
+          metrics.record_import(
+            total_processed: 0,
+            successful: 0,
+            failed: 0,
+            skipped: 0,
+            rate_limited: 0
+          )
+        end
       end
-      hourly_metrics = metrics.get_hourly_metrics(5)
-      expect(hourly_metrics.size).to eq(5)
-      expect(hourly_metrics.map { |m| m[:total_processed] }).to include(0)
+      let(:hourly_metrics) { metrics.get_hourly_metrics(5) }
+      it { expect(hourly_metrics.size).to eq(5) }
+      it { expect(hourly_metrics.map { |m| m[:total_processed] }).to include(0) }
     end
   end
 end

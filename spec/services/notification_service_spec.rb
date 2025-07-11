@@ -48,9 +48,12 @@ RSpec.describe NotificationService do
         service.notify_import_error(error: error, stats: stats)
       end
 
-      it 'sends email notification' do
+      it 'creates email notification with error details' do
         expect(ImportMailer).to have_received(:error_notification)
           .with(hash_including(error: error))
+      end
+
+      it 'delivers email notification asynchronously' do
         expect(mailer).to have_received(:deliver_later)
       end
 
@@ -80,9 +83,12 @@ RSpec.describe NotificationService do
           service.notify_import_error(error: error, stats: stats)
         end
 
-        it 'sends email notification' do
+        it 'creates email notification with error details when Slack is not configured' do
           expect(ImportMailer).to have_received(:error_notification)
             .with(hash_including(error: error, stats: stats))
+        end
+
+        it 'delivers email notification asynchronously when Slack is not configured' do
           expect(mailer).to have_received(:deliver_later)
         end
 
