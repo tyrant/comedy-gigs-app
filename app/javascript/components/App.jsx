@@ -64,7 +64,7 @@ const App = () => {
           label: act.name,
           image: act.primary_image_url || null
         }));
-        
+
         setActs(formattedActs.sort((a, b) => a.label.localeCompare(b.label)));
       } catch (err) {
         console.error('Error fetching acts:', err);
@@ -219,10 +219,8 @@ const App = () => {
                     ...baseStyles,
                     backgroundColor: '#e5e7eb'
                   }),
-                  // Fix z-index issue with map
                   menu: (baseStyles) => ({
-                    ...baseStyles,
-                    zIndex: 9999 // Ensure dropdown appears above the map
+                    ...baseStyles
                   })
                 }}
                 // Custom option component with image thumbnails
@@ -232,10 +230,10 @@ const App = () => {
                       <img 
                         src={option.image} 
                         alt={option.label}
-                        className="w-6 h-6 rounded-full object-cover"
+                        className="w-8 h-8 rounded-full object-cover"
                       />
                     )}
-                    <span>{option.label}</span>
+                    <span className="text-sm">{option.label}</span>
                   </div>
                 )}
               />
@@ -243,6 +241,7 @@ const App = () => {
             
             {/* Start date */}
             <div className="w-40">
+              <p className="text-xs text-gray-600">Start date</p>
               <input
                 type="date"
                 className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
@@ -254,6 +253,7 @@ const App = () => {
             
             {/* End date */}
             <div className="w-40">
+              <p className="text-xs text-gray-600">End date</p>
               <input
                 type="date"
                 className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
@@ -283,7 +283,7 @@ const App = () => {
               <span className="text-sm text-red-600">{error}</span>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">{gigs.length} gigs found</span>
+                <span className="text-sm text-gray-600">{gigs.length} gigs</span>
                 {((searchFilters.actIds && searchFilters.actIds.length > 0) || searchFilters.startDate || searchFilters.endDate) && (
                   <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
                     Filters applied
