@@ -40,11 +40,10 @@ const formatDate = (dateString) => {
 // URL parameter handling
 const getMapParamsFromUrl = () => {
   const params = new URLSearchParams(window.location.search);
-  const lng = params.get('lng') ? parseFloat(params.get('lng')) : null;
   
   return {
     lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
-    lng: lng ? normalizeLongitude(lng) : null,
+    lng: params.get('lng') ? normalizeLongitude(parseFloat(params.get('lng'))) : null,
     zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null,
     venueId: params.get('venue') || null
   };
