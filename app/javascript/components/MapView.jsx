@@ -328,7 +328,7 @@ const VenueMarkers = ({ venueGroups }) => {
         const popupContent = createPopupContent(venue, gigs);
         const popup = L.popup({
           autoClose: false,
-          closeOnClick: false,
+          closeOnClick: true,
           className: 'venue-popup-container',
           maxWidth: 340,
           minWidth: 280,
