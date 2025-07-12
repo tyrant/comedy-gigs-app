@@ -29,11 +29,15 @@ const MapEventHandler = ({ onBoundsChange }) => {
     const bounds = map.getBounds();
     const zoom = map.getZoom();
     
-    // Update URL with center coordinates
+    // Get current URL params to preserve venue ID if present
+    const { venueId } = getMapParamsFromUrl();
+    
+    // Update URL with center coordinates and preserve venue ID if present
     updateUrlParams(
       center.lat,
       center.lng,
-      zoom
+      zoom,
+      venueId
     );
     
     // Send the raw bounds to the API
@@ -286,6 +290,8 @@ const VenueMarkers = ({ venueGroups }) => {
     };
   }, [map]);
   
+  // We'll handle the venue ID check in the markers effect instead
+  
   // Effect to create and manage markers
   useEffect(() => {
     if (!markerClusterRef.current || !map) return;
@@ -339,13 +345,23 @@ const VenueMarkers = ({ venueGroups }) => {
         // Bind popup to marker
         marker.bindPopup(popup);
         
-        // Track popup open state
+        // Track popup open state and update URL
         marker.on('popupopen', () => {
           popupStatesRef.current[venueId] = true;
+          
+          // Update URL with venue ID
+          const mapCenter = map.getCenter();
+          const mapZoom = map.getZoom();
+          updateUrlParams(mapCenter.lat, mapCenter.lng, mapZoom, venueId);
         });
         
         marker.on('popupclose', () => {
           popupStatesRef.current[venueId] = false;
+          
+          // Remove venue ID from URL
+          const mapCenter = map.getCenter();
+          const mapZoom = map.getZoom();
+          updateUrlParams(mapCenter.lat, mapCenter.lng, mapZoom);
         });
         
         // Add to cluster group and store reference
@@ -362,6 +378,15 @@ const VenueMarkers = ({ venueGroups }) => {
         delete popupStatesRef.current[id];
       }
     });
+    
+    // Check for venue ID in URL and open the corresponding popup after all markers are created
+    const { venueId } = getMapParamsFromUrl();
+    if (venueId && markersRef.current[venueId]) {
+      setTimeout(() => {
+        markersRef.current[venueId].openPopup();
+        popupStatesRef.current[venueId] = true;
+      }, 300); // Small delay to ensure proper rendering
+    }
     
     // Cleanup on unmount is handled by the cluster group effect
   }, [map, venueGroups, createPopupContent]);

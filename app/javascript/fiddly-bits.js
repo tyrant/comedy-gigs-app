@@ -45,15 +45,24 @@ const getMapParamsFromUrl = () => {
   return {
     lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
     lng: lng ? normalizeLongitude(lng) : null,
-    zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null
+    zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null,
+    venueId: params.get('venue') || null
   };
 };
 
-const updateUrlParams = (lat, lng, zoom) => {
+const updateUrlParams = (lat, lng, zoom, venueId = null) => {
   const params = new URLSearchParams(window.location.search);
   params.set('lat', lat.toFixed(6));
   params.set('lng', normalizeLongitude(lng).toFixed(6));
   params.set('zoom', zoom);
+  
+  // Handle venue ID parameter
+  if (venueId) {
+    params.set('venue', venueId);
+  } else {
+    params.delete('venue');
+  }
+  
   window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
 };
 
