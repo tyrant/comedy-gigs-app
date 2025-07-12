@@ -110,9 +110,9 @@ const VenueMarkers = ({ venueGroups }) => {
   
   // Create popup content for a venue
   const createPopupContent = useCallback((venue, gigs) => {
-    // Create a container for the popup content
+    // Create a container for the popup content with improved styling
     const container = document.createElement('div');
-    container.className = 'venue-popup w-full sm:w-[330px] relative';
+    container.className = 'venue-popup w-[280px] sm:w-[330px] relative bg-white rounded-md overflow-hidden shadow-lg';
     
     // Create the venue image if available
     if (venue.primary_image_url) {
@@ -128,67 +128,107 @@ const VenueMarkers = ({ venueGroups }) => {
       container.appendChild(imageContainer);
     }
     
-    // Create the content container
+    // Create the content container with improved styling
     const contentContainer = document.createElement('div');
-    contentContainer.className = 'mt-2 max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100';
+    contentContainer.className = 'max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100';
     
-    // Create the sticky header
+    // Create the sticky header with improved styling
     const headerContainer = document.createElement('div');
-    headerContainer.className = 'sticky top-0 z-10 bg-white px-2 pt-2 pb-3 backdrop-blur-sm bg-opacity-90';
+    headerContainer.className = 'sticky top-0 z-10 bg-white px-2 pt-2 pb-2 backdrop-blur-sm bg-opacity-95 border-b border-gray-100';
     
     const venueTitle = document.createElement('h3');
-    venueTitle.className = 'text-lg sm:text-xl font-bold leading-tight';
+    venueTitle.className = 'text-base sm:text-lg font-bold leading-tight text-gray-900';
     venueTitle.textContent = venue.name;
     
-    const venueLocation = document.createElement('p');
-    venueLocation.className = 'text-sm sm:text-base text-gray-600 mt-1';
-    venueLocation.textContent = `${venue.city}, ${venue.country}`;
+    // Create a flex container for location with icon
+    const locationContainer = document.createElement('div');
+    locationContainer.className = 'flex items-center mt-0.5';
     
+    // Add location icon
+    const locationIcon = document.createElement('span');
+    locationIcon.className = 'text-gray-400 mr-1 text-xs';
+    locationIcon.innerHTML = '📍'; // Simple location icon
+    
+    const venueLocation = document.createElement('p');
+    venueLocation.className = 'text-gray-500 text-xs sm:text-sm truncate';
+    venueLocation.textContent = venue.address || venue.city || '';
+    
+    locationContainer.appendChild(locationIcon);
+    locationContainer.appendChild(venueLocation);
+    
+    // Add a subtle gradient to indicate scrollable content
     const gradient = document.createElement('div');
-    gradient.className = 'absolute left-0 right-0 bottom-0 h-4 bg-gradient-to-b from-white to-transparent';
+    gradient.className = 'absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-t from-white to-transparent pointer-events-none';
     
     headerContainer.appendChild(venueTitle);
-    headerContainer.appendChild(venueLocation);
+    headerContainer.appendChild(locationContainer);
     headerContainer.appendChild(gradient);
     
-    // Create the gigs list
+    // Create the gigs list - more compact and mobile-friendly
     const gigsList = document.createElement('div');
-    gigsList.className = 'space-y-4 pr-2';
+    gigsList.className = 'divide-y divide-gray-100 px-3 py-2';
     
     gigs.forEach(gig => {
       const gigItem = document.createElement('div');
-      gigItem.className = 'border-t py-3 first:border-t-0 first:pt-0 hover:bg-gray-50 px-2';
+      gigItem.className = 'py-2.5 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded';
+      
+      // Create a flex container for the gig header
+      const gigHeader = document.createElement('div');
+      gigHeader.className = 'flex justify-between items-start';
+      
+      // Left side: title and date
+      const gigInfo = document.createElement('div');
+      gigInfo.className = 'flex-1 min-w-0'; // prevent overflow
       
       const gigTitle = document.createElement('h4');
-      gigTitle.className = 'font-semibold text-gray-900';
+      gigTitle.className = 'font-medium text-gray-900 text-sm sm:text-base truncate';
       gigTitle.textContent = gig.name;
       
       const gigDate = document.createElement('p');
-      gigDate.className = 'text-gray-600 text-sm';
+      gigDate.className = 'text-gray-500 text-xs sm:text-sm';
       gigDate.textContent = formatDate(gig.start_time);
       
-      gigItem.appendChild(gigTitle);
-      gigItem.appendChild(gigDate);
+      gigInfo.appendChild(gigTitle);
+      gigInfo.appendChild(gigDate);
       
-      // Add acts if available
+      // Right side: ticket button if available
+      if (gig.ticket_url) {
+        const ticketLink = document.createElement('a');
+        ticketLink.href = gig.ticket_url;
+        ticketLink.target = '_blank';
+        ticketLink.rel = 'noopener noreferrer';
+        ticketLink.className = 'ml-2 shrink-0 px-2.5 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors duration-150';
+        ticketLink.textContent = 'Tickets';
+        
+        gigHeader.appendChild(gigInfo);
+        gigHeader.appendChild(ticketLink);
+      } else {
+        gigHeader.appendChild(gigInfo);
+      }
+      
+      gigItem.appendChild(gigHeader);
+      
+      // Add acts if available - more compact display
       if (gig.acts && gig.acts.length > 0) {
         const actsContainer = document.createElement('div');
-        actsContainer.className = 'mt-2';
-        
-        const actsLabel = document.createElement('p');
-        actsLabel.className = 'text-xs text-gray-500 mb-1';
-        actsLabel.textContent = 'Featuring:';
+        actsContainer.className = 'mt-1.5';
         
         const actsWrapper = document.createElement('div');
-        actsWrapper.className = 'flex flex-wrap gap-2';
+        actsWrapper.className = 'flex flex-wrap gap-1.5';
+        
+        // Add a subtle label directly in the flow
+        const actsLabel = document.createElement('span');
+        actsLabel.className = 'text-xs text-gray-400 mr-1';
+        actsLabel.textContent = 'With:';
+        actsWrapper.appendChild(actsLabel);
         
         gig.acts.forEach(act => {
           const actItem = document.createElement('div');
-          actItem.className = 'flex items-center bg-purple-50 rounded-md p-1';
+          actItem.className = 'inline-flex items-center bg-purple-50 rounded-full py-0.5 px-2';
           
           if (act.primary_image_url) {
             const actImageContainer = document.createElement('div');
-            actImageContainer.className = 'w-8 h-8 rounded-full overflow-hidden mr-1';
+            actImageContainer.className = 'w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0';
             
             const actImage = document.createElement('img');
             actImage.src = act.primary_image_url;
@@ -200,28 +240,15 @@ const VenueMarkers = ({ venueGroups }) => {
           }
           
           const actName = document.createElement('span');
-          actName.className = 'text-xs text-purple-800 font-medium';
+          actName.className = 'text-xs text-purple-800 font-medium truncate max-w-[100px]';
           actName.textContent = act.name;
           
           actItem.appendChild(actName);
           actsWrapper.appendChild(actItem);
         });
         
-        actsContainer.appendChild(actsLabel);
         actsContainer.appendChild(actsWrapper);
         gigItem.appendChild(actsContainer);
-      }
-      
-      // Add ticket link if available
-      if (gig.ticket_url) {
-        const ticketLink = document.createElement('a');
-        ticketLink.href = gig.ticket_url;
-        ticketLink.target = '_blank';
-        ticketLink.rel = 'noopener noreferrer';
-        ticketLink.className = 'mt-2 inline-block px-3 py-1 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700';
-        ticketLink.textContent = 'Get Tickets';
-        
-        gigItem.appendChild(ticketLink);
       }
       
       gigsList.appendChild(gigItem);
@@ -300,11 +327,13 @@ const VenueMarkers = ({ venueGroups }) => {
         // Create popup with content
         const popupContent = createPopupContent(venue, gigs);
         const popup = L.popup({
-          maxWidth: 350,
-          maxHeight: 500,
-          className: 'venue-popup',
-          autoClose: false,  // Important: prevent auto-closing on map click
-          closeOnClick: false  // Important: prevent closing when clicking elsewhere
+          autoClose: false,
+          closeOnClick: false,
+          className: 'venue-popup-container',
+          maxWidth: 340,
+          minWidth: 280,
+          offset: [0, -5],
+          autoPanPadding: [20, 20]
         }).setContent(popupContent);
         
         // Bind popup to marker
