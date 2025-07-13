@@ -21,6 +21,7 @@
     "esbuild": "^0.25.5",
     "esbuild-loader": "^4.3.0",
     "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0",
