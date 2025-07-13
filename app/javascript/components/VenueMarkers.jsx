@@ -202,7 +202,7 @@ const VenueMarkers = ({ venueGroups }) => {
         // Track popup open state and update URL
         marker.on('popupopen', () => {
           popupStatesRef.current[venueId] = true;
-          
+          console.log('Popup gigs:', gigs);
           // Update URL with venue ID
           const mapCenter = map.getCenter();
           const mapZoom = map.getZoom();

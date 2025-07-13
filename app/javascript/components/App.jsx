@@ -193,55 +193,14 @@ const App = () => {
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-gray-100">
       <header className="bg-white shadow-sm top-0">
-        <div className="w-full px-4 py-3 flex flex-wrap items-center gap-4">
+        <div className="w-full p-1 flex flex-wrap items-center gap-2">
           
           {/* Integrated Search Form */}
-          <div className="flex flex-1 flex-wrap items-center gap-3">
-            {/* Act multi-select dropdown with thumbnails */}
-            <div className="w-72">
-              <Select
-                isMulti
-                isLoading={loadingActs}
-                options={acts}
-                value={searchFilters.actIds}
-                onChange={handleActsChange}
-                placeholder="Select acts..."
-                noOptionsMessage={() => "No acts found"}
-                classNamePrefix="react-select"
-                // Custom styles for the dropdown
-                styles={{
-                  control: (baseStyles) => ({
-                    ...baseStyles,
-                    borderColor: '#d1d5db',
-                    fontSize: '0.875rem'
-                  }),
-                  multiValue: (baseStyles) => ({
-                    ...baseStyles,
-                    backgroundColor: '#e5e7eb'
-                  }),
-                  menu: (baseStyles) => ({
-                    ...baseStyles
-                  })
-                }}
-                // Custom option component with image thumbnails
-                formatOptionLabel={(option) => (
-                  <div className="flex items-center gap-2">
-                    {option.image && (
-                      <img 
-                        src={option.image} 
-                        alt={option.label}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    )}
-                    <span className="text-sm">{option.label}</span>
-                  </div>
-                )}
-              />
-            </div>
-            
+          <div className="flex flex-1 flex-wrap gap-0">
+
             {/* Start date */}
-            <div className="w-40">
-              <p className="text-xs text-gray-600">Start date</p>
+            <div className="basis-1/2 sm:basis-auto p-2">
+              <p className="text-xs text-gray-600">From</p>
               <input
                 type="date"
                 className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
@@ -252,8 +211,8 @@ const App = () => {
             </div>
             
             {/* End date */}
-            <div className="w-40">
-              <p className="text-xs text-gray-600">End date</p>
+            <div className="basis-1/2 sm:basis-auto p-2">
+              <p className="text-xs text-gray-600">To</p>
               <input
                 type="date"
                 className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
@@ -261,36 +220,67 @@ const App = () => {
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
                 placeholder="End Date"
               />
-            </div>
-            
-            {/* Clear filters button */}
-            <button
-              onClick={handleClearFilters}
-              className="py-1 px-3 text-sm border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
-            >
-              Clear
-            </button>
+            </div>           
+
+            {/* Act multi-select dropdown with thumbnails */}
+            <div className="basis-full sm:basis-auto flex-1 p-2">
+              <div className="grow">
+                <Select
+                  isMulti
+                  closeMenuOnSelect={false}
+                  isLoading={loadingActs}
+                  options={acts}
+                  value={searchFilters.actIds}
+                  onChange={handleActsChange}
+                  placeholder="Select acts"
+                  noOptionsMessage={() => "No acts found"}
+                  classNamePrefix="react-select"
+                  // Custom styles for the dropdown
+                  styles={{
+                    control: (baseStyles) => ({
+                      ...baseStyles,
+                      borderColor: '#d1d5db',
+                      fontSize: '0.875rem'
+                    }),
+                    multiValue: (baseStyles) => ({
+                      ...baseStyles,
+                      backgroundColor: '#e5e7eb'
+                    }),
+                    menu: (baseStyles) => ({
+                      ...baseStyles
+                    })
+                  }}
+                  // Custom option component with image thumbnails
+                  formatOptionLabel={(option) => (
+                    <div className="flex items-center gap-2">
+                      <img src={option.image} alt={option.label} className="w-8 h-8 rounded-full object-cover" />
+                      <span className="text-sm">{option.label}</span>
+                    </div>
+                  )}
+                />
+              </div>
+            </div>   
           </div>
           
-          {/* Status indicators */}
-          <div className="flex items-center">
-            {loading ? (
-              <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
+            {/* Clear filters button */}
+            <button
+                onClick={handleClearFilters}
+                className="flex-none py-1 px-3 text-sm border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              >
+                Clear
+            </button>
+
+            <div className="w-16 flex justify-center">
+              {loading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                <span className="text-sm text-gray-600">Loading...</span>
-              </div>
-            ) : error ? (
-              <span className="text-sm text-red-600">{error}</span>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">{gigs.length} gigs</span>
-                {((searchFilters.actIds && searchFilters.actIds.length > 0) || searchFilters.startDate || searchFilters.endDate) && (
-                  <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
-                    Filters applied
-                  </span>
-                )}
-              </div>
-            )}
+              ) : error ? (
+                <span className="text-sm text-red-600">{error}</span>
+              ) : (
+                <span className="text-sm text-gray-600 text-center">{gigs.length} gigs</span>
+              )}
+            </div>
+
           </div>
         </div>
       </header>

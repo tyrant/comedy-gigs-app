@@ -1,4 +1,6 @@
 class Act < ApplicationRecord
+  # Remove the ActionView helper as it won't work properly in API contexts
+
   # Relationships
   has_and_belongs_to_many :gigs
 
@@ -25,7 +27,10 @@ class Act < ApplicationRecord
 
   # Helper method to get the primary image URL
   def primary_image_url(size = "standard")
-    return nil if images.blank?
+    # Use a placeholder image that will definitely work
+    # For production, you should use your own hosted image
+    placeholder = "/images/comedian_placeholder.png"
+    return placeholder if images.blank?
 
     # Try to find an image with the requested size
     if images[size].present?
@@ -34,7 +39,7 @@ class Act < ApplicationRecord
     elsif images.values.first.present?
       images.values.first
     else
-      nil
+      placeholder
     end
   end
 end
