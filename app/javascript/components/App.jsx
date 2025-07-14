@@ -232,7 +232,7 @@ const App = () => {
                   options={acts}
                   value={searchFilters.actIds}
                   onChange={handleActsChange}
-                  placeholder="Select acts"
+                  placeholder="Show gigs performed by ..."
                   noOptionsMessage={() => "No acts found"}
                   classNamePrefix="react-select"
                   // Custom styles for the dropdown
@@ -244,19 +244,65 @@ const App = () => {
                     }),
                     multiValue: (baseStyles) => ({
                       ...baseStyles,
-                      backgroundColor: '#e5e7eb'
+                      backgroundColor: '#fff',
+                      padding: '0px',
+                      marginRight: '-2px',
+                      borderRadius: '50%'
+                    }),
+                    multiValueLabel: (baseStyles) => ({
+                      ...baseStyles,
+                      // Hide the text label completely
+                      padding: 0,
+                      paddingLeft: 0
+                    }),
+                    multiValueRemove: (baseStyles) => ({
+                      ...baseStyles,
+                      zIndex: 9999,
+                      cursor: 'pointer',
+                      borderRadius: '50%',
+                      position: 'relative',
+                      top: 0,
+                      right: 10,
+                      width: '20px',
+                      height: '20px',
+                      backgroundColor: '#aaa',
+                      '&:hover': {
+                        backgroundColor: 'rgba(220,38,38,1)',
+                        color: 'white'
+                      }
                     }),
                     menu: (baseStyles) => ({
                       ...baseStyles
                     })
                   }}
-                  // Custom option component with image thumbnails
-                  formatOptionLabel={(option) => (
-                    <div className="flex items-center gap-2">
-                      <img src={option.image} alt={option.label} className="w-8 h-8 rounded-full object-cover" />
-                      <span className="text-sm">{option.label}</span>
-                    </div>
-                  )}
+                  // Custom components
+                  components={{
+                    // Custom MultiValueLabel to show only the image for selected values
+                    MultiValueLabel: ({ data }) => (
+                      <div className="w-8 h-8 rounded-full overflow-hidden">
+                        <img 
+                          src={data.image} 
+                          alt={data.label} 
+                          className="w-full h-full object-cover" 
+                          title={data.label} // Show name on hover
+                        />
+                      </div>
+                    )
+                  }}
+                  // Custom option component with image thumbnails (for dropdown options)
+                  formatOptionLabel={(option, { context }) => {
+                    // Only show the full option with text in the menu, not in the value container
+                    if (context === 'menu') {
+                      return (
+                        <div className="flex items-center gap-2">
+                          <img src={option.image} alt={option.label} className="w-8 h-8 rounded-full object-cover" />
+                          <span className="text-sm">{option.label}</span>
+                        </div>
+                      );
+                    }
+                    // For the value container, we'll use the custom MultiValueLabel component
+                    return null;
+                  }}
                 />
               </div>
             </div>   
