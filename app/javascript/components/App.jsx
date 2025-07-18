@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import MapView from './MapView';
-import { normalizeLongitude } from '../fiddly-bits';
+import { normalizeLongitude, debounce, getFilterParamsFromUrl, updateFilterUrlParams } from '../fiddly-bits';
 import Select from 'react-select';
 
 // Debug flag to log API calls
@@ -12,11 +12,10 @@ const App = () => {
   const [error, setError] = useState(null);
   const lastBoundsRef = useRef(null);
   
-  // Search filters state
-  const [searchFilters, setSearchFilters] = useState({
-    actIds: [],
-    startDate: '',
-    endDate: ''
+  // Search filters state - initialize from URL parameters
+  const [searchFilters, setSearchFilters] = useState(() => {
+    // Get filter params from URL
+    return getFilterParamsFromUrl();
   });
   
   // Acts data for the dropdown
@@ -49,8 +48,22 @@ const App = () => {
            round(west1) === round(west2);
   };
 
-  // Fetch acts for dropdown on component mount
+  // Fetch acts for dropdown on component mount and initialize filters from URL
   useEffect(() => {
+    // Get filter params from URL
+    const urlFilterParams = getFilterParamsFromUrl();
+    if (DEBUG) console.log('URL filter params:', urlFilterParams);
+    
+    // Initialize search filters from URL parameters
+    if (urlFilterParams) {
+      setSearchFilters(prevFilters => ({
+        ...prevFilters,
+        startDate: urlFilterParams.startDate || '',
+        endDate: urlFilterParams.endDate || '',
+        // We'll set actIds after fetching the acts data
+      }));
+    }
+    
     const fetchActs = async () => {
       setLoadingActs(true);
       try {
@@ -65,7 +78,23 @@ const App = () => {
           image: act.primary_image_url || null
         }));
 
-        setActs(formattedActs.sort((a, b) => a.label.localeCompare(b.label)));
+        const sortedActs = formattedActs.sort((a, b) => a.label.localeCompare(b.label));
+        setActs(sortedActs);
+        
+        // Now that we have the acts data, we can set the selected acts from URL
+        if (urlFilterParams && urlFilterParams.actIds && urlFilterParams.actIds.length > 0) {
+          // Find the act objects that match the IDs from the URL
+          const selectedActs = sortedActs.filter(act => 
+            urlFilterParams.actIds.includes(act.value)
+          );
+          
+          if (selectedActs.length > 0) {
+            setSearchFilters(prevFilters => ({
+              ...prevFilters,
+              actIds: selectedActs
+            }));
+          }
+        }
       } catch (err) {
         console.error('Error fetching acts:', err);
       } finally {
@@ -151,6 +180,10 @@ const App = () => {
     // Set the new filters
     setSearchFilters(newFilters);
     
+    // Update URL with new filters using the granular utility function
+    // This will only update the filter parameters without affecting map parameters
+    updateFilterUrlParams(newFilters);
+    
     // Trigger an API call with the new filters
     if (lastBoundsRef.current) {
       fetchGigsForBounds(lastBoundsRef.current, newFilters);
@@ -168,6 +201,10 @@ const App = () => {
     
     setSearchFilters(newFilters);
     
+    // Update URL with new filters using the granular utility function
+    // This will only update the filter parameters without affecting map parameters
+    updateFilterUrlParams(newFilters);
+    
     if (lastBoundsRef.current) {
       fetchGigsForBounds(lastBoundsRef.current, newFilters);
     }
@@ -179,6 +216,10 @@ const App = () => {
     
     const clearedFilters = { actIds: [], startDate: '', endDate: '' };
     setSearchFilters(clearedFilters);
+    
+    // Update URL with cleared filters using the granular utility function
+    // This will only update the filter parameters without affecting map parameters
+    updateFilterUrlParams(clearedFilters);
     
     if (lastBoundsRef.current) {
       fetchGigsForBounds(lastBoundsRef.current, clearedFilters);

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { createRoot } from 'react-dom/client';
-import { formatDate, getMapParamsFromUrl, updateUrlParams } from '../fiddly-bits';
+import { formatDate, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam, getFilterParamsFromUrl } from '../fiddly-bits';
 import L from 'leaflet'
 import 'leaflet.markercluster'
 
@@ -105,6 +105,8 @@ const PopupContent = ({ venue, gigs }) => {
 
 // Venue markers component
 const VenueMarkers = ({ venueGroups }) => {
+  // Get current filter params from URL to preserve them
+  const filterParams = getFilterParamsFromUrl();
   const map = useMap();
   const markersRef = useRef({});
   const popupStatesRef = useRef({});
@@ -203,19 +205,30 @@ const VenueMarkers = ({ venueGroups }) => {
         marker.on('popupopen', () => {
           popupStatesRef.current[venueId] = true;
           console.log('Popup gigs:', gigs);
-          // Update URL with venue ID
+          
+          // Update URL with venue ID and map position
           const mapCenter = map.getCenter();
           const mapZoom = map.getZoom();
-          updateUrlParams(mapCenter.lat, mapCenter.lng, mapZoom, venueId);
+          
+          // Update map parameters
+          updateMapUrlParams(mapCenter.lat, mapCenter.lng, mapZoom);
+          
+          // Update venue parameter
+          updateVenueUrlParam(venueId);
         });
         
         marker.on('popupclose', () => {
           popupStatesRef.current[venueId] = false;
           
-          // Remove venue ID from URL
+          // Remove venue ID from URL but preserve map position
           const mapCenter = map.getCenter();
           const mapZoom = map.getZoom();
-          updateUrlParams(mapCenter.lat, mapCenter.lng, mapZoom);
+          
+          // Update map parameters
+          updateMapUrlParams(mapCenter.lat, mapCenter.lng, mapZoom);
+          
+          // Remove venue parameter
+          updateVenueUrlParam(null);
         });
         
         // Add to cluster group and store reference

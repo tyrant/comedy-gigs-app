@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, ZoomControl, ScaleControl, useMap, useMapEvents } from 'react-leaflet';
-import { debounce, getMapParamsFromUrl, updateUrlParams } from '../fiddly-bits';
+import { debounce, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam } from '../fiddly-bits';
 import VenueMarkers from './VenueMarkers';
 
 // Map event handler component
@@ -28,16 +28,9 @@ const MapEventHandler = ({ onBoundsChange }) => {
     const bounds = map.getBounds();
     const zoom = map.getZoom();
     
-    // Get current URL params to preserve venue ID if present
-    const { venueId } = getMapParamsFromUrl();
-    
-    // Update URL with center coordinates and preserve venue ID if present
-    updateUrlParams(
-      center.lat,
-      center.lng,
-      zoom,
-      venueId
-    );
+    // Update map position parameters in URL
+    // This won't affect venue ID or filter parameters
+    updateMapUrlParams(center.lat, center.lng, zoom);
     
     // Send the raw bounds to the API
     debouncedBoundsChange(bounds);
