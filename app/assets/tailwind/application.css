@@ -75,3 +75,12 @@
     border-radius: 0.5rem;
   }
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  cursor: pointer;
+}
+
+/* Firefox */
+input[type="date"]::-moz-calendar-picker-indicator {
+  cursor: pointer;
+}
