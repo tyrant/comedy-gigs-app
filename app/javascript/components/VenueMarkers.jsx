@@ -184,7 +184,10 @@ const VenueMarkers = ({ venueGroups }) => {
         }
       } else {
         // Create new marker
-        const marker = L.marker([lat, lng], { icon: comedyIcon });
+        const marker = L.marker([lat, lng], { 
+          icon: comedyIcon,
+          title: venue.name
+        });
         
         // Create popup with content
         const popupContent = createPopupContent(venue, gigs);

@@ -271,6 +271,7 @@ const App = () => {
               <p className="text-xs text-gray-600">From</p>
               <input
                 type="date"
+                name="start_date"
                 className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
                 value={searchFilters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
@@ -283,6 +284,7 @@ const App = () => {
               <p className="text-xs text-gray-600">To</p>
               <input
                 type="date"
+                name="end_date"
                 className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
                 value={searchFilters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
@@ -294,6 +296,7 @@ const App = () => {
             <div className="basis-full sm:basis-auto flex-1 p-2">
               <div className="grow">
                 <Select
+                  name="acts"
                   isMulti
                   closeMenuOnSelect={false}
                   isLoading={loadingActs}

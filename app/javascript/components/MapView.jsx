@@ -3,6 +3,27 @@ import { MapContainer, TileLayer, ZoomControl, ScaleControl, useMap, useMapEvent
 import { debounce, getMapParamsFromUrl, updateMapUrlParams } from '../fiddly-bits';
 import VenueMarkers from './VenueMarkers';
 
+// Component to expose map instance for testing
+const MapInstanceExposer = () => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Expose map instance to window for system tests
+    if (typeof window !== 'undefined') {
+      window.mapInstance = map;
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.mapInstance = null;
+      }
+    };
+  }, [map]);
+  
+  return null;
+};
+
 // Map event handler component
 const MapEventHandler = ({ onBoundsChange }) => {
   const map = useMapEvents({
@@ -148,6 +169,7 @@ const MapView = ({ gigs, onBoundsChange }) => {
       zoomControl={false}
       worldCopyJump={true}
     >
+      <MapInstanceExposer />
       <MapEventHandler onBoundsChange={onBoundsChange} />
       {!initialPosition.bounds && initialPosition.center && initialPosition.zoom && (
         <InitialMapPosition 
