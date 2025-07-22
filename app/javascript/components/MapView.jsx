@@ -115,9 +115,6 @@ const MapView = ({ gigs, onBoundsChange }) => {
   // Memoize the grouped gigs to prevent unnecessary recalculation
   const venueGroups = useMemo(() => groupGigsByVenue(gigs), [gigs]);
 
-  // Store whether this is the first load
-  const isFirstLoad = useRef(true);
-  
   const defaultCenter = [-41.959490, 171.595459];
   const defaultZoom = 5;
   const urlParams = getMapParamsFromUrl();
@@ -130,26 +127,6 @@ const MapView = ({ gigs, onBoundsChange }) => {
         center: [urlParams.lat, urlParams.lng],
         zoom: urlParams.zoom || defaultZoom
       };
-    }
-    
-    // If we have gigs and this is the first load, calculate bounds
-    if (gigs?.length > 0 && isFirstLoad.current) {
-      isFirstLoad.current = false;
-      
-      // Calculate bounds from venue locations
-      const bounds = venueGroups.reduce(
-        (acc, { venue }) => {
-          const lat = parseFloat(venue.latitude);
-          const lng = parseFloat(venue.longitude);
-          return [
-            [Math.min(acc[0][0], lat), Math.min(acc[0][1], lng)],
-            [Math.max(acc[1][0], lat), Math.max(acc[1][1], lng)],
-          ];
-        },
-        [[90, 180], [-90, -180]]
-      );
-
-      return { bounds };
     }
     
     // Default fallback
