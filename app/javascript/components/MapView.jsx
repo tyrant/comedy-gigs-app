@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, ZoomControl, ScaleControl, useMap, useMapEvents } from 'react-leaflet';
-import { debounce, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam } from '../fiddly-bits';
+import { debounce, getMapParamsFromUrl, updateMapUrlParams } from '../fiddly-bits';
 import VenueMarkers from './VenueMarkers';
 
 // Map event handler component

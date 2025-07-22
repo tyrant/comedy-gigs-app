@@ -52,21 +52,11 @@ const getMapParamsFromUrl = () => {
 // Get filter parameters from URL
 const getFilterParamsFromUrl = () => {
   const params = new URLSearchParams(window.location.search);
-  
-  // Parse act IDs if present
-  let actIds = [];
-  const actIdsParam = params.get('acts');
-  if (actIdsParam) {
-    // Try to parse the act IDs from the URL
-    try {
-      actIds = JSON.parse(decodeURIComponent(actIdsParam));
-    } catch (e) {
-      console.error('Failed to parse act IDs from URL', e);
-    }
-  }
-  
+
   return {
-    actIds: actIds,
+    actIds: params.getAll('act')
+              .map(id => parseInt(id, 10))
+              .filter(id => !isNaN(id)) || [],
     startDate: params.get('start') || '',
     endDate: params.get('end') || ''
   };
@@ -83,20 +73,21 @@ const updateUrlParams = (paramsToUpdate = {}, paramsToRemove = []) => {
   // Update parameters
   Object.entries(paramsToUpdate).forEach(([key, value]) => {
     if (value !== null && value !== undefined) {
-      // Special handling for lat/lng to ensure proper formatting
-      if (key === 'lat' || key === 'lng') {
+
+      if (key === 'lat') {
         params.set(key, parseFloat(value).toFixed(6));
-      } 
-      // Special handling for lng to normalize
+      }
       else if (key === 'lng') {
         params.set(key, normalizeLongitude(parseFloat(value)).toFixed(6));
       }
-      // Special handling for act IDs array
       else if (key === 'acts' && Array.isArray(value) && value.length > 0) {
-        params.set(key, encodeURIComponent(JSON.stringify(value)));
+        params.delete('act');
+        value.forEach(actId => {
+          params.append('act', actId);
+        });
       }
-      // All other parameters
-      else if (value !== '') {
+      
+      else {
         params.set(key, value);
       }
     }
@@ -136,7 +127,6 @@ const updateVenueUrlParam = (venueId) => {
 
 // Update filter parameters in URL
 const updateFilterUrlParams = (filters) => {
-  console.log('Updating filter URL params:', filters);
   const paramsToUpdate = {};
   const paramsToRemove = [];
   
@@ -154,11 +144,11 @@ const updateFilterUrlParams = (filters) => {
     paramsToRemove.push('end');
   }
   
-  // Handle act IDs
+  // Handle act IDs 
   if (filters.actIds && filters.actIds.length > 0) {
     paramsToUpdate.acts = filters.actIds;
   } else {
-    paramsToRemove.push('acts');
+    paramsToRemove.push('act');
   }
   
   updateUrlParams(paramsToUpdate, paramsToRemove);
