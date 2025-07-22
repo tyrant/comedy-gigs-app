@@ -256,8 +256,6 @@ const App = () => {
     }
   }, [fetchGigsForBounds]);
 
-  console.log('searchFilters.actIds', searchFilters.actIds)
-
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-gray-100">
       <header className="bg-white shadow-sm top-0">
