@@ -365,6 +365,7 @@ const App = () => {
                 className="grow xs:w-24 sm:w-auto h-10 py-1 px-2 border border-gray-300 rounded-r-md text-sm cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 value={searchFilters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                onClick={(e) => e.target.showPicker?.()}
                 placeholder="Start Date"
                 style={{ colorScheme: 'light' }}
               />
@@ -385,6 +386,7 @@ const App = () => {
                 className="grow xs:w-24 sm:w-auto h-10 py-1 px-2 border border-gray-300 rounded-r-md text-sm cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 value={searchFilters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                onClick={(e) => e.target.showPicker?.()}
                 placeholder="End Date"
                 style={{ colorScheme: 'light' }}
               />
