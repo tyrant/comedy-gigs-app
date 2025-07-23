@@ -144,7 +144,7 @@ const App = () => {
       setGigs(data);
     } catch (err) {
       console.error('Error fetching gigs:', err);
-      setError('Failed to load gigs. Please try again.');
+      setError('Loading failed; reattempt suckah');
     } finally {
       setLoading(false);
     }
@@ -259,39 +259,13 @@ const App = () => {
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-gray-100">
       <header className="bg-white shadow-sm top-0">
-        <div className="w-full p-1 flex flex-wrap items-center gap-2">
+        <div className="w-full p-2 flex flex-wrap items-center gap-2">
           
           {/* Integrated Search Form */}
-          <div className="flex flex-1 flex-wrap gap-0">
-
-            {/* Start date */}
-            <div className="basis-1/2 sm:basis-auto p-2">
-              <p className="text-xs text-gray-600">From</p>
-              <input
-                type="date"
-                name="start_date"
-                className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
-                value={searchFilters.startDate}
-                onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                placeholder="Start Date"
-              />
-            </div>
-            
-            {/* End date */}
-            <div className="basis-1/2 sm:basis-auto p-2">
-              <p className="text-xs text-gray-600">To</p>
-              <input
-                type="date"
-                name="end_date"
-                className="w-full py-1 px-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500"
-                value={searchFilters.endDate}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                placeholder="End Date"
-              />
-            </div>           
+          <div className="flex flex-1 flex-wrap gap-2">
 
             {/* Act multi-select dropdown with thumbnails */}
-            <div className="basis-full sm:basis-auto flex-1 p-2">
+            <div className="basis-full md:basis-auto flex-1">
               <div className="grow">
                 <Select
                   name="acts"
@@ -374,16 +348,53 @@ const App = () => {
                   }}
                 />
               </div>
-            </div>   
+            </div>
+
+            {/* Start date */}
+            <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm">
+              <p className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center">
+                From
+              </p>
+              <input
+                type="date"
+                name="start_date"
+                className="grow xs:w-24 sm:w-auto h-10 py-1 px-2 border border-gray-300 rounded-r-md text-sm cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                value={searchFilters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                placeholder="Start Date"
+              />
+            </div>
+            
+            {/* End date */}
+            <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm">
+              <p className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center">
+                To
+              </p>
+              <input
+                type="date"
+                name="end_date"
+                className="grow xs:w-24 sm:w-auto h-10 py-1 px-2 border border-gray-300 rounded-r-md text-sm cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                value={searchFilters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                placeholder="End Date"
+              />
+            </div>
+
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-2 items-center">
+          <div className="flex flex-col md:flex-row gap-2 items-center">
             {/* Clear filters button */}
             <button
                 onClick={handleClearFilters}
-                className="flex-none py-1 px-3 text-sm border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="flex-none py-1 px-3 h-10 text-sm border border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-sm"
               >
-                Clear
+                <span className="inline-block xs:hidden">Mobile</span>
+                <span className="hidden xs:inline-block sm:hidden">X-small</span>
+                <span className="hidden sm:inline-block md:hidden">Small</span>
+                <span className="hidden md:inline-block lg:hidden">Medium</span>
+                <span className="hidden lg:inline-block xl:hidden">Large</span>
+
+
             </button>
 
             <div className="w-16 flex justify-center">
