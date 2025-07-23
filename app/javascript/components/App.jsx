@@ -155,6 +155,7 @@ const App = () => {
 
   // Handle map bounds changes
   const handleBoundsChange = useCallback((bounds) => {
+
     // Skip if bounds haven't changed significantly
     if (areBoundsSame(bounds, lastBoundsRef.current)) return;
     lastBoundsRef.current = bounds;
@@ -351,7 +352,7 @@ const App = () => {
             </div>
 
             {/* Start date */}
-            <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm">
+            <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm rounded-md">
               <label 
                 htmlFor="start_date"
                 className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center cursor-pointer"
@@ -372,7 +373,7 @@ const App = () => {
             </div>
             
             {/* End date */}
-            <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm">
+            <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm rounded-md">
               <label 
                 htmlFor="end_date"
                 className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center cursor-pointer"
@@ -403,7 +404,7 @@ const App = () => {
                 Clear
             </button>
 
-            <div className="w-16 flex justify-center">
+            <div className="w-16 h-10 flex justify-center items-center">
               {loading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
               ) : error ? (
