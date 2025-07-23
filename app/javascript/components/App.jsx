@@ -352,31 +352,41 @@ const App = () => {
 
             {/* Start date */}
             <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm">
-              <p className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center">
+              <label 
+                htmlFor="start_date"
+                className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center cursor-pointer"
+              >
                 From
-              </p>
+              </label>
               <input
                 type="date"
+                id="start_date"
                 name="start_date"
                 className="grow xs:w-24 sm:w-auto h-10 py-1 px-2 border border-gray-300 rounded-r-md text-sm cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 value={searchFilters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
                 placeholder="Start Date"
+                style={{ colorScheme: 'light' }}
               />
             </div>
             
             {/* End date */}
             <div className="basis-full xs:flex-1 flex flex-row items-center shadow-sm">
-              <p className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center">
+              <label 
+                htmlFor="end_date"
+                className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 h-10 flex items-center cursor-pointer"
+              >
                 To
-              </p>
+              </label>
               <input
                 type="date"
+                id="end_date"
                 name="end_date"
                 className="grow xs:w-24 sm:w-auto h-10 py-1 px-2 border border-gray-300 rounded-r-md text-sm cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 value={searchFilters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
                 placeholder="End Date"
+                style={{ colorScheme: 'light' }}
               />
             </div>
 
