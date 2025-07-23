@@ -388,13 +388,7 @@ const App = () => {
                 onClick={handleClearFilters}
                 className="flex-none py-1 px-3 h-10 text-sm border border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-sm"
               >
-                <span className="inline-block xs:hidden">Mobile</span>
-                <span className="hidden xs:inline-block sm:hidden">X-small</span>
-                <span className="hidden sm:inline-block md:hidden">Small</span>
-                <span className="hidden md:inline-block lg:hidden">Medium</span>
-                <span className="hidden lg:inline-block xl:hidden">Large</span>
-
-
+                Clear
             </button>
 
             <div className="w-16 flex justify-center">
