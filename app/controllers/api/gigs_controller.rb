@@ -3,12 +3,16 @@ module Api
     def index
       scope = Gig.includes(:venue, :acts)
 
+      # By default, only show current and future gigs (not past gigs)
+      # This can be overridden by explicitly setting start_date
+      unless params[:start_date].present?
+        scope = scope.where("start_time >= ?", Time.current.beginning_of_day)
+      end
+
       # Apply map bounds filter if present
       if bounds_params_present?
         sw = [ params[:south].to_f, params[:west].to_f ]
         ne = [ params[:north].to_f, params[:east].to_f ]
-
-        Rails.logger.info "Searching within bounds: SW=#{sw.inspect}, NE=#{ne.inspect}"
 
         scope = scope.joins(:venue).merge(Venue.within_bounding_box([ sw, ne ]))
       end
@@ -17,10 +21,8 @@ module Api
       if params[:act_ids].present?
         # Handle array of IDs for multi-select
         act_ids = params[:act_ids].is_a?(Array) ? params[:act_ids] : params[:act_ids].split(",")
+
         scope = scope.joins(:acts).where(acts: { id: act_ids }).distinct
-      elsif params[:act_id].present?
-        # Keep backward compatibility with single act_id
-        scope = scope.joins(:acts).where(acts: { id: params[:act_id] })
       end
 
       # Filter by date range if provided
@@ -34,9 +36,7 @@ module Api
         scope = scope.where("start_time <= ?", end_date.end_of_day) if end_date
       end
 
-      Rails.logger.info "Found #{scope.count} gigs after applying all filters"
-
-      @gigs = scope.to_a
+      @gigs = scope.order(:id).to_a
 
       render json: @gigs.map { |gig|
         gig_json = gig.as_json

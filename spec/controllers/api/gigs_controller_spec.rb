@@ -2,13 +2,22 @@ require 'rails_helper'
 
 RSpec.describe Api::GigsController, type: :controller do
   describe 'GET #index' do
-    let!(:venue_tokyo) { create(:venue, name: 'Tokyo Comedy Bar', latitude: 35.6762, longitude: 139.6503) }
-    let!(:venue_honolulu) { create(:venue, name: 'Honolulu Comedy Club', latitude: 21.3069, longitude: -157.8583) }
-    let!(:venue_fiji) { create(:venue, name: 'Fiji Comedy House', latitude: -17.713371, longitude: 178.065032) }
+    let(:tokyo_name) { Faker::Sports::Basketball.coach }
+    let!(:venue_tokyo) { create :venue, name: tokyo_name,
+                                        latitude: 35.6762,
+                                        longitude: 139.6503 }
+    let(:honolulu_name) { Faker::Sports::Chess.opening }
+    let!(:venue_honolulu) { create :venue, name: honolulu_name,
+                                           latitude: 21.3069,
+                                           longitude: -157.8583 }
+    let(:fiji_name) { Faker::Sports::Football.team }
+    let!(:venue_fiji) { create :venue, name: fiji_name,
+                                       latitude: -17.713371,
+                                       longitude: 178.065032 }
 
-    let!(:gig_tokyo) { create(:gig, venue: venue_tokyo) }
-    let!(:gig_honolulu) { create(:gig, venue: venue_honolulu) }
-    let!(:gig_fiji) { create(:gig, venue: venue_fiji) }
+    let!(:gig_tokyo) { create :gig, venue: venue_tokyo }
+    let!(:gig_honolulu) { create :gig, venue: venue_honolulu }
+    let!(:gig_fiji) { create :gig, venue: venue_fiji }
 
     context 'without bounds parameters' do
       describe 'returning all gigs' do
@@ -32,7 +41,7 @@ RSpec.describe Api::GigsController, type: :controller do
           end
 
           it { expect(JSON.parse(response.body).length).to eq(1) }
-          it { expect(JSON.parse(response.body).first['venue']['name']).to eq('Tokyo Comedy Bar') }
+          it { expect(JSON.parse(response.body).first['venue']['name']).to eq tokyo_name }
         end
       end
 
@@ -48,8 +57,9 @@ RSpec.describe Api::GigsController, type: :controller do
             }
           end
 
-          it { expect(JSON.parse(response.body).length).to eq(2) }
-          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort).to eq([ 'Fiji Comedy House', 'Honolulu Comedy Club' ]) }
+          it { expect(JSON.parse(response.body).length).to eq 2 }
+          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort)
+                 .to match_array [ fiji_name, honolulu_name ] }
         end
 
         describe 'handles bounds crossing antimeridian with wider longitude range' do
@@ -63,15 +73,16 @@ RSpec.describe Api::GigsController, type: :controller do
             }
           end
 
-          it { expect(JSON.parse(response.body).length).to eq(2) }
-          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort).to eq([ 'Fiji Comedy House', 'Honolulu Comedy Club' ]) }
+          it { expect(JSON.parse(response.body).length).to eq 2 }
+          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort)
+                 .to match_array [ fiji_name, honolulu_name ] }
         end
       end
 
       describe 'with invalid bounds parameters' do
         describe 'returns all gigs when bounds params are incomplete' do
           before { get :index, params: { north: 36.0, south: 35.0 } }
-          it { expect(JSON.parse(response.body).length).to eq(3) }
+          it { expect(JSON.parse(response.body).length).to eq 3 }
         end
       end
     end

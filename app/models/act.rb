@@ -25,12 +25,13 @@ class Act < ApplicationRecord
     where("external_ids->>'#{source}' = ?", id.to_s)
   }
 
+  # Use a placeholder image that will definitely work
+  # For production, you should use your own hosted image
+  IMAGE_PLACEHOLDER = "/images/comedian_placeholder.png"
+
   # Helper method to get the primary image URL
   def primary_image_url(size = "standard")
-    # Use a placeholder image that will definitely work
-    # For production, you should use your own hosted image
-    placeholder = "/images/comedian_placeholder.png"
-    return placeholder if images.blank?
+    return IMAGE_PLACEHOLDER if images.blank?
 
     # Try to find an image with the requested size
     if images[size].present?
@@ -39,7 +40,7 @@ class Act < ApplicationRecord
     elsif images.values.first.present?
       images.values.first
     else
-      placeholder
+      IMAGE_PLACEHOLDER
     end
   end
 end

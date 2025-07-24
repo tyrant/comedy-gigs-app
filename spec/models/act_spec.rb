@@ -32,19 +32,31 @@ RSpec.describe Act, type: :model do
 
     describe 'returning nil if no images are available' do
       let(:act) { create(:act, images: {}) }
-      it { expect(act.primary_image_url).to be_nil }
+      it { expect(act.primary_image_url).to eq Act::IMAGE_PLACEHOLDER }
     end
   end
 
   describe '.performing_between' do
-    let(:venue) { create(:venue) }
-    let(:act1) { create(:act, name: 'Act 1') }
-    let(:act2) { create(:act, name: 'Act 2') }
-    let(:act3) { create(:act, name: 'Act 3') }
+    let(:venue) { create :venue }
+    let(:act1_name) { Faker::Movies::BackToTheFuture.character }
+    let(:act2_name) { Faker::Movies::Ghostbusters.character }
+    let(:act3_name) { Faker::Games::SuperSmashBros.fighter }
+    let(:act1) { create :act, name: act1_name }
+    let(:act2) { create :act, name: act2_name }
+    let(:act3) { create :act, name: act3_name }
 
-    let!(:gig1) { create(:gig, start_time: Date.today.noon, end_time: Date.today.noon + 2.hours, venue: venue, acts: [ act1 ]) }
-    let!(:gig2) { create(:gig, start_time: 1.week.from_now.noon, end_time: 1.week.from_now.noon + 2.hours, venue: venue, acts: [ act2 ]) }
-    let!(:gig3) { create(:gig, start_time: 2.weeks.from_now.noon, end_time: 2.weeks.from_now.noon + 2.hours, venue: venue, acts: [ act1, act3 ]) }
+    let!(:gig1) { create :gig, start_time: Date.today.noon,
+                               end_time: Date.today.noon + 2.hours,
+                               venue: venue,
+                               acts: [ act1 ] }
+    let!(:gig2) { create :gig, start_time: 1.week.from_now.noon,
+                               end_time: 1.week.from_now.noon + 2.hours,
+                               venue: venue,
+                               acts: [ act2 ] }
+    let!(:gig3) { create :gig, start_time: 2.weeks.from_now.noon,
+                               end_time: 2.weeks.from_now.noon + 2.hours,
+                               venue: venue,
+                               acts: [ act1, act3 ] }
 
     let(:end_date) { Date.today }
     let(:acts) { Act.performing_between(Date.today, end_date) }
@@ -93,7 +105,7 @@ RSpec.describe Act, type: :model do
 
     describe 'not returning duplicate acts even if they perform multiple times in the range' do
       let(:end_date) { 3.weeks.from_now }
-      it { expect(acts.where(name: 'Act 1').count).to eq(1) }
+      it { expect(acts.where(name: act1_name).count).to eq(1) }
     end
   end
 end
