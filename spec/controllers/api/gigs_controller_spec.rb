@@ -23,7 +23,7 @@ RSpec.describe Api::GigsController, type: :controller do
       describe 'returning all gigs' do
         before { get :index }
         it { expect(response).to have_http_status(:success) }
-        it { expect(JSON.parse(response.body).length).to eq(3) }
+        it { expect(JSON.parse(response.body).length).to eq 3 }
       end
     end
 
@@ -40,7 +40,7 @@ RSpec.describe Api::GigsController, type: :controller do
             }
           end
 
-          it { expect(JSON.parse(response.body).length).to eq(1) }
+          it { expect(JSON.parse(response.body).length).to eq 1 }
           it { expect(JSON.parse(response.body).first['venue']['name']).to eq tokyo_name }
         end
       end
@@ -58,7 +58,7 @@ RSpec.describe Api::GigsController, type: :controller do
           end
 
           it { expect(JSON.parse(response.body).length).to eq 2 }
-          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort)
+          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
                  .to match_array [ fiji_name, honolulu_name ] }
         end
 
@@ -74,7 +74,7 @@ RSpec.describe Api::GigsController, type: :controller do
           end
 
           it { expect(JSON.parse(response.body).length).to eq 2 }
-          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] }.sort)
+          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
                  .to match_array [ fiji_name, honolulu_name ] }
         end
       end
@@ -83,6 +83,126 @@ RSpec.describe Api::GigsController, type: :controller do
         describe 'returns all gigs when bounds params are incomplete' do
           before { get :index, params: { north: 36.0, south: 35.0 } }
           it { expect(JSON.parse(response.body).length).to eq 3 }
+        end
+      end
+    end
+
+    context 'with act_ids parameter' do
+      let(:act1_name) { Faker::Movies::BackToTheFuture.character }
+      let(:act2_name) { Faker::Movies::Ghostbusters.character }
+      let(:act3_name) { Faker::Games::SuperSmashBros.fighter }
+      let!(:act1) { create :act, name: act1_name }
+      let!(:act2) { create :act, name: act2_name }
+      let!(:act3) { create :act, name: act3_name }
+
+      # Update existing gigs to have acts
+      before do
+        gig_tokyo.acts = [ act1 ]
+        gig_tokyo.save!
+        gig_honolulu.acts = [ act2 ]
+        gig_honolulu.save!
+        gig_fiji.acts = [ act1, act3 ]
+        gig_fiji.save!
+      end
+
+      describe 'filtering by single act ID' do
+        context 'when act has one gig' do
+          before { get :index, params: { act_ids: [ act2.id ] } }
+
+          it { expect(JSON.parse(response.body).length).to eq 1 }
+          it { expect(JSON.parse(response.body).first['venue']['name']).to eq honolulu_name }
+          it { expect(JSON.parse(response.body).first['acts'].map { |a| a['name'] })
+                 .to include act2_name }
+        end
+
+        context 'when act has multiple gigs' do
+          before { get :index, params: { act_ids: [ act1.id ] } }
+
+          it { expect(JSON.parse(response.body).length).to eq 2 }
+          it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
+                 .to match_array [ tokyo_name, fiji_name ] }
+          it 'includes the act in all returned gigs' do
+            JSON.parse(response.body).each do |gig|
+              expect(gig['acts'].map { |a| a['name'] }).to include act1_name
+            end
+          end
+        end
+      end
+
+      describe 'filtering by multiple act IDs as array' do
+        before { get :index, params: { act_ids: [ act1.id, act2.id ] } }
+
+        it { expect(JSON.parse(response.body).length).to eq 3 }
+        it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
+               .to match_array [ tokyo_name, honolulu_name, fiji_name ] }
+        it 'returns gigs that have at least one of the specified acts' do
+          response_acts = JSON.parse(response.body).flat_map { |gig| gig['acts'].map { |a| a['name'] } }
+          expect(response_acts).to include act1_name, act2_name
+        end
+      end
+
+      describe 'filtering by multiple act IDs as comma-separated string' do
+        before { get :index, params: { act_ids: "#{act2.id},#{act3.id}" } }
+
+        it { expect(JSON.parse(response.body).length).to eq 2 }
+        it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
+               .to match_array [ honolulu_name, fiji_name ] }
+        it 'returns gigs that have at least one of the specified acts' do
+          response_acts = JSON.parse(response.body).flat_map { |gig| gig['acts'].map { |a| a['name'] } }
+          expect(response_acts).to include act2_name, act3_name
+        end
+      end
+
+      describe 'filtering by non-existent act ID' do
+        before { get :index, params: { act_ids: [ 99999 ] } }
+
+        it { expect(JSON.parse(response.body).length).to eq 0 }
+      end
+
+      describe 'filtering by mix of valid and invalid act IDs' do
+        before { get :index, params: { act_ids: [ act1.id, 99999 ] } }
+
+        it { expect(JSON.parse(response.body).length).to eq 2 }
+        it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
+               .to match_array [ tokyo_name, fiji_name ] }
+      end
+
+      describe 'combining act_ids with bounds parameters' do
+        context 'when both filters match some gigs' do
+          before do
+            get :index, params: {
+              act_ids: [ act1.id ],
+              north: 36.0,
+              south: 35.0,
+              east: 140.0,
+              west: 139.0
+            }
+          end
+
+          it { expect(JSON.parse(response.body).length).to eq 1 }
+          it { expect(JSON.parse(response.body).first['venue']['name']).to eq tokyo_name }
+        end
+
+        context 'when bounds exclude all gigs with specified acts' do
+          before do
+            get :index, params: {
+              act_ids: [ act2.id ],
+              north: 36.0,
+              south: 35.0,
+              east: 140.0,
+              west: 139.0
+            }
+          end
+
+          it { expect(JSON.parse(response.body).length).to eq 0 }
+        end
+      end
+
+      describe 'without act_ids parameter' do
+        before { get :index }
+
+        it 'returns all gigs regardless of acts' do
+          expect(JSON.parse(response.body).length).to eq 3
         end
       end
     end
