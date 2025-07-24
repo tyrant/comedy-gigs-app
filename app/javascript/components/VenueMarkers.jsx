@@ -169,7 +169,7 @@ const VenueMarkers = ({ venueGroups }) => {
         return;
       }
       
-      // If marker already exists, just update its position if needed
+      // If marker already exists, update its position and popup content
       if (markersRef.current[venueId]) {
         const marker = markersRef.current[venueId];
         const currentPos = marker.getLatLng();
@@ -177,6 +177,20 @@ const VenueMarkers = ({ venueGroups }) => {
         if (currentPos.lat !== lat || currentPos.lng !== lng) {
           marker.setLatLng([lat, lng]);
         }
+        
+        // Always update popup content with new gig data
+        const popupContent = createPopupContent(venue, gigs);
+        const popup = L.popup({
+          autoClose: false,
+          closeOnClick: true,
+          className: 'venue-popup-container',
+          maxWidth: 340,
+          minWidth: 280,
+          offset: [0, -5],
+          closeButton: true
+        }).setContent(popupContent);
+        
+        marker.bindPopup(popup);
         
         // Check if popup was open before and reopen it
         if (popupStatesRef.current[venueId]) {
@@ -207,7 +221,6 @@ const VenueMarkers = ({ venueGroups }) => {
         // Track popup open state and update URL
         marker.on('popupopen', () => {
           popupStatesRef.current[venueId] = true;
-          console.log('Popup gigs:', gigs);
           
           // Update URL with venue ID and map position
           const mapCenter = map.getCenter();
