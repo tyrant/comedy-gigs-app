@@ -47,7 +47,7 @@ const PopupContent = ({ venue, gigs }) => {
         {/* Gigs list */}
         <div className="divide-y divide-gray-100 px-3 py-2">
           {gigs.map(gig => (
-            <div key={gig.id} className="py-2.5 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded">
+            <div key={gig.id} data-gig-id={gig.id} className="py-2.5 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded">
               {/* Gig header with title and ticket button */}
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
@@ -77,7 +77,7 @@ const PopupContent = ({ venue, gigs }) => {
                   <div className="flex flex-wrap gap-1.5">
                     <span className="text-xs text-gray-400 mr-1">With:</span>
                     {gig.acts.map(act => (
-                      <div key={act.id} className="inline-flex items-center bg-purple-50 rounded-full py-0.5 px-2">
+                      <div key={act.id} data-act-id={act.id} className="inline-flex items-center bg-purple-50 rounded-full py-0.5 px-2">
                         {act.primary_image_url && (
                           <div className="w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0">
                             <img 

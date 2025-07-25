@@ -1,0 +1,334 @@
+require 'rails_helper'
+
+RSpec.describe 'Search Form Filtering', type: :system, js: true do
+  let(:act1_name) { Faker::Creature::Horse.name }
+  let(:act2_name) { Faker::Creature::Bird.implausible_common_name }
+  let(:act3_name) { Faker::Creature::Cat.breed }
+  let!(:act1) { create :act, name: act1_name }
+  let!(:act2) { create :act, name: act2_name }
+  let!(:act3) { create :act, name: act3_name }
+
+  let(:venue1_name) { Faker::JapaneseMedia::StudioGhibli.movie }
+  let(:venue2_name) { Faker::JapaneseMedia::Conan.character }
+  let(:venue3_name) { Faker::JapaneseMedia::CowboyBebop.song }
+  let!(:venue1) { create :venue, name: venue1_name, latitude: -37.7, longitude: 169.1 }
+  let!(:venue2) { create :venue, name: venue2_name, latitude: -42.8, longitude: 174.2 }
+  let!(:venue3) { create :venue, name: venue3_name, latitude: -47.9, longitude: 179.3 }
+
+  let(:past_gig_name) { Faker::Games::ClashOfClans.troop }
+  let!(:past_gig) { create :gig, name: past_gig_name,
+                                 start_time: 2.weeks.ago,
+                                 end_time: 2.weeks.ago + 2.hours,
+                                 venue: venue1,
+                                 acts: [ act1 ] }
+  let(:current_gig_name) { Faker::Games::FinalFantasyXIV.character }
+  let!(:current_gig) { create :gig, name: current_gig_name,
+                                    start_time: Time.current,
+                                    end_time: Time.current + 2.hours,
+                                    venue: venue2,
+                                    acts: [ act2 ] }
+  let(:future_gig1_name) { Faker::Games::LeagueOfLegends.location }
+  let!(:future_gig1) { create :gig, name: future_gig1_name,
+                                    start_time: 2.weeks.from_now,
+                                    end_time: 2.weeks.from_now + 2.hours,
+                                    venue: venue3,
+                                    acts: [ act1 ] }
+  let(:future_gig2_name) { Faker::Games::Overwatch.hero }
+  let!(:future_gig2) { create :gig, name: future_gig2_name,
+                                    start_time: 4.weeks.from_now,
+                                    end_time: 4.weeks.from_now + 2.hours,
+                                    venue: venue1,
+                                    acts: [ act3 ] }
+  let(:far_future_gig_name) { Faker::Games::SuperSmashBros.fighter }
+  let!(:far_future_gig) { create :gig, name: far_future_gig_name,
+                                       start_time: 8.weeks.from_now,
+                                       end_time: 8.weeks.from_now + 2.hours,
+                                       venue: venue2,
+                                       acts: [ act2 ] }
+
+  before do
+    visit root_path
+    expect(page).to have_selector('.leaflet-container', wait: 10)
+    # Wait for any search form elements to load
+    sleep 2 # Allow components to fully load
+  end
+
+  # Helper method to set date using HTML5 date picker interaction
+  def set_date_via_picker(field_id, target_date)
+    puts "\n=== Setting #{field_id} to #{target_date.strftime('%Y-%m-%d')} ==="
+
+    # Click the date input to open the picker
+    find("##{field_id}").click
+    sleep 1
+
+    # Set the date value and trigger React's onChange handler properly
+    result = page.execute_script(<<~JS)
+      const input = document.getElementById('#{field_id}');
+      const dateValue = '#{target_date.strftime('%Y-%m-%d')}';
+
+      console.log('Setting date input:', input.id, 'to:', dateValue);
+
+      // Set the value
+      input.value = dateValue;
+
+      // Create a proper React synthetic event by triggering the onChange handler directly
+      const event = {
+        target: input,
+        currentTarget: input,
+        type: 'change',
+        bubbles: true,
+        cancelable: true,
+        preventDefault: function() {},
+        stopPropagation: function() {}
+      };
+
+      // Find React's onChange handler and call it directly
+      const reactProps = Object.keys(input).find(key => key.startsWith('__reactProps'));
+      let handlerFound = false;
+
+      if (reactProps && input[reactProps] && input[reactProps].onChange) {
+        console.log('Found React props onChange handler');
+        input[reactProps].onChange(event);
+        handlerFound = true;
+      } else {
+        // Fallback: try to find React fiber and call onChange
+        const reactFiber = Object.keys(input).find(key => key.startsWith('__reactInternalInstance') || key.startsWith('__reactFiber'));
+        if (reactFiber && input[reactFiber] && input[reactFiber].memoizedProps && input[reactFiber].memoizedProps.onChange) {
+          console.log('Found React fiber onChange handler');
+          input[reactFiber].memoizedProps.onChange(event);
+          handlerFound = true;
+        } else {
+          console.log('No React handlers found, using native events');
+          // Last resort: dispatch native events and hope React picks them up
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+
+      input.blur();
+
+      return {
+        value: input.value,
+        handlerFound: handlerFound,
+        url: window.location.href
+      };
+    JS
+
+    puts "Date set result: #{result}"
+    puts "Current URL: #{page.current_url}"
+
+    # Small delay to allow React state updates and debounced handlers
+    sleep 1
+
+    puts "Waiting for API calls to complete..."
+    sleep 2 # Additional wait for debounced API calls
+  end
+
+  # Helper method to select acts using React Select component
+  def select_act_via_dropdown(act_name)
+    puts "\n=== Selecting act: #{act_name} ==="
+
+    # Click the React Select dropdown to open it
+    find('.react-select__control').click
+    sleep 1
+
+    # Find and click the option with the act name
+    find('.react-select__option', text: act_name).click
+    sleep 1
+
+    puts "Act selected: #{act_name}"
+    puts "Waiting for API calls to complete..."
+    sleep 2 # Additional wait for debounced API calls
+  end
+
+  describe 'start_date filtering' do
+    it 'filters venues and gigs based on start_date' do
+      # Filters out past_gig only.
+      set_date_via_picker('start_date', 1.week.ago)
+
+      sleep 3 # Wait for debounced filter update and map refresh
+
+      # Should show venue markers with gigs after the start_date
+      expect(page).to have_selector('.leaflet-marker-icon', wait: 10)
+
+      # Should show venues with current/future gigs (venue2, venue3, venue1).
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]")
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]")
+
+      # Click on venue1 marker
+      find(".leaflet-marker-icon[title=\"#{venue1_name}\"]").click
+
+      # Venue1's gigs: future_gig2 (hosted by act3) but not past_gig (hosted by act1).
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup')
+        expect(page).to have_text(venue1_name)
+
+        within "[data-gig-id='#{future_gig2.id}']" do
+          expect(page).to have_text(act3_name)
+          expect(page).to have_text(future_gig2_name)
+        end
+
+        expect(page).not_to have_selector("[data-gig-id='#{past_gig.id}']")
+      end
+    end
+
+    it 'shows all venues when start_date is in the past' do
+      set_date_via_picker('start_date', 3.weeks.ago)
+
+      sleep 3 # Wait for debounced filter update
+
+      # Should show all venue markers
+      expect(page).to have_selector('.leaflet-marker-icon', wait: 10)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]")
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]")
+    end
+
+    it 'hides venues when start_date is in the future' do
+      set_date_via_picker('start_date', 10.weeks.from_now)
+
+      sleep 3 # Wait for debounced filter update
+
+      # Should show no venue markers (all gigs are before this date)
+      expect(page).not_to have_selector('.leaflet-marker-icon', wait: 10)
+    end
+  end
+
+  describe 'end_date filtering' do
+    it 'filters venues and gigs based on end_date' do
+      # Before setting end_date: date range (Today..1.year_from_now).
+      # Shows: current_gig, future_gig1, future_gig2, far_future_gig.
+      #
+      # After: date range (Today..3.weeks.from_now).
+      # Excludes: future_gig2 (4.weeks), and far_future_gig (8.weeks).
+      # Gigs: current_gig (Today), future_gig1 (2.weeks).
+      # Venues: venue2, venue3.
+
+      set_date_via_picker('end_date', 3.weeks.from_now)
+
+      sleep 2
+
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]")
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]")
+
+      find(".leaflet-marker-icon[title=\"#{venue2_name}\"]").click
+
+      # Venue2 shows current_gig (hosted by act2) but not far_future_gig (hosted by act2).
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup')
+        expect(page).to have_text(venue2_name)
+
+        within "[data-gig-id='#{current_gig.id}']" do
+          expect(page).to have_text(current_gig_name)
+          expect(page).to have_text(act2_name)
+        end
+
+        expect(page).not_to have_selector("[data-gig-id='#{far_future_gig.id}']")
+      end
+    end
+
+    it 'hides all venues when end_date is in the past' do
+      set_date_via_picker('end_date', 1.month.ago)
+
+      sleep 2
+
+      # Should show no venues since all gigs are after the end_date
+      expect(page).not_to have_selector('.leaflet-marker-icon', wait: 5)
+
+      # Specifically verify no venue markers are present
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]")
+    end
+  end
+
+  describe 'Combined From and To date filtering' do
+    it 'filters venues with gigs within date range' do
+      set_date_via_picker('start_date', 1.week.ago)
+      set_date_via_picker('end_date', 3.weeks.from_now)
+
+      sleep 2
+
+      # Should show venue markers with gigs within the date range
+      expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
+
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
+
+      # Should show venues with gigs in the specified range
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]") # current_gig
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]") # future_gig1
+    end
+
+    it 'shows venues with multiple gigs when some are in range' do
+      # Shows future_gig1 (at venue3), and future_gig2 (at venue1)
+      set_date_via_picker('start_date', 1.week.from_now)
+      set_date_via_picker('end_date', 5.weeks.from_now)
+
+      sleep 2
+
+      # Should show venue1 (has future_gig2 in range) and venue3 (has future_gig1 in range)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]")
+
+      # Click on venue1 to verify popup shows only gigs in range
+      find(".leaflet-marker-icon[title=\"#{venue1_name}\"]").click
+
+      within '.leaflet-popup' do
+        within "[data-gig-id='#{future_gig2.id}']" do
+          expect(page).to have_text(future_gig2.name)
+          expect(page).to have_text(act3.name)
+        end
+
+        expect(page).not_to have_selector("[data-gig-id='#{past_gig.id}']")
+      end
+    end
+  end
+
+  describe 'Act filtering' do
+    it 'shows only venues with gigs by selected act' do
+      select_act_via_dropdown(act1.name)
+
+      # Should show venues where act1 performs
+      expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
+
+      # Should show venue3 (has future_gig1 with act1)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]")
+
+      # Shouldn't show venue1 (act1 performs there but it's outside default date range)
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
+      # Shouldn't show venue2 anyway (act1 doesn't perform there)
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]")
+    end
+
+    it 'shows venues with multiple acts when one is selected' do
+      select_act_via_dropdown(act3.name)
+
+      expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
+
+      find(".leaflet-marker-icon[title=\"#{venue1_name}\"]").click
+
+      # Shows Venue2, gigged by Act3 but not Act1.
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup')
+        expect(page).to have_selector("[data-act-id=\"#{act3.id}\"]")
+        expect(page).not_to have_selector("[data-act-id=\"#{act1.id}\"]")
+      end
+    end
+
+    it 'combines act filtering with date filtering' do
+      select_act_via_dropdown(act1.name)
+      set_date_via_picker('start_date', Date.current)
+
+      expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
+
+      # Should show venues with Comedy Act 1 within the date range (venue3)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name}\"]") # future_gig1 with act1
+
+      # Should not show venues outside criteria
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]") # past_gig with act1 is outside date range
+      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]") # has act2, not act1
+    end
+  end
+end

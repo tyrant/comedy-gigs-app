@@ -1,13 +1,8 @@
 module Api
   class GigsController < ApplicationController
     def index
+      # Get all gigs
       scope = Gig.includes(:venue, :acts)
-
-      # By default, only show current and future gigs (not past gigs)
-      # This can be overridden by explicitly setting start_date
-      unless params[:start_date].present?
-        scope = scope.where("start_time >= ?", Time.current.beginning_of_day)
-      end
 
       # Apply map bounds filter if present
       if bounds_params_present?
