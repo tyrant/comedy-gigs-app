@@ -23,6 +23,18 @@ const App = () => {
   // Track if this is the first page load
   const isFirstPageLoad = useRef(true);
 
+  // Update URL with default filter values on initial load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasStartDate = params.has('start');
+    const hasEndDate = params.has('end');
+    
+    // If either start or end date is missing from URL, update URL with defaults
+    if (!hasStartDate || !hasEndDate) {
+      updateFilterUrlParams(searchFilters);
+    }
+  }, []); // Run only once on mount
+
   // Helper to compare bounds with special handling for antimeridian crossing
   const areBoundsSame = (bounds1, bounds2) => {
     if (!bounds1 || !bounds2) return false;
@@ -183,7 +195,6 @@ const App = () => {
     if (areBoundsSame(bounds, lastBoundsRef.current)) return;
     lastBoundsRef.current = bounds;
     
-    console.log('isFirstPageLoad.current', isFirstPageLoad.current)
     // On first page load, ensure we're using the URL params
     if (isFirstPageLoad.current) {
       isFirstPageLoad.current = false;

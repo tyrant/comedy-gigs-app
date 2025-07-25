@@ -52,13 +52,21 @@ const getMapParamsFromUrl = () => {
 // Get filter parameters from URL
 const getFilterParamsFromUrl = () => {
   const params = new URLSearchParams(window.location.search);
+  
+  // Default dates: today to one year from today
+  const today = new Date();
+  const oneYearFromToday = new Date(today);
+  oneYearFromToday.setFullYear(today.getFullYear() + 1);
+  
+  const defaultStartDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  const defaultEndDate = oneYearFromToday.toISOString().split('T')[0];
 
   return {
     actIds: params.getAll('act')
               .map(id => parseInt(id, 10))
               .filter(id => !isNaN(id)) || [],
-    startDate: params.get('start') || '',
-    endDate: params.get('end') || ''
+    startDate: params.get('start') || defaultStartDate,
+    endDate: params.get('end') || defaultEndDate
   };
 };
 
