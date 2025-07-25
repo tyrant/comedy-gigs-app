@@ -5,8 +5,9 @@ import Select from 'react-select';
 
 const App = () => {
   const [gigs, setGigs] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const abortControllerRef = useRef(null);
   const lastBoundsRef = useRef(null);
   
   // Search filters state - initialize from URL parameters
@@ -18,6 +19,9 @@ const App = () => {
   // Acts data for the dropdown
   const [acts, setActs] = useState([]);
   const [loadingActs, setLoadingActs] = useState(false);
+    
+  // Track if this is the first page load
+  const isFirstPageLoad = useRef(true);
 
   // Helper to compare bounds with special handling for antimeridian crossing
   const areBoundsSame = (bounds1, bounds2) => {
@@ -105,6 +109,15 @@ const App = () => {
   const fetchGigsForBounds = useCallback(async (bounds, filters) => {
     if (!bounds) return;
     
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
     setError(null);
     setLoading(true);
     
@@ -127,7 +140,9 @@ const App = () => {
           params.append('act_ids', actIdValues.join(','));
         }
       }
-      
+
+      // 
+
       if (filters.startDate) {
         params.append('start_date', filters.startDate);
       }
@@ -136,22 +151,30 @@ const App = () => {
         params.append('end_date', filters.endDate);
       }
       
-      const response = await fetch(`/api/gigs?${params}`);
+      const response = await fetch(`/api/gigs?${params}`, {
+        signal: abortController.signal
+      });
       if (!response.ok) throw new Error('Failed to fetch gigs');
       
       const data = await response.json();
       
-      setGigs(data);
+      // Only update state if this request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setGigs(data);
+      }
     } catch (err) {
-      console.error('Error fetching gigs:', err);
-      setError('Loading failed; reattempt suckah');
+      // Don't show error if request was just aborted
+      if (err.name !== 'AbortError') {
+        console.error('Error fetching gigs:', err);
+        setError('Loading failed; reattempt suckah');
+      }
     } finally {
-      setLoading(false);
+      // Only update loading state if this request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [setGigs, setError, setLoading]);
-  
-  // Track if this is the first bounds change (initial map load)
-  const isFirstBoundsChange = useRef(true);
 
   // Handle map bounds changes
   const handleBoundsChange = useCallback((bounds) => {
@@ -160,9 +183,10 @@ const App = () => {
     if (areBoundsSame(bounds, lastBoundsRef.current)) return;
     lastBoundsRef.current = bounds;
     
-    // On first bounds change, ensure we're using the URL params
-    if (isFirstBoundsChange.current) {
-      isFirstBoundsChange.current = false;
+    console.log('isFirstPageLoad.current', isFirstPageLoad.current)
+    // On first page load, ensure we're using the URL params
+    if (isFirstPageLoad.current) {
+      isFirstPageLoad.current = false;
       
       // Get filter params from URL to ensure we're using the latest URL state
       const urlFilterParams = getFilterParamsFromUrl();
@@ -197,7 +221,8 @@ const App = () => {
   }, [fetchGigsForBounds, searchFilters, acts]);
 
   // Handle search filter changes
-  const handleFilterChange = useCallback((name, value) => {    
+  const handleFilterChange = useCallback((name, value) => {
+
     // Update the filter state
     const newFilters = {
       ...searchFilters,
@@ -352,7 +377,7 @@ const App = () => {
             </div>
 
             {/* Start date */}
-            <div className="basis-full xs:flex-1 flex flex-row items-center items-stretch h-10 shadow-sm rounded-md">
+            <div className="basis-full xs:flex-1 md:flex-none flex flex-row items-center items-stretch h-10 shadow-sm rounded-md">
               <label 
                 htmlFor="start_date"
                 className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 flex items-center cursor-pointer"
@@ -373,7 +398,7 @@ const App = () => {
             </div>
             
             {/* End date */}
-            <div className="basis-full xs:flex-1 flex flex-row items-center items-stretch h-10 shadow-sm rounded-md">
+            <div className="basis-full xs:flex-1 md:flex-none flex flex-row items-center items-stretch h-10 shadow-sm rounded-md">
               <label 
                 htmlFor="end_date"
                 className="text-sm text-gray-600 border border-gray-300 bg-gray-100 border-r-0 rounded-l-md p-1 px-2 flex items-center cursor-pointer"
