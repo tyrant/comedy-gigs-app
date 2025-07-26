@@ -79,9 +79,6 @@ module SystemTestHelper
 
     # Small delay to allow React state updates and debounced handlers
     sleep 1
-
-    puts "Waiting for API calls to complete..."
-    sleep 2 # Additional wait for debounced API calls
   end
 
   # Helper method to select acts using React Select component
