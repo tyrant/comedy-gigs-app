@@ -42,23 +42,7 @@ const App = () => {
            round(west1) === round(west2);
   };
 
-  // Fetch acts for dropdown on component mount and initialize filters from URL
   useEffect(() => {
-
-    const url = new URLSearchParams(window.location.search);
-    if (!url.has('start') || !url.has('end')) updateFilterUrlParams(searchFilters);
-    
-    const urlFilterParams = getFilterParamsFromUrl();
-    
-    if (urlFilterParams) {
-      setSearchFilters(prevFilters => ({
-        ...prevFilters,
-        startDate: urlFilterParams.startDate || '',
-        endDate: urlFilterParams.endDate || '',
-        // We'll set actIds after fetching the acts data
-      }));
-    }
-    
     const fetchActs = async () => {
       setLoadingActs(true);
 
@@ -75,7 +59,7 @@ const App = () => {
         })).sort((a, b) => a.label.localeCompare(b.label));
         
         setActs(sortedActs);
-        
+        const urlFilterParams = getFilterParamsFromUrl();
         // Now that we have the acts data, we can set the selected acts from URL
         if (urlFilterParams && urlFilterParams.actIds && urlFilterParams.actIds.length > 0) {
           // The URL contains just the IDs, find the corresponding act objects
@@ -108,13 +92,11 @@ const App = () => {
     fetchActs();
   }, []);
 
-  // Function to fetch gigs based on bounds and filters
   const fetchGigsForBounds = useCallback(async (bounds, filters) => {
     if (!bounds) return;
     
     if (abortControllerRef.current) abortControllerRef.current.abort();
     
-    // Create new AbortController for this request
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
     
@@ -180,6 +162,7 @@ const App = () => {
     fetchGigsForBounds(lastBoundsRef.current, filtersWithActs);
     
   }, [acts, fetchGigsForBounds]);
+
 
   // Fires on each change - and once on app load.
   const handleBoundsChange = useCallback((bounds) => {

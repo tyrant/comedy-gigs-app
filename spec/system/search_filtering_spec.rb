@@ -49,8 +49,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
   before do
     visit root_path
     expect(page).to have_selector('.leaflet-container', wait: 10)
-    # Wait for any search form elements to load
-    sleep 2 # Allow components to fully load
   end
 
   describe 'start_date filtering' do
@@ -58,9 +56,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Filters out past_gig only.
       set_date_via_picker('start_date', 1.week.ago)
 
-      sleep 3 # Wait for debounced filter update and map refresh
-
-      # Should show venue markers with gigs after the start_date
       expect(page).to have_selector('.leaflet-marker-icon', wait: 10)
 
       # Should show venues with current/future gigs (venue2, venue3, venue1).
@@ -88,8 +83,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
     it 'shows all venues when start_date is in the past' do
       set_date_via_picker('start_date', 3.weeks.ago)
 
-      sleep 3 # Wait for debounced filter update
-
       # Should show all venue markers
       expect(page).to have_selector('.leaflet-marker-icon', wait: 10)
       expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
@@ -99,8 +92,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
 
     it 'hides venues when start_date is in the future' do
       set_date_via_picker('start_date', 10.weeks.from_now)
-
-      sleep 3 # Wait for debounced filter update
 
       # Should show no venue markers (all gigs are before this date)
       expect(page).not_to have_selector('.leaflet-marker-icon', wait: 10)
@@ -118,8 +109,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Venues: venue2, venue3.
 
       set_date_via_picker('end_date', 3.weeks.from_now)
-
-      sleep 2
 
       expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")
       expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name}\"]")
@@ -144,8 +133,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
     it 'hides all venues when end_date is in the past' do
       set_date_via_picker('end_date', 1.month.ago)
 
-      sleep 2
-
       # Should show no venues since all gigs are after the end_date
       expect(page).not_to have_selector('.leaflet-marker-icon', wait: 5)
 
@@ -161,8 +148,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       set_date_via_picker('start_date', 1.week.ago)
       set_date_via_picker('end_date', 3.weeks.from_now)
 
-      sleep 2
-
       # Should show venue markers with gigs within the date range
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
 
@@ -177,8 +162,6 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Shows future_gig1 (at venue3), and future_gig2 (at venue1)
       set_date_via_picker('start_date', 1.week.from_now)
       set_date_via_picker('end_date', 5.weeks.from_now)
-
-      sleep 2
 
       # Should show venue1 (has future_gig2 in range) and venue3 (has future_gig1 in range)
       expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name}\"]")

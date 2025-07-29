@@ -49,17 +49,15 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
   before do
     visit root_path
     expect(page).to have_selector('.leaflet-container', wait: 10)
-    sleep 2
+    # sleep 2
   end
 
   describe 'form values persistence across page reloads' do
     it 'persists start date filter value and maintains filtered results' do
       start_date = 1.week.ago
 
-      # Set start date filter using helper
       set_date_via_picker('start_date', start_date)
 
-      # Verify filtering works before reload
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
       initial_markers_count = all('.leaflet-marker-icon').count
 
@@ -67,10 +65,8 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       current_url_with_params = current_url
       expect(current_url_with_params).to include 'start='
 
-      # Reload the page
       visit current_url_with_params
       expect(page).to have_selector('.leaflet-container', wait: 10)
-      sleep 2
 
       # Verify start date field is populated
       expect(find_field('start_date').value).to eq start_date.strftime('%Y-%m-%d')
@@ -85,10 +81,8 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
     it 'persists end date filter value and maintains filtered results' do
       end_date = 2.weeks.from_now
 
-      # Set end date filter using helper
       set_date_via_picker('end_date', end_date)
 
-      # Verify filtering works before reload
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
       initial_to_markers_count = all('.leaflet-marker-icon').count
 
@@ -96,10 +90,8 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       current_url_with_params = current_url
       expect(current_url_with_params).to include 'end='
 
-      # Reload the page
       visit current_url_with_params
       expect(page).to have_selector('.leaflet-container', wait: 10)
-      sleep 2
 
       # Verify end date field is populated
       expect(find_field('end_date').value).to eq end_date.strftime('%Y-%m-%d')
@@ -118,7 +110,6 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       set_date_via_picker('start_date', start_date)
       set_date_via_picker('end_date', end_date)
 
-      # Should show filtered venues
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
       both_date_markers_count = all('.leaflet-marker-icon').count
 
@@ -130,7 +121,6 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       # Reload the page
       visit current_url_with_params
       expect(page).to have_selector('.leaflet-container', wait: 10)
-      sleep 2
 
       # Verify both date fields are populated
       expect(find_field('start_date').value).to eq(start_date.strftime('%Y-%m-%d'))
@@ -144,21 +134,18 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
     end
 
     it 'persists act filter selection and maintains filtered results' do
-      # Select act1 using helper method
       select_act_via_dropdown(act1_name)
 
       # Should show venues where act1 performs
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
       act_filter_markers_count = all('.leaflet-marker-icon').count
 
-      # Get current URL
       current_url_with_params = current_url
       expect(current_url_with_params).to include 'act='
 
       # Reload the page
       visit current_url_with_params
       expect(page).to have_selector('.leaflet-container', wait: 10)
-      sleep 2
 
       # Verify act selection is maintained by checking if the act appears in selected values
       expect(page).to have_selector(".react-select__multi-value img[alt='#{act1_name}']", wait: 5)
@@ -173,35 +160,29 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
     it 'persists combined filters (dates and act)' do
       start_date = Date.current
 
-      # Set start date and select act3 using helper methods
       set_date_via_picker('start_date', start_date)
       select_act_via_dropdown(act3_name)
 
-      # Should show filtered venues
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
       combined_filter_markers_count = all('.leaflet-marker-icon').count
 
-      # Get current URL
       current_url_with_params = current_url
       expect(current_url_with_params).to include 'start='
       expect(current_url_with_params).to include 'act='
 
-      # Reload the page
       visit current_url_with_params
       expect(page).to have_selector('.leaflet-container', wait: 10)
-      sleep 2
 
       # Verify all filters are maintained
       expect(find_field('start_date').value).to eq(start_date.strftime('%Y-%m-%d'))
       expect(page).to have_selector(".react-select__multi-value img[alt='#{act3_name}']", wait: 5)
 
-      # Verify same filtering is applied
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
       reloaded_combined_markers_count = all('.leaflet-marker-icon').count
       expect(reloaded_combined_markers_count).to eq(combined_filter_markers_count)
 
       # Click on venue to verify popup shows correct filtered gig
-      first('.leaflet-marker-icon').click
+      first('.leaflet-marker-icon').click # TODO
 
       within '.leaflet-popup' do
         expect(page).to have_selector('.venue-popup')
@@ -212,7 +193,6 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
     it 'maintains map position along with search filters' do
       start_date = 1.week.ago
 
-      # Set map position and search filter
       page.execute_script(<<~JS)
         if (window.mapInstance) {
           window.mapInstance.setView([-42.8, 174.2], 10);
@@ -229,15 +209,11 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       expect(current_url_with_params).to include 'zoom=10'
       expect(current_url_with_params).to include 'start='
 
-      # Reload the page
       visit current_url_with_params
       expect(page).to have_selector('.leaflet-container', wait: 10)
-      sleep 3 # Allow extra time for map positioning
 
-      # Verify search filter is maintained
       expect(find_field('start_date').value).to eq(start_date.strftime('%Y-%m-%d'))
 
-      # Verify map position is maintained
       lat = page.evaluate_script('window.mapInstance ? window.mapInstance.getCenter().lat : null')
       lng = page.evaluate_script('window.mapInstance ? window.mapInstance.getCenter().lng : null')
       zoom = page.evaluate_script('window.mapInstance ? window.mapInstance.getZoom() : null')
@@ -251,15 +227,12 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
     end
 
     it 'resets to default filters when navigating to root without parameters' do
-      # Set custom filters first
       custom_start_date = 1.week.ago
       set_date_via_picker('start_date', custom_start_date)
       select_act_via_dropdown(act1_name)
 
-      # Navigate to clean root path
       visit root_path
       expect(page).to have_selector('.leaflet-container', wait: 10)
-      sleep 2
 
       # Verify filters are reset to defaults (today to one year from today)
       today = Date.current

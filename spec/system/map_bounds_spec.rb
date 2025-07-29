@@ -44,9 +44,7 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
 
   before do
     visit root_path
-    # Wait for map to fully load
     expect(page).to have_selector('.leaflet-container', wait: 10)
-    sleep 2 # Allow React components to mount
   end
 
   describe 'venue markers display based on map bounds' do
@@ -58,8 +56,6 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
           window.mapInstance.fire('moveend');
         }
       JS
-
-      sleep 2 # Wait for debounced API call and marker updates
 
       # Should show London venue marker specifically
       expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 5)
@@ -77,8 +73,6 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
         }
       JS
 
-      sleep 2
-
       # Should show NYC venue marker specifically
       expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]", wait: 5)
 
@@ -95,8 +89,6 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
           window.mapInstance.fire('moveend');
         }
       JS
-
-      sleep 2
 
       # Should show Atlantic venues (London and NYC)
       expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 5)
@@ -117,9 +109,6 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
         }
       JS
 
-      sleep 1
-
-      # Check URL contains map parameters
       expect(current_url).to match(/lat=51\.5074/)
       expect(current_url).to match(/lng=-0\.1278/)
       expect(current_url).to match(/zoom=10/)
@@ -130,9 +119,7 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
       visit root_path + '?lat=40.7128&lng=-74.0060&zoom=12'
 
       expect(page).to have_selector(".leaflet-container", wait: 10)
-      sleep 2
 
-      # Verify map is positioned correctly
       lat = page.evaluate_script('window.mapInstance ? window.mapInstance.getCenter().lat : null')
       lng = page.evaluate_script('window.mapInstance ? window.mapInstance.getCenter().lng : null')
       zoom = page.evaluate_script('window.mapInstance ? window.mapInstance.getZoom() : null')
@@ -153,12 +140,8 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
         }
       JS
 
-      sleep 2
-
-      # Click on first venue marker
       first(".leaflet-marker-icon").click
 
-      # Verify popup appears with venue information
       expect(page).to have_selector(".leaflet-popup", wait: 3)
 
       within ".leaflet-popup" do
