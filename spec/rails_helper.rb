@@ -15,9 +15,21 @@ end
 Dir[Rails.root.join('spec/support/**/*.rb')].each { |f| require f }
 
 RSpec.configure do |config|
+  # Enable parallel test execution
   config.use_transactional_fixtures = true
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
+  
+  # Configure parallel testing
+  if ENV['PARALLEL_TESTS']
+    # Use the number of available processors, or specify a custom number
+    config.before(:suite) do
+      # Set up parallel test databases if needed
+      Rails.application.load_tasks
+      Rake::Task['parallel:create'].invoke rescue nil
+      Rake::Task['parallel:migrate'].invoke rescue nil
+    end
+  end
 
   # Factory Bot configuration
   config.include FactoryBot::Syntax::Methods
