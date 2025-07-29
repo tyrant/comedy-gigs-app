@@ -1,24 +1,14 @@
 # README
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## Parallel_tests
 
-Things you may want to cover:
+```ruby
+# Run all tests in parallel
+bundle exec parallel_test spec/ -t rspec --first-is-1
 
-* Ruby version
+# Run only system tests in parallel
+bundle exec parallel_test spec/system/ -t rspec --first-is-1
 
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+# Specify custom worker count
+bundle exec parallel_test spec/ -t rspec -n 4 --first-is-1
+```

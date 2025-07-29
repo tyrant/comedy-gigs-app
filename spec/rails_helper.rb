@@ -34,16 +34,27 @@ RSpec.configure do |config|
   # Factory Bot configuration
   config.include FactoryBot::Syntax::Methods
 
-  # Database Cleaner configuration
+  # Database Cleaner configuration for parallel testing
   config.before(:suite) do
-    DatabaseCleaner.strategy = :transaction
-    DatabaseCleaner.clean_with(:truncation)
+    # Use truncation for parallel tests to avoid transaction conflicts
+    if ENV['TEST_ENV_NUMBER']
+      DatabaseCleaner.strategy = :truncation
+      DatabaseCleaner.clean_with(:truncation)
+    else
+      DatabaseCleaner.strategy = :transaction
+      DatabaseCleaner.clean_with(:truncation)
+    end
   end
 
   config.around(:each) do |example|
     DatabaseCleaner.cleaning do
       example.run
     end
+  end
+  
+  # Disable transactional fixtures for parallel tests
+  if ENV['TEST_ENV_NUMBER']
+    config.use_transactional_fixtures = false
   end
 end
 
