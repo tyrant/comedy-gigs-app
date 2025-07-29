@@ -161,7 +161,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       sleep 2
 
       # Verify act selection is maintained by checking if the act appears in selected values
-      expect(page).to have_selector('.react-select__multi-value__label', text: act1_name, wait: 5)
+      expect(page).to have_selector(".react-select__multi-value img[alt='#{act1_name}']", wait: 5)
 
       # Verify same venues are displayed
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
@@ -193,7 +193,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
 
       # Verify all filters are maintained
       expect(find_field('start_date').value).to eq(start_date.strftime('%Y-%m-%d'))
-      expect(page).to have_selector('.react-select__multi-value__label', text: act3_name, wait: 5)
+      expect(page).to have_selector(".react-select__multi-value img[alt='#{act3_name}']", wait: 5)
 
       # Verify same filtering is applied
       expect(page).to have_selector('.leaflet-marker-icon', wait: 5)

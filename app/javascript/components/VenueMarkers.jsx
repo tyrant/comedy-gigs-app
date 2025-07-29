@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { createRoot } from 'react-dom/client';
-import { formatDate, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam, getFilterParamsFromUrl } from '../fiddly-bits';
+import { formatDate, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam } from '../fiddly-bits';
 import L from 'leaflet'
 import 'leaflet.markercluster'
 
@@ -105,14 +105,11 @@ const PopupContent = ({ venue, gigs }) => {
 
 // Venue markers component
 const VenueMarkers = ({ venueGroups }) => {
-  // Get current filter params from URL to preserve them
-  const filterParams = getFilterParamsFromUrl();
-  const map = useMap();
-  const markersRef = useRef({});
-  const popupStatesRef = useRef({});
+  const map              = useMap();
+  const markersRef       = useRef({});
+  const popupStatesRef   = useRef({});
   const markerClusterRef = useRef(null);
   
-  // Create popup content using React and ReactDOM
   const createPopupContent = useCallback((venue, gigs) => {
     const container = document.createElement('div');
     const root = createRoot(container);
@@ -120,27 +117,19 @@ const VenueMarkers = ({ venueGroups }) => {
     return container;
   }, []);
   
-  // Initialize marker cluster group
   useEffect(() => {
-    if (!markerClusterRef.current && map) {
-      // Check if L.markerClusterGroup is available
-      if (typeof L.markerClusterGroup !== 'function') {
-        console.error('L.markerClusterGroup is not a function. Make sure leaflet.markercluster is properly loaded.');
-        // Fallback to regular layer group if markerClusterGroup is not available
-        markerClusterRef.current = L.layerGroup();
-      } else {
-        markerClusterRef.current = L.markerClusterGroup({
-          chunkedLoading: true,
-          maxClusterRadius: 40,
-          spiderfyOnMaxZoom: true,
-          showCoverageOnHover: true,
-          zoomToBoundsOnClick: true
-        });
-      }
-      
-      map.addLayer(markerClusterRef.current);
-    }
+    if (!map || markerClusterRef.current) return;
+
+    markerClusterRef.current = L.markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: true,
+      zoomToBoundsOnClick: true
+    });
     
+    map.addLayer(markerClusterRef.current);
+
     return () => {
       if (markerClusterRef.current && map) {
         map.removeLayer(markerClusterRef.current);
@@ -174,9 +163,8 @@ const VenueMarkers = ({ venueGroups }) => {
         const marker = markersRef.current[venueId];
         const currentPos = marker.getLatLng();
         
-        if (currentPos.lat !== lat || currentPos.lng !== lng) {
+        if (currentPos.lat !== lat || currentPos.lng !== lng)
           marker.setLatLng([lat, lng]);
-        }
         
         // Always update popup content with new gig data
         const popupContent = createPopupContent(venue, gigs);
@@ -193,9 +181,9 @@ const VenueMarkers = ({ venueGroups }) => {
         marker.bindPopup(popup);
         
         // Check if popup was open before and reopen it
-        if (popupStatesRef.current[venueId]) {
+        if (popupStatesRef.current[venueId])
           setTimeout(() => marker.openPopup(), 100); // Small delay to ensure proper rendering
-        }
+
       } else {
         // Create new marker
         const marker = L.marker([lat, lng], { 

@@ -6,19 +6,17 @@ import VenueMarkers from './VenueMarkers';
 // Component to expose map instance for testing
 const MapInstanceExposer = () => {
   const map = useMap();
-  
+
+  // Expose map instance to window for system tests
   useEffect(() => {
-    // Expose map instance to window for system tests
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined')
       window.mapInstance = map;
-    }
-    
+
     // Cleanup on unmount
-    return () => {
-      if (typeof window !== 'undefined') {
+    return () => { 
+      if (typeof window !== 'undefined')
         window.mapInstance = null;
-      }
-    };
+    }; 
   }, [map]);
   
   return null;
@@ -59,9 +57,7 @@ const MapEventHandler = ({ onBoundsChange }) => {
 
   // Initial load - trigger bounds change once map is ready
   useEffect(() => {
-    if (map) {
-      handleMapMove();
-    }
+    if (map) handleMapMove();
   }, [map, handleMapMove]);
 
   return null;
@@ -72,10 +68,9 @@ const InitialMapPosition = ({ center, zoom }) => {
   const map = useMap();
   
   useEffect(() => {
-    if (center && zoom) {
-      // Add worldCopyJump option to handle antimeridian crossing smoothly
+    // Worldcopyjump? Behold: leafletjs.com/reference.html#map-worldcopyjump
+    if (center && zoom)
       map.setView(center, zoom, { animate: false, worldCopyJump: true });
-    }
   }, [map, center, zoom]);
 
   return null;
@@ -96,9 +91,8 @@ const groupGigsByVenue = (gigs) => {
 
   gigs.forEach((gig) => {
     const venue = gig.venue;
-    if (!venueMap.has(venue.id)) {
-      venueMap.set(venue.id, { venue, gigs: [] });
-    }
+    if (!venueMap.has(venue.id)) venueMap.set(venue.id, { venue, gigs: [] });
+    
     venueMap.get(venue.id).gigs.push(gig);
   });
 
@@ -115,24 +109,12 @@ const MapView = ({ gigs, onBoundsChange }) => {
   // Memoize the grouped gigs to prevent unnecessary recalculation
   const venueGroups = useMemo(() => groupGigsByVenue(gigs), [gigs]);
 
-  const defaultCenter = [-41.959490, 171.595459];
-  const defaultZoom = 5;
   const urlParams = getMapParamsFromUrl();
 
-  // Calculate initial map position
   const initialPosition = useMemo(() => {
-    // If we have URL params, use those
-    if (urlParams.lat && urlParams.lng) {
-      return {
-        center: [urlParams.lat, urlParams.lng],
-        zoom: urlParams.zoom || defaultZoom
-      };
-    }
-    
-    // Default fallback
-    return {
-      center: defaultCenter,
-      zoom: defaultZoom
+    return { 
+      center: [urlParams.lat || -41.959490, urlParams.lng || 171.595459],
+      zoom:   urlParams.zoom || 5 
     };
   }, [venueGroups, urlParams.lat, urlParams.lng, urlParams.zoom]);
 

@@ -1,39 +1,20 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import MapView from './MapView';
 import { normalizeLongitude, getFilterParamsFromUrl, updateFilterUrlParams } from '../fiddly-bits';
 import Select from 'react-select';
 
 const App = () => {
-  const [gigs, setGigs] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const abortControllerRef = useRef(null);
-  const lastBoundsRef = useRef(null);
-  
-  // Search filters state - initialize from URL parameters
-  const [searchFilters, setSearchFilters] = useState(() => {
-    // Get filter params from URL
-    return getFilterParamsFromUrl();
-  });
-  
-  // Acts data for the dropdown
-  const [acts, setActs] = useState([]);
-  const [loadingActs, setLoadingActs] = useState(false);
-    
-  // Track if this is the first page load
-  const isFirstPageLoad = useRef(true);
 
-  // Update URL with default filter values on initial load
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const hasStartDate = params.has('start');
-    const hasEndDate = params.has('end');
-    
-    // If either start or end date is missing from URL, update URL with defaults
-    if (!hasStartDate || !hasEndDate) {
-      updateFilterUrlParams(searchFilters);
-    }
-  }, []); // Run only once on mount
+  const abortControllerRef = useRef(null);
+  const lastBoundsRef      = useRef(null);
+  const isFirstPageLoad    = useRef(true); // Track if this is the first page load
+
+  const [gigs, setGigs]                   = useState([]);
+  const [error, setError]                 = useState(null);
+  const [loading, setLoading]             = useState(false);
+  const [acts, setActs]                   = useState([]); // Acts data for the dropdown
+  const [loadingActs, setLoadingActs]     = useState(false);
+  const [searchFilters, setSearchFilters] = useState(() => getFilterParamsFromUrl()); // Search filters: init from URL params
 
   // Helper to compare bounds with special handling for antimeridian crossing
   const areBoundsSame = (bounds1, bounds2) => {
@@ -63,10 +44,12 @@ const App = () => {
 
   // Fetch acts for dropdown on component mount and initialize filters from URL
   useEffect(() => {
-    // Get filter params from URL
+
+    const url = new URLSearchParams(window.location.search);
+    if (!url.has('start') || !url.has('end')) updateFilterUrlParams(searchFilters);
+    
     const urlFilterParams = getFilterParamsFromUrl();
     
-    // Initialize search filters from URL parameters
     if (urlFilterParams) {
       setSearchFilters(prevFilters => ({
         ...prevFilters,
@@ -78,19 +61,19 @@ const App = () => {
     
     const fetchActs = async () => {
       setLoadingActs(true);
+
       try {
         const response = await fetch('/api/acts');
         if (!response.ok) throw new Error('Failed to fetch acts');
+        
         const data = await response.json();
         
-        // Format acts data for React Select with value/label format
-        const formattedActs = data.map(act => ({
+        const sortedActs = data.map(act => ({
           value: act.id,
           label: act.name,
-          image: act.primary_image_url || null
-        }));
-
-        const sortedActs = formattedActs.sort((a, b) => a.label.localeCompare(b.label));
+          image: act.primary_image_url
+        })).sort((a, b) => a.label.localeCompare(b.label));
+        
         setActs(sortedActs);
         
         // Now that we have the acts data, we can set the selected acts from URL
@@ -99,12 +82,20 @@ const App = () => {
           const selectedActs = sortedActs.filter(act => 
             urlFilterParams.actIds.includes(act.value)
           );
-          
+
           if (selectedActs.length > 0) {
-            setSearchFilters(prevFilters => ({
-              ...prevFilters,
-              actIds: selectedActs // Store full act objects in component state
-            }));
+            const newFilters = {
+              ...urlFilterParams,
+              acts: selectedActs // Store full act objects in component state
+            };
+            setSearchFilters(newFilters);
+            
+            // If we have map bounds and this is still the first page load, make the API call now
+            if (lastBoundsRef.current && isFirstPageLoad.current) {
+              isFirstPageLoad.current = false;
+              // Use the newFilters which contain the full act objects
+              fetchGigsForBounds(lastBoundsRef.current, newFilters);
+            }
           }
         }
       } catch (err) {
@@ -121,10 +112,7 @@ const App = () => {
   const fetchGigsForBounds = useCallback(async (bounds, filters) => {
     if (!bounds) return;
     
-    // Cancel any previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     
     // Create new AbortController for this request
     const abortController = new AbortController();
@@ -140,40 +128,21 @@ const App = () => {
         east: normalizeLongitude(bounds.getEast()),
         west: normalizeLongitude(bounds.getWest())
       });
-      
-      // Add search filters to params if they exist
-      if (filters.actIds && filters.actIds.length > 0) {
-        // For multi-select, pass array of IDs
-        const actIdValues = filters.actIds.map(act => act.value);
-        
-        // Add act IDs as an array parameter
-        // Make sure we're not sending empty values
-        if (actIdValues.length > 0 && actIdValues[0] !== '') {
-          params.append('act_ids', actIdValues.join(','));
-        }
-      }
 
-      // 
+      if (filters.actIds && filters.actIds.length > 0)
+        params.append('act_ids', filters.actIds.join(','));
 
-      if (filters.startDate) {
-        params.append('start_date', filters.startDate);
-      }
+      if (filters.startDate) params.append('start_date', filters.startDate);
+      if (filters.endDate)   params.append('end_date', filters.endDate);
       
-      if (filters.endDate) {
-        params.append('end_date', filters.endDate);
-      }
-      
-      const response = await fetch(`/api/gigs?${params}`, {
-        signal: abortController.signal
-      });
+      const response = await fetch(`/api/gigs?${params}`, { signal: abortController.signal });
       if (!response.ok) throw new Error('Failed to fetch gigs');
       
       const data = await response.json();
       
       // Only update state if this request wasn't aborted
-      if (!abortController.signal.aborted) {
-        setGigs(data);
-      }
+      if (!abortController.signal.aborted) setGigs(data);
+
     } catch (err) {
       // Don't show error if request was just aborted
       if (err.name !== 'AbortError') {
@@ -182,24 +151,43 @@ const App = () => {
       }
     } finally {
       // Only update loading state if this request wasn't aborted
-      if (!abortController.signal.aborted) {
-        setLoading(false);
-      }
+      if (!abortController.signal.aborted) setLoading(false);
     }
   }, [setGigs, setError, setLoading]);
 
-  // Handle map bounds changes
-  const handleBoundsChange = useCallback((bounds) => {
+    
+  // Trigger API call when acts are loaded and we have URL act IDs to process
+  useEffect(() => {
+    if (!acts.length || !isFirstPageLoad.current) return; // No acts; first page-load? Exit.
 
-    // Skip if bounds haven't changed significantly
+    const urlFilterParams = getFilterParamsFromUrl();
+    if (!urlFilterParams.actIds) return;
+
+    const selectedActs = acts.filter(act => urlFilterParams.actIds.includes(act.value));    
+    if (!selectedActs.length) return;
+
+    // Create filters with the act objects
+    const filtersWithActs = {
+      ...urlFilterParams,
+      acts: selectedActs
+    };
+    
+    // Update search filters state
+    setSearchFilters(filtersWithActs);
+    
+    // Make the API call with the correct filters
+    isFirstPageLoad.current = false;
+    fetchGigsForBounds(lastBoundsRef.current, filtersWithActs);
+    
+  }, [acts, fetchGigsForBounds]);
+
+  // Fires on each change - and once on app load.
+  const handleBoundsChange = useCallback((bounds) => {
     if (areBoundsSame(bounds, lastBoundsRef.current)) return;
+
     lastBoundsRef.current = bounds;
     
-    // On first page load, ensure we're using the URL params
     if (isFirstPageLoad.current) {
-      isFirstPageLoad.current = false;
-      
-      // Get filter params from URL to ensure we're using the latest URL state
       const urlFilterParams = getFilterParamsFromUrl();
       
       // For the initial load, we need to handle the actIds specially since they're just IDs in the URL
@@ -209,22 +197,35 @@ const App = () => {
       // If URL has actIds but our state doesn't have the full objects yet (which happens on initial load)
       if (urlFilterParams.actIds && urlFilterParams.actIds.length > 0 && 
           (!searchFilters.actIds || searchFilters.actIds.length === 0)) {
+        
+        if (!acts.length) return;
+        
         // Find the corresponding act objects from our acts array
         const selectedActs = acts.filter(act => urlFilterParams.actIds.includes(act.value));
 
         if (selectedActs.length > 0) {
+          // Set the act objects in the API filters
           filtersForApi.actIds = selectedActs;
           
           // Also update the search filters state to reflect the URL params
           setSearchFilters(prev => ({
             ...prev,
-            actIds: selectedActs
+            startDate: urlFilterParams.startDate || prev.startDate,
+            endDate: urlFilterParams.endDate || prev.endDate,
+            actIds: selectedActs.map(act => act.value)
           }));
         }
       }
       
+      if (urlFilterParams.startDate) filtersForApi.startDate = urlFilterParams.startDate;
+      if (urlFilterParams.endDate)   filtersForApi.endDate = urlFilterParams.endDate;
+      
+      // Now we're actually making the API call, so set the flag
+      isFirstPageLoad.current = false;
+
       // Fetch gigs with URL filters
       fetchGigsForBounds(bounds, filtersForApi);
+
     } else {
       // For subsequent bounds changes, use the current filters from component state
       fetchGigsForBounds(bounds, searchFilters);
@@ -239,7 +240,7 @@ const App = () => {
       ...searchFilters,
       [name]: value
     };
-    
+
     // Set the new filters
     setSearchFilters(newFilters);
     
@@ -248,49 +249,43 @@ const App = () => {
     updateFilterUrlParams(newFilters);
     
     // Trigger an API call with the new filters
-    if (lastBoundsRef.current) {
-      fetchGigsForBounds(lastBoundsRef.current, newFilters);
-    }
+    if (lastBoundsRef.current) fetchGigsForBounds(lastBoundsRef.current, newFilters);
+
   }, [fetchGigsForBounds, searchFilters]);
   
   // Special handler for multi-select acts
   const handleActsChange = useCallback((selectedOptions) => {
-    
     const selectedActs = selectedOptions || []; // Handle null when all options are cleared
     
+    // Extract just the IDs for URL parameters
+    const actIds = selectedActs.map(act => act.value);
+
     // Update component state with full act objects
     const newFilters = {
       ...searchFilters,
-      actIds: selectedActs
+      acts: selectedActs,
+      actIds: actIds
     };
     setSearchFilters(newFilters);
-    
-    // Extract just the IDs for URL parameters
-    const actIdsForUrl = selectedActs.map(act => act.value);
-
+ 
     // Update URL with just the IDs
     updateFilterUrlParams({
       ...newFilters,
-      actIds: actIdsForUrl // Override with just IDs for URL
+     // actIds: actIds // Override with just IDs for URL
     });
     
-    if (lastBoundsRef.current) {
-      fetchGigsForBounds(lastBoundsRef.current, newFilters);
-    }
+    if (lastBoundsRef.current) fetchGigsForBounds(lastBoundsRef.current, newFilters);
+
   }, [fetchGigsForBounds, searchFilters]);
   
   // Clear all filters
   const handleClearFilters = useCallback(() => {
+
     const clearedFilters = { actIds: [], startDate: '', endDate: '' };
     setSearchFilters(clearedFilters);
-    
-    // Update URL with cleared filters using the granular utility function
-    // This will only update the filter parameters without affecting map parameters
     updateFilterUrlParams(clearedFilters);
-    
-    if (lastBoundsRef.current) {
-      fetchGigsForBounds(lastBoundsRef.current, clearedFilters);
-    }
+    if (lastBoundsRef.current) fetchGigsForBounds(lastBoundsRef.current, clearedFilters);
+
   }, [fetchGigsForBounds]);
 
   return (
@@ -310,7 +305,7 @@ const App = () => {
                   closeMenuOnSelect={false}
                   isLoading={loadingActs}
                   options={acts}
-                  value={searchFilters.actIds}
+                  value={searchFilters.acts}
                   onChange={handleActsChange}
                   placeholder="Show gigs performed by ..."
                   noOptionsMessage={() => "No acts found"}

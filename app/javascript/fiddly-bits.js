@@ -88,11 +88,9 @@ const updateUrlParams = (paramsToUpdate = {}, paramsToRemove = []) => {
       else if (key === 'lng') {
         params.set(key, normalizeLongitude(parseFloat(value)).toFixed(6));
       }
-      else if (key === 'acts' && Array.isArray(value) && value.length > 0) {
+      else if (key === 'act' && Array.isArray(value) && value.length > 0) {
         params.delete('act');
-        value.forEach(actId => {
-          params.append('act', actId);
-        });
+        value.forEach(actId => params.append('act', actId));
       }
       
       else {
@@ -102,9 +100,7 @@ const updateUrlParams = (paramsToUpdate = {}, paramsToRemove = []) => {
   });
   
   // Remove parameters
-  paramsToRemove.forEach(key => {
-    params.delete(key);
-  });
+  paramsToRemove.forEach(key => params.delete(key));
   
   window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
 };
@@ -154,7 +150,7 @@ const updateFilterUrlParams = (filters) => {
   
   // Handle act IDs 
   if (filters.actIds && filters.actIds.length > 0) {
-    paramsToUpdate.acts = filters.actIds;
+    paramsToUpdate.act = filters.actIds;
   } else {
     paramsToRemove.push('act');
   }
