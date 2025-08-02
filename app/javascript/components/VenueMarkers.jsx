@@ -166,23 +166,29 @@ const VenueMarkers = ({ venueGroups }) => {
         if (currentPos.lat !== lat || currentPos.lng !== lng)
           marker.setLatLng([lat, lng]);
         
-        // Always update popup content with new gig data
-        const popupContent = createPopupContent(venue, gigs);
-        const popup = L.popup({
-          autoClose: false,
-          closeOnClick: true,
-          className: 'venue-popup-container',
-          maxWidth: 340,
-          minWidth: 280,
-          offset: [0, -5],
-          closeButton: true
-        }).setContent(popupContent);
-        
-        marker.bindPopup(popup);
-        
-        // Check if popup was open before and reopen it
-        if (popupStatesRef.current[venueId])
-          setTimeout(() => marker.openPopup(), 100); // Small delay to ensure proper rendering
+        // Only update popup if it's not currently open to prevent duplication
+        if (!marker.isPopupOpen()) {
+          // Unbind existing popup before creating new one
+          marker.unbindPopup();
+          
+          // Always update popup content with new gig data
+          const popupContent = createPopupContent(venue, gigs);
+          const popup = L.popup({
+            autoClose: false,
+            closeOnClick: true,
+            className: 'venue-popup-container',
+            maxWidth: 340,
+            minWidth: 280,
+            offset: [0, -5],
+            closeButton: true
+          }).setContent(popupContent);
+          
+          marker.bindPopup(popup);
+          
+          // Check if popup was open before and reopen it
+          if (popupStatesRef.current[venueId])
+            setTimeout(() => marker.openPopup(), 100); // Small delay to ensure proper rendering
+        }
 
       } else {
         // Create new marker
