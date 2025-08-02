@@ -295,6 +295,7 @@ const App = () => {
                 styles={{
                   control: (baseStyles) => ({
                     ...baseStyles,
+                    paddingLeft: '6px',
                     borderColor: '#d1d5db',
                     fontSize: '0.875rem',
                     minHeight: '40px',
@@ -360,7 +361,7 @@ const App = () => {
                       />
                     </div>
                   ),
-                  ValueContainer: ({ children, getValue }) => {
+                  ValueContainer: ({ children, getValue, ...props }) => {
                     const acts = document.getElementById('acts');
                     let hiddenCount = 0;
 
@@ -370,7 +371,7 @@ const App = () => {
                     }
 
                     return (
-                      <div id="acts_select_container" className="flex items-center flex-1 overflow-hidden">
+                      <div {...props} id="acts_select_container" className="flex items-center flex-1 overflow-hidden">
                         <div className="flex items-center flex-wrap">
                           {children}
                         </div>
