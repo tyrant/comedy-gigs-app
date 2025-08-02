@@ -280,89 +280,123 @@ const App = () => {
           <div className="flex flex-1 flex-wrap gap-2">
 
             {/* Act multi-select dropdown with thumbnails */}
-            <div className="basis-full md:basis-auto flex-1">
-              <div className="grow">
-                <Select
-                  name="acts"
-                  isMulti
-                  closeMenuOnSelect={false}
-                  isLoading={loadingActs}
-                  options={acts}
-                  value={searchFilters.acts}
-                  onChange={handleActsChange}
-                  placeholder="Show gigs performed by ..."
-                  noOptionsMessage={() => "No acts found"}
-                  classNamePrefix="react-select"
-                  // Custom styles for the dropdown
-                  styles={{
-                    control: (baseStyles) => ({
+            <div id="acts" className="basis-full md:basis-auto flex-1 relative">
+              <Select
+                name="acts"
+                isMulti
+                closeMenuOnSelect={false}
+                isLoading={loadingActs}
+                options={acts}
+                value={searchFilters.acts}
+                onChange={handleActsChange}
+                placeholder="Show gigs performed by ..."
+                noOptionsMessage={() => "No acts found"}
+                classNamePrefix="react-select"
+                styles={{
+                  control: (baseStyles) => ({
+                    ...baseStyles,
+                    borderColor: '#d1d5db',
+                    fontSize: '0.875rem',
+                    minHeight: '40px',
+                    height: 'auto',
+                    flexWrap: 'nowrap'
+                  }),
+                  valueContainer: (baseStyles) => ({
+                    ...baseStyles,
+                    padding: '2px 8px',
+                    flexWrap: 'nowrap',
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }),
+                  multiValue: (baseStyles, { index }) => {
+                    const acts = document.getElementById('acts');
+                    // 73px for the remove/select-acts buttons, 52px for act thumbs
+                    const maxVisibleCount = Math.floor((acts.offsetWidth - 73) / 53); 
+                    return {
                       ...baseStyles,
-                      borderColor: '#d1d5db',
-                      fontSize: '0.875rem'
-                    }),
-                    multiValue: (baseStyles) => ({
-                      ...baseStyles,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                       backgroundColor: '#fff',
-                      padding: '0px',
-                      marginRight: '-2px',
-                      borderRadius: '50%'
-                    }),
-                    multiValueLabel: (baseStyles) => ({
-                      ...baseStyles,
-                      // Hide the text label completely
-                      padding: 0,
-                      paddingLeft: 0
-                    }),
-                    multiValueRemove: (baseStyles) => ({
-                      ...baseStyles,
-                      zIndex: 9999,
-                      cursor: 'pointer',
+                      marginLeft: '5px',
+                      marginRight: '-5px',
                       borderRadius: '50%',
-                      position: 'relative',
-                      top: 0,
-                      right: 10,
-                      width: '20px',
-                      height: '20px',
-                      backgroundColor: '#aaa',
-                      '&:hover': {
-                        backgroundColor: 'rgba(220,38,38,1)',
-                        color: 'white'
-                      }
-                    }),
-                    menu: (baseStyles) => ({
-                      ...baseStyles
-                    })
-                  }}
-                  // Custom components
-                  components={{
-                    // Custom MultiValueLabel to show only the image for selected values
-                    MultiValueLabel: ({ data }) => (
-                      <div className="w-8 h-8 rounded-full overflow-hidden">
-                        <img 
-                          src={data.image} 
-                          alt={data.label} 
-                          className="w-full h-full object-cover" 
-                          title={data.label} // Show name on hover
-                        />
-                      </div>
-                    )
-                  }}
-                  // Custom option component with image thumbnails (for dropdown options)
-                  formatOptionLabel={(option, { context }) => {
-                    // Only show the full option with text in the menu, not in the value container
-                    if (context === 'menu') {
-                      return (
-                        <div className="flex items-center gap-2">
-                          <img src={option.image} alt={option.label} className="w-8 h-8 rounded-full object-cover" />
-                          <span className="text-sm">{option.label}</span>
-                        </div>
-                      );
+                      flexShrink: 0,
+                      display: (index < maxVisibleCount-2 ? 'flex' : 'none')
+                    };
+                  },
+                  multiValueLabel: (baseStyles) => ({
+                    ...baseStyles,
+                    padding: 0,
+                    paddingLeft: 0
+                  }),
+                  multiValueRemove: (baseStyles) => ({
+                    ...baseStyles,
+                    zIndex: 10,
+                    cursor: 'pointer',
+                    borderRadius: '50%',
+                    position: 'relative',
+                    top: 0,
+                    right: 10,
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: '#aaa',
+                    '&:hover': {
+                      backgroundColor: 'rgba(220,38,38,1)',
+                      color: 'white'
                     }
-                    // For the value container, we'll use the custom MultiValueLabel component
-                    return null;
-                  }}
-                />
-              </div>
+                  }),
+                  menu: (baseStyles) => ({
+                    ...baseStyles
+                  })
+                }}
+                components={{
+                  MultiValueLabel: ({ data }) => (
+                    <div className="w-8 h-8 rounded-full overflow-hidden">
+                      <img 
+                        src={data.image} 
+                        alt={data.label} 
+                        className="w-full h-full object-cover" 
+                        title={data.label} // Show name on hover
+                      />
+                    </div>
+                  ),
+                  ValueContainer: ({ children, getValue }) => {
+                    const acts = document.getElementById('acts');
+                    let hiddenCount = 0;
+
+                    if (acts) {
+                      const maxVisibleCount = Math.floor((acts.offsetWidth - 73) / 53); 
+                      hiddenCount = Math.max(getValue().length - maxVisibleCount, 0);
+                    }
+
+                    return (
+                      <div id="acts_select_container" className="flex items-center flex-1 overflow-hidden">
+                        <div className="flex items-center flex-wrap">
+                          {children}
+                        </div>
+                        {hiddenCount > 0 && (
+                          <div className="-ml-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full flex-shrink-0">
+                            +{hiddenCount} more
+                          </div>
+                        )}
+                      </div>
+                    );
+                  },
+                }}
+                formatOptionLabel={(option, { context }) => {
+                  // Only show the full option with text in the menu, not in the value container
+                  if (context === 'menu') {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <img src={option.image} alt={option.label} className="w-8 h-8 rounded-full object-cover" />
+                        <span className="text-sm">{option.label}</span>
+                      </div>
+                    );
+                  }
+                  // For the value container, we'll use the custom MultiValueLabel component
+                  return null;
+                }}
+              />
             </div>
 
             {/* Start date */}
@@ -413,7 +447,7 @@ const App = () => {
             {/* Clear filters button */}
             <button
                 onClick={handleClearFilters}
-                className="flex-none py-1 px-3 h-10 text-sm border border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-sm"
+                className="flex-none py-0 px-3 h-10 text-sm border border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-sm"
               >
                 Clear
             </button>
