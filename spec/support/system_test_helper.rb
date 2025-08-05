@@ -7,7 +7,7 @@ Capybara.configure do |config|
   config.javascript_driver = :selenium_chrome_headless
   config.default_max_wait_time = 10
   config.server = :puma, { Silent: true }
-  
+
   # Configure unique ports for parallel testing
   if ENV['TEST_ENV_NUMBER']
     # Use different ports for each parallel worker

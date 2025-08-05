@@ -19,7 +19,7 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = true
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
-  
+
   # Configure parallel testing
   if ENV['PARALLEL_TESTS']
     # Use the number of available processors, or specify a custom number
@@ -51,7 +51,7 @@ RSpec.configure do |config|
       example.run
     end
   end
-  
+
   # Disable transactional fixtures for parallel tests
   if ENV['TEST_ENV_NUMBER']
     config.use_transactional_fixtures = false
