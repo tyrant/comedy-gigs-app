@@ -1,10 +1,8 @@
 module Api
   class GigsController < ApplicationController
     def index
-      # Get all gigs
       scope = Gig.includes(:venue, :acts)
 
-      # Apply map bounds filter if present
       if bounds_params_present?
         sw = [ params[:south].to_f, params[:west].to_f ]
         ne = [ params[:north].to_f, params[:east].to_f ]
@@ -12,22 +10,20 @@ module Api
         scope = scope.joins(:venue).merge(Venue.within_bounding_box([ sw, ne ]))
       end
 
-      # Filter by act(s) if act_id(s) are provided
       if params[:act_ids].present?
-        # Handle array of IDs for multi-select
-        act_ids = params[:act_ids].is_a?(Array) ? params[:act_ids] : params[:act_ids].split(",")
+        act_ids = params[:act_ids].split(",")
 
-        scope = scope.joins(:acts).where(acts: { id: act_ids }).distinct
+        gig_ids_with_acts = Gig.joins(:acts).where(acts: { id: act_ids }).distinct.pluck(:id)
+        scope = scope.where(id: gig_ids_with_acts)
       end
 
-      # Filter by date range if provided
       if params[:start_date].present?
-        start_date = Date.parse(params[:start_date]) rescue nil
+        start_date = Date.parse(params[:start_date]) rescue false
         scope = scope.where("start_time >= ?", start_date.beginning_of_day) if start_date
       end
 
       if params[:end_date].present?
-        end_date = Date.parse(params[:end_date]) rescue nil
+        end_date = Date.parse(params[:end_date]) rescue false
         scope = scope.where("start_time <= ?", end_date.end_of_day) if end_date
       end
 

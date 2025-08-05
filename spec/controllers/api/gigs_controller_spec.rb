@@ -120,11 +120,15 @@ RSpec.describe Api::GigsController, type: :controller do
 
           it { expect(JSON.parse(response.body).length).to eq 2 }
           it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
-                 .to match_array [ tokyo_name, fiji_name ] }
-          it 'includes the act in all returned gigs' do
+                 .to contain_exactly tokyo_name, fiji_name }
+          it 'includes the filtered act in all returned gigs' do
             JSON.parse(response.body).each do |gig|
               expect(gig['acts'].map { |a| a['name'] }).to include act1_name
             end
+          end
+          it 'returns all acts for each gig, not just the filtered act' do
+            fiji_gig = JSON.parse(response.body).find { |gig| gig['venue']['name'] == fiji_name }
+            expect(fiji_gig['acts'].map { |a| a['name'] }).to contain_exactly act1_name, act3_name
           end
         end
       end
@@ -134,10 +138,14 @@ RSpec.describe Api::GigsController, type: :controller do
 
         it { expect(JSON.parse(response.body).length).to eq 3 }
         it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
-               .to match_array [ tokyo_name, honolulu_name, fiji_name ] }
+               .to contain_exactly tokyo_name, honolulu_name, fiji_name }
         it 'returns gigs that have at least one of the specified acts' do
           response_acts = JSON.parse(response.body).flat_map { |gig| gig['acts'].map { |a| a['name'] } }
           expect(response_acts).to include act1_name, act2_name
+        end
+        it 'returns all acts for each gig, including non-filtered acts' do
+          fiji_gig = JSON.parse(response.body).find { |gig| gig['venue']['name'] == fiji_name }
+          expect(fiji_gig['acts'].map { |a| a['name'] }).to contain_exactly act1_name, act3_name
         end
       end
 
@@ -146,7 +154,7 @@ RSpec.describe Api::GigsController, type: :controller do
 
         it { expect(JSON.parse(response.body).length).to eq 2 }
         it { expect(JSON.parse(response.body).map { |gig| gig['venue']['name'] })
-               .to match_array [ honolulu_name, fiji_name ] }
+               .to contain_exactly honolulu_name, fiji_name }
         it 'returns gigs that have at least one of the specified acts' do
           response_acts = JSON.parse(response.body).flat_map { |gig| gig['acts'].map { |a| a['name'] } }
           expect(response_acts).to include act2_name, act3_name
