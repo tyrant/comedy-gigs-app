@@ -64,18 +64,22 @@
 }
 
 /* Popup Styles */
-.venue-popup .leaflet-popup-content-wrapper {
+.leaflet-popup-content-wrapper {
   padding: 0;
   overflow: hidden;
 }
 
-.venue-popup .leaflet-popup-content {
+.leaflet-popup-content {
   margin: 0;
   width: 100% !important;
 }
 
+.leaflet-container a[data-role="ticket-url"] {
+  color: white;
+}
+
 @media (max-width: 640px) {
-  .venue-popup .leaflet-popup-content-wrapper {
+  .leaflet-popup-content-wrapper {
     border-radius: 0.5rem;
   }
 }

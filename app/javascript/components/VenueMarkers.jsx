@@ -17,86 +17,118 @@ const comedyIcon = L.icon({
 
 // Popup content component
 const PopupContent = ({ venue, gigs }) => {
+
+  // Group this popup's Gigs by Act: 
+  // [ ..., { acts: [...], gigs: [...]}, ... ]
+  const gigsGroupedByActs = [];
+
+  gigs.forEach(gig => {
+    const existingActs = gigsGroupedByActs.find(group => {
+      const groupActIds = group.acts.map(a => a.id);
+      const gigActIds = gig.acts.map(a => a.id);
+
+      return groupActIds.every((id, i) => id == gigActIds[i]);
+    });
+
+    if (!existingActs) gigsGroupedByActs.push({ acts: gig.acts, gigs: [gig] });
+    else              existingActs.gigs.push(gig);
+  });
+
   return (
-    <div className="venue-popup w-[280px] sm:w-[330px] relative bg-white rounded-md overflow-hidden shadow-lg">
+    <div className="venue-popup w-[280px] sm:w-[330px] bg-white rounded-md overflow-hidden shadow-lg">
       {venue.primary_image_url && (
-        <div className="w-full h-40 overflow-hidden">
-          <img 
-            src={venue.primary_image_url} 
-            alt={venue.name} 
-            className="w-full h-full object-cover" 
-          />
+        <div className="relative">
+          <div className="w-full h-40 overflow-hidden">
+            <img 
+              src={venue.primary_image_url} 
+              alt={venue.name} 
+              className="w-full h-full object-cover" 
+            />
+          </div>
+
+          <div className="absolute bottom-0 p-2 z-10 w-full h-4/5 bg-gradient-to-b from-transparent to-gray-900">
+            <div className="absolute bottom-0 p-2">
+              <h3 className="text-lg font-bold leading-5 text-gray-100">
+                {venue.name}
+              </h3>
+              <div className="flex items-center mt-0.5">
+                <span className="text-gray-200 text-xs truncate">
+                  {venue.address || venue.city || ''}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       
-      <div className="max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        {/* Sticky header */}
-        <div className="sticky top-0 z-10 bg-white px-2 pt-2 pb-2 backdrop-blur-sm bg-opacity-95 border-b border-gray-100">
-          <h3 className="text-base sm:text-lg font-bold leading-tight text-gray-900">
-            {venue.name}
-          </h3>
-          <div className="flex items-center mt-0.5">
-            <span className="text-gray-400 mr-1 text-xs">📍</span>
-            <p className="text-gray-500 text-xs sm:text-sm truncate">
-              {venue.address || venue.city || ''}
-            </p>
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
-        </div>
+      <div className="max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+
+ 
         
-        {/* Gigs list */}
         <div className="divide-y divide-gray-100 px-3 py-2">
-          {gigs.map(gig => (
-            <div key={gig.id} data-gig-id={gig.id} className="py-2.5 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded">
-              {/* Gig header with title and ticket button */}
-              <div className="flex justify-between items-start">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">
-                    {gig.name}
-                  </h4>
-                  <p className="text-gray-500 text-xs sm:text-sm">
-                    {formatDate(gig.start_time)}
-                  </p>
-                </div>
-                
-                {gig.ticket_url && (
-                  <a 
-                    href={gig.ticket_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="ml-2 shrink-0 px-2.5 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors duration-150"
-                  >
-                    Tickets
-                  </a>
+          {gigsGroupedByActs.map(group => (
+
+            <>
+              <div key={group.acts.map(act => act.id).join('-')}>
+                {group.acts && group.acts.length > 0 && (
+                  <div className="mt-1.5">
+                    <div className="flex flex-wrap gap-1.5">
+                      {group.acts.map(act => (
+                        <div key={act.id} data-act-id={act.id} className="inline-flex items-center bg-purple-50 rounded-full py-0.5 px-2">
+                          {act.primary_image_url && (
+                            <div className="w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0">
+                              <img 
+                                src={act.primary_image_url} 
+                                alt={act.name} 
+                                className="w-full h-full object-cover" 
+                              />
+                            </div>
+                          )}
+                          <span className="text-xs text-purple-800 font-medium truncate max-w-[100px]">
+                            {act.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-              
-              {/* Acts list */}
-              {gig.acts && gig.acts.length > 0 && (
-                <div className="mt-1.5">
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="text-xs text-gray-400 mr-1">With:</span>
-                    {gig.acts.map(act => (
-                      <div key={act.id} data-act-id={act.id} className="inline-flex items-center bg-purple-50 rounded-full py-0.5 px-2">
-                        {act.primary_image_url && (
-                          <div className="w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0">
-                            <img 
-                              src={act.primary_image_url} 
-                              alt={act.name} 
-                              className="w-full h-full object-cover" 
-                            />
+
+              <div>
+                {group.gigs && group.gigs.length > 0 && (
+                  <div>
+                    {group.gigs.map(gig => (
+                      <div key={gig.id} data-gig-id={gig.id} className="py-2.5 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 text-xs truncate">
+                              {gig.name}
+                            </h4>
+                            <span className="text-gray-500 text-xs">
+                              {formatDate(gig.start_time)}
+                            </span>
                           </div>
-                        )}
-                        <span className="text-xs text-purple-800 font-medium truncate max-w-[100px]">
-                          {act.name}
-                        </span>
+                          
+                          {gig.ticket_url && (
+                            <a 
+                              href={gig.ticket_url}
+                              data-role="ticket-url"
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="ml-2 shrink-0 px-2.5 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors duration-150"
+                            >
+                              Tickets
+                            </a>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </>
           ))}
+
         </div>
       </div>
     </div>

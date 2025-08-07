@@ -27,9 +27,11 @@ class Venue < ApplicationRecord
     where("external_ids->>'#{source}' = ?", id.to_s)
   }
 
+  IMAGE_PLACEHOLDER = "/images/venue_placeholder.webp"
+
   # Helper method to get the primary image URL
   def primary_image_url(size = "standard")
-    return nil if images.blank?
+    return IMAGE_PLACEHOLDER if images.blank?
 
     # Try to find an image with the requested size
     if images[size].present?
@@ -38,7 +40,7 @@ class Venue < ApplicationRecord
     elsif images.values.first.present?
       images.values.first
     else
-      nil
+      IMAGE_PLACEHOLDER
     end
   end
 
