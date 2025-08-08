@@ -82,6 +82,14 @@
   color: white;
 }
 
+.leaflet-container a[data-role="gig-title"] {
+  @apply text-gray-900;
+
+  &:hover {
+    @apply text-blue-600;
+  }
+}
+
 @media (max-width: 640px) {
   .leaflet-popup-content-wrapper {
     border-radius: 0.5rem;

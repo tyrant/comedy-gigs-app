@@ -71,8 +71,10 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
         expect(page).to have_selector('.venue-popup')
         expect(page).to have_text(venue1_name)
 
-        within "[data-gig-id='#{future_gig2.id}']" do
+        within "[data-act-id='#{act3.id}']" do
           expect(page).to have_text(act3_name)
+        end
+        within "[data-gig-id='#{future_gig2.id}']" do
           expect(page).to have_text(future_gig2_name)
         end
 
@@ -121,9 +123,11 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
         expect(page).to have_selector('.venue-popup')
         expect(page).to have_text(venue2_name)
 
+        within "[data-act-id='#{act2.id}']" do
+          expect(page).to have_text(act2_name)
+        end
         within "[data-gig-id='#{current_gig.id}']" do
           expect(page).to have_text(current_gig_name)
-          expect(page).to have_text(act2_name)
         end
 
         expect(page).not_to have_selector("[data-gig-id='#{far_future_gig.id}']")
@@ -171,9 +175,11 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       find(".leaflet-marker-icon[title=\"#{venue1_name}\"]").click
 
       within '.leaflet-popup' do
+        within "[data-act-id='#{act3.id}']" do
+          expect(page).to have_text(act3_name)
+        end
         within "[data-gig-id='#{future_gig2.id}']" do
           expect(page).to have_text(future_gig2.name)
-          expect(page).to have_text(act3.name)
         end
 
         expect(page).not_to have_selector("[data-gig-id='#{past_gig.id}']")

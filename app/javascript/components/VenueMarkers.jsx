@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { createRoot } from 'react-dom/client';
-import { formatDate, formatGigTime, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam } from '../fiddly-bits';
+import { formatDate, formatGigTime, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam, updateVenueAndGigUrlParams } from '../fiddly-bits';
 import L from 'leaflet'
 import 'leaflet.markercluster'
 
@@ -17,6 +17,33 @@ const comedyIcon = L.icon({
 
 // Popup content component
 const PopupContent = ({ venue, gigs }) => {
+  const scrollContainerRef = useRef(null);
+
+  // Handle gig title click
+  const handleGigClick = (gigId, event) => {
+    event.preventDefault();
+    updateVenueAndGigUrlParams(venue.id, gigId);
+  };
+
+  // Scroll to specific gig if gigId is in URL
+  useEffect(() => {
+    const urlParams = getMapParamsFromUrl();
+    if (urlParams.gigId && scrollContainerRef.current) {
+      // Small delay to ensure DOM is rendered
+      setTimeout(() => {
+        const gigElement = scrollContainerRef.current.querySelector(`[data-gig-id="${urlParams.gigId}"]`);
+        if (gigElement) {
+          gigElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Add temporary highlight
+          gigElement.classList.add('bg-blue-100');
+          setTimeout(() => {
+            gigElement.classList.remove('bg-blue-100');
+          }, 2000);
+        }
+      }, 1000);
+    }
+  }, [venue.id]);
 
   // Group this popup's Gigs by Act: 
   // [ ..., { acts: [...], gigs: [...]}, ... ]
@@ -61,12 +88,12 @@ const PopupContent = ({ venue, gigs }) => {
         </div>
       )}
       
-      <div className="max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div ref={scrollContainerRef} id="venue-popup-scroll-container" className="max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
 
         <div className="p-1">
           {gigsGroupedByActs.map(group => (
 
-            <div className="mb-4">
+            <div className="mb-3 last:mb-0">
               <div key={group.acts.map(act => act.id).join('-')}>
                 <div className="mt-1 flex gap-1 w-full h-10 overflow-x-auto no-scrollbar">
                   {group.acts.map(act => (
@@ -88,13 +115,20 @@ const PopupContent = ({ venue, gigs }) => {
 
               <div>
                 {group.gigs && group.gigs.length > 0 && (
-                  <div className="pl-2 mt-1">
+                  <div className="mt-1">
                     {group.gigs.map(gig => (
-                      <div key={gig.id} data-gig-id={gig.id} className="py-1 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 min-w-0">
+                      <div key={gig.id} data-gig-id={gig.id} className="py-1 first:pt-0 last:pb-0 px-1 ml-1 pl-5 hover:bg-gray-100 transition-colors duration-150 rounded">
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1 min-w-0 flex flex-wrap items-center">
                             <h4 className="font-medium text-gray-900 text-xs truncate">
-                              {gig.name}
+                              <a 
+                                href="#"
+                                data-role="gig-title"
+                                onClick={(e) => handleGigClick(gig.id, e)}
+                                className="text-gray-900 hover:text-blue-600 font-semibold mr-1 transition-colors duration-150 cursor-pointer"
+                              >
+                                {gig.name}
+                              </a>
                             </h4>
                             <span className="text-gray-500 text-xs">
                               {formatGigTime(gig.start_time, venue)}
@@ -107,7 +141,7 @@ const PopupContent = ({ venue, gigs }) => {
                               data-role="ticket-url"
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="ml-2 shrink-0 px-2.5 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors duration-150"
+                              className="h-full ml-2 shrink-0 px-2.5 py-1 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors duration-150"
                             >
                               Tickets
                             </a>
@@ -254,15 +288,15 @@ const VenueMarkers = ({ venueGroups }) => {
         marker.on('popupclose', () => {
           popupStatesRef.current[venueId] = false;
           
-          // Remove venue ID from URL but preserve map position
+          // Remove venue and gig IDs from URL but preserve map position
           const mapCenter = map.getCenter();
           const mapZoom = map.getZoom();
           
           // Update map parameters
           updateMapUrlParams(mapCenter.lat, mapCenter.lng, mapZoom);
           
-          // Remove venue parameter
-          updateVenueUrlParam(null);
+          // Remove venue and gig parameters
+          updateVenueAndGigUrlParams(null, null);
         });
         
         // Add to cluster group and store reference
@@ -281,11 +315,14 @@ const VenueMarkers = ({ venueGroups }) => {
     });
     
     // Check for venue ID in URL and open the corresponding popup after all markers are created
-    const { venueId } = getMapParamsFromUrl();
+    const { venueId, gigId } = getMapParamsFromUrl();
     if (venueId && markersRef.current[venueId]) {
       setTimeout(() => {
         markersRef.current[venueId].openPopup();
         popupStatesRef.current[venueId] = true;
+        
+        // If gigId is also present, the PopupContent component will handle scrolling to it
+        // via its useEffect hook that watches for gigId in the URL
       }, 300); // Small delay to ensure proper rendering
     }
   }, [map, venueGroups, createPopupContent]);

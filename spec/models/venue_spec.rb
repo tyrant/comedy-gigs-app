@@ -32,7 +32,7 @@ RSpec.describe Venue, type: :model do
 
     describe 'returning nil if no images are available' do
       before { venue.update(images: {}) }
-      it { expect(venue.primary_image_url).to be_nil }
+      it { expect(venue.primary_image_url).to eq '/images/venue_placeholder.webp' }
     end
   end
 

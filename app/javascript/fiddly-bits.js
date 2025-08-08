@@ -79,7 +79,8 @@ const getMapParamsFromUrl = () => {
     lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
     lng: params.get('lng') ? normalizeLongitude(parseFloat(params.get('lng'))) : null,
     zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null,
-    venueId: params.get('venue') || null
+    venueId: params.get('venue') || null,
+    gigId: params.get('gig') || null
   };
 };
 
@@ -156,11 +157,28 @@ const updateMapUrlParams = (lat, lng, zoom) => {
 
 // Update venue selection in URL
 const updateVenueUrlParam = (venueId) => {
-  if (venueId) {
-    updateUrlParams({ venue: venueId }, []);
-  } else {
-    updateUrlParams({}, ['venue']);
-  }
+  if (venueId) updateUrlParams({ venue: venueId }, []);
+  else         updateUrlParams({}, ['venue']);
+};
+
+// Update gig selection in URL
+const updateGigUrlParam = (gigId) => {
+  if (gigId) updateUrlParams({ gig: gigId }, []);
+  else       updateUrlParams({}, ['gig']);
+};
+
+// Update both venue and gig in URL (for gig deep-linking)
+const updateVenueAndGigUrlParams = (venueId, gigId) => {
+  const paramsToUpdate = {};
+  const paramsToRemove = [];
+  
+  if (venueId) paramsToUpdate.venue = venueId;
+  else         paramsToRemove.push('venue');
+  
+  if (gigId) paramsToUpdate.gig = gigId;
+  else       paramsToRemove.push('gig');
+  
+  updateUrlParams(paramsToUpdate, paramsToRemove);
 };
 
 // Update filter parameters in URL
@@ -169,26 +187,17 @@ const updateFilterUrlParams = (filters) => {
   const paramsToRemove = [];
   
   // Handle start date
-  if (filters.startDate) {
-    paramsToUpdate.start = filters.startDate;
-  } else {
-    paramsToRemove.push('start');
-  }
+  if (filters.startDate) paramsToUpdate.start = filters.startDate;
+  else                   paramsToRemove.push('start');
   
   // Handle end date
-  if (filters.endDate) {
-    paramsToUpdate.end = filters.endDate;
-  } else {
-    paramsToRemove.push('end');
-  }
+  if (filters.endDate) paramsToUpdate.end = filters.endDate;
+  else                 paramsToRemove.push('end');
   
   // Handle act IDs 
-  if (filters.actIds && filters.actIds.length > 0) {
-    paramsToUpdate.act = filters.actIds;
-  } else {
-    paramsToRemove.push('act');
-  }
-  
+  if (filters.actIds && filters.actIds.length > 0) paramsToUpdate.act = filters.actIds;
+  else                                             paramsToRemove.push('act');
+    
   updateUrlParams(paramsToUpdate, paramsToRemove);
 };
 
@@ -200,6 +209,8 @@ export {
   updateUrlParams, 
   updateMapUrlParams,
   updateVenueUrlParam,
+  updateGigUrlParam,
+  updateVenueAndGigUrlParams,
   updateFilterUrlParams,
   formatDate,
   formatDateWithTimezone,

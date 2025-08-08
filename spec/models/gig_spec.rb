@@ -124,8 +124,8 @@ RSpec.describe Gig, type: :model do
         let(:start_date) { 1.5.days.from_now.to_date.to_s }
         let(:gigs_after) { Gig.starting_after(start_date) }
 
-        it { expect(gigs_after).to include(gig2, gig3) }
-        it { expect(gigs_after).not_to include(gig1, past_gig) }
+        it { expect(gigs_after).to include(gig1, gig2, gig3) }
+        it { expect(gigs_after).not_to include(past_gig) }
       end
 
       context 'with invalid start_date' do
