@@ -24,7 +24,7 @@ const normalizeLongitude = (lng) => {
   return lng === 180 ? -180 : lng;
 };
 
-// Format date for display
+// Format date for display (legacy function - maintains backward compatibility)
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleString('en-US', {
@@ -35,6 +35,40 @@ const formatDate = (dateString) => {
     minute: '2-digit',
     hour12: true
   });
+};
+
+// Format date with timezone awareness
+const formatDateWithTimezone = (dateString, timezone = null) => {
+  const date = new Date(dateString);
+  
+  // If no timezone provided, use the legacy formatting
+  if (!timezone) {
+    return formatDate(dateString);
+  }
+  
+  try {
+    return date.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: timezone
+    });
+  } catch (error) {
+    console.warn(`Invalid timezone '${timezone}', falling back to default formatting:`, error);
+    return formatDate(dateString);
+  }
+};
+
+// Format date in venue's timezone for gig display
+const formatGigTime = (gigStartTime, venue) => {
+  if (!venue || !venue.timezone) {
+    return formatDate(gigStartTime);
+  }
+  
+  return formatDateWithTimezone(gigStartTime, venue.timezone);
 };
 
 // URL parameter handling
@@ -167,5 +201,7 @@ export {
   updateMapUrlParams,
   updateVenueUrlParam,
   updateFilterUrlParams,
-  formatDate 
+  formatDate,
+  formatDateWithTimezone,
+  formatGigTime
 };

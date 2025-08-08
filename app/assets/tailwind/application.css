@@ -8,6 +8,10 @@
 @tailwind components;
 @tailwind utilities;
 
+@utility no-scrollbar {
+  @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
+}
+
 /* React Select Custom Styles */
 .react-select__control {
   @apply shadow-sm border border-gray-300 rounded-md text-sm;

@@ -44,6 +44,34 @@ class Venue < ApplicationRecord
     end
   end
 
+  # Helper method to get timezone object
+  def timezone_object
+    return nil if timezone.blank?
+    
+    begin
+      TZInfo::Timezone.get(timezone)
+    rescue TZInfo::InvalidTimezoneIdentifier
+      Rails.logger.warn "Invalid timezone for venue #{name}: #{timezone}"
+      nil
+    end
+  end
+
+  # Helper method to format time in venue's timezone
+  def format_time_in_timezone(time, format = :default)
+    return time if timezone.blank? || timezone_object.nil?
+    
+    local_time = timezone_object.to_local(time)
+    
+    case format
+    when :short
+      local_time.strftime("%b %d, %I:%M %p")
+    when :long
+      local_time.strftime("%A, %B %d, %Y at %I:%M %p %Z")
+    else
+      local_time.strftime("%m/%d/%Y %I:%M %p %Z")
+    end
+  end
+
   # Callbacks
   before_validation :geocode_address, if: :address_changed?
 

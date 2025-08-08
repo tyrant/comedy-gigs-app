@@ -161,4 +161,172 @@ RSpec.describe Api::TicketmasterTransformer do
       it { expect(result.first[:images]['square']).to eq('https://example.com/comedian.jpg') }
     end
   end
+
+  describe '.extract_timezone' do
+    context 'with valid timezone in venue data' do
+      let(:venue_with_timezone) do
+        {
+          'name' => 'Test Venue',
+          'timezone' => 'America/New_York'
+        }
+      end
+
+      it 'extracts the timezone from venue data' do
+        result = described_class.extract_timezone(venue_with_timezone)
+        expect(result).to eq('America/New_York')
+      end
+    end
+
+    context 'with invalid timezone in venue data' do
+      let(:venue_with_invalid_timezone) do
+        {
+          'name' => 'Test Venue',
+          'timezone' => 'Invalid/Timezone'
+        }
+      end
+
+      it 'returns nil for invalid timezone' do
+        result = described_class.extract_timezone(venue_with_invalid_timezone)
+        expect(result).to be_nil
+      end
+    end
+
+    context 'without timezone in venue data' do
+      let(:venue_without_timezone) do
+        {
+          'name' => 'Test Venue',
+          'country' => { 'name' => 'United States' },
+          'city' => { 'name' => 'New York' }
+        }
+      end
+
+      it 'infers timezone from location' do
+        result = described_class.extract_timezone(venue_without_timezone)
+        expect(result).to eq('America/New_York')
+      end
+    end
+  end
+
+  describe '.infer_timezone_from_location' do
+    context 'with US locations' do
+      it 'returns correct timezone for New York' do
+        result = described_class.infer_timezone_from_location('United States', 'New York')
+        expect(result).to eq('America/New_York')
+      end
+
+      it 'returns correct timezone for Los Angeles' do
+        result = described_class.infer_timezone_from_location('United States', 'Los Angeles')
+        expect(result).to eq('America/Los_Angeles')
+      end
+
+      it 'returns correct timezone for Chicago' do
+        result = described_class.infer_timezone_from_location('United States', 'Chicago')
+        expect(result).to eq('America/Chicago')
+      end
+
+      it 'returns correct timezone for Denver' do
+        result = described_class.infer_timezone_from_location('United States', 'Denver')
+        expect(result).to eq('America/Denver')
+      end
+
+      it 'defaults to Eastern time for unknown US cities' do
+        result = described_class.infer_timezone_from_location('United States', 'Unknown City')
+        expect(result).to eq('America/New_York')
+      end
+    end
+
+    context 'with Canadian locations' do
+      it 'returns correct timezone for Toronto' do
+        result = described_class.infer_timezone_from_location('Canada', 'Toronto')
+        expect(result).to eq('America/Toronto')
+      end
+
+      it 'returns correct timezone for Vancouver' do
+        result = described_class.infer_timezone_from_location('Canada', 'Vancouver')
+        expect(result).to eq('America/Vancouver')
+      end
+    end
+
+    context 'with UK locations' do
+      it 'returns London timezone for UK' do
+        result = described_class.infer_timezone_from_location('United Kingdom', 'London')
+        expect(result).to eq('Europe/London')
+      end
+    end
+
+    context 'with Australian locations' do
+      it 'returns correct timezone for Sydney' do
+        result = described_class.infer_timezone_from_location('Australia', 'Sydney')
+        expect(result).to eq('Australia/Sydney')
+      end
+
+      it 'returns correct timezone for Perth' do
+        result = described_class.infer_timezone_from_location('Australia', 'Perth')
+        expect(result).to eq('Australia/Perth')
+      end
+    end
+
+    context 'with unknown countries' do
+      it 'returns nil for unknown countries' do
+        result = described_class.infer_timezone_from_location('Unknown Country', 'Unknown City')
+        expect(result).to be_nil
+      end
+    end
+  end
+
+  describe '.valid_timezone?' do
+    it 'returns true for valid IANA timezone' do
+      expect(described_class.valid_timezone?('America/New_York')).to be true
+    end
+
+    it 'returns false for invalid timezone' do
+      expect(described_class.valid_timezone?('Invalid/Timezone')).to be false
+    end
+
+    it 'returns false for blank timezone' do
+      expect(described_class.valid_timezone?('')).to be false
+      expect(described_class.valid_timezone?(nil)).to be false
+    end
+  end
+
+  describe '.build_venue' do
+    context 'with timezone data' do
+      let(:venue_data_with_timezone) do
+        {
+          'name' => 'Madison Square Garden',
+          'id' => 'venue123',
+          'address' => { 'line1' => '4 Pennsylvania Plaza' },
+          'city' => { 'name' => 'New York' },
+          'country' => { 'name' => 'United States' },
+          'location' => { 'latitude' => '40.7505', 'longitude' => '-73.9934' },
+          'timezone' => 'America/New_York',
+          'images' => []
+        }
+      end
+
+      it 'includes timezone in the result' do
+        result = described_class.build_venue(venue_data_with_timezone)
+        expect(result[:timezone]).to eq('America/New_York')
+      end
+    end
+
+    context 'without timezone data' do
+      let(:venue_data_without_timezone) do
+        {
+          'name' => 'Test Venue',
+          'id' => 'venue456',
+          'address' => { 'line1' => '123 Test St' },
+          'city' => { 'name' => 'Los Angeles' },
+          'country' => { 'name' => 'United States' },
+          'location' => { 'latitude' => '34.0522', 'longitude' => '-118.2437' },
+          'images' => []
+        }
+      end
+
+      it 'infers timezone from location' do
+        result = described_class.build_venue(venue_data_without_timezone)
+        expect(result[:timezone]).to eq('America/Los_Angeles')
+      end
+    end
+  end
 end

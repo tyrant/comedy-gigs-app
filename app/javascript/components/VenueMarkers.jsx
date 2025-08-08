@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { createRoot } from 'react-dom/client';
-import { formatDate, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam } from '../fiddly-bits';
+import { formatDate, formatGigTime, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam } from '../fiddly-bits';
 import L from 'leaflet'
 import 'leaflet.markercluster'
 
@@ -31,7 +31,7 @@ const PopupContent = ({ venue, gigs }) => {
     });
 
     if (!existingActs) gigsGroupedByActs.push({ acts: gig.acts, gigs: [gig] });
-    else              existingActs.gigs.push(gig);
+    else               existingActs.gigs.push(gig);
   });
 
   return (
@@ -63,49 +63,41 @@ const PopupContent = ({ venue, gigs }) => {
       
       <div className="max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
 
- 
-        
-        <div className="divide-y divide-gray-100 px-3 py-2">
+        <div className="p-1">
           {gigsGroupedByActs.map(group => (
 
-            <>
+            <div className="mb-4">
               <div key={group.acts.map(act => act.id).join('-')}>
-                {group.acts && group.acts.length > 0 && (
-                  <div className="mt-1.5">
-                    <div className="flex flex-wrap gap-1.5">
-                      {group.acts.map(act => (
-                        <div key={act.id} data-act-id={act.id} className="inline-flex items-center bg-purple-50 rounded-full py-0.5 px-2">
-                          {act.primary_image_url && (
-                            <div className="w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0">
-                              <img 
-                                src={act.primary_image_url} 
-                                alt={act.name} 
-                                className="w-full h-full object-cover" 
-                              />
-                            </div>
-                          )}
-                          <span className="text-xs text-purple-800 font-medium truncate max-w-[100px]">
-                            {act.name}
-                          </span>
-                        </div>
-                      ))}
+                <div className="mt-1 flex gap-1 w-full h-10 overflow-x-auto no-scrollbar">
+                  {group.acts.map(act => (
+                    <div key={act.id} data-act-id={act.id} className={`inline-flex items-center bg-blue-100 rounded-full p-1 duration-150 transition-all ${group.acts.length > 1 ? 'w-10 hover:w-auto active:w-auto' : 'w-auto'}`}>
+                      <div className="w-8 h-8 rounded-full overflow-hidden mr-1 flex-shrink-0">
+                        <img 
+                          src={act.primary_image_url}
+                          alt={act.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-xs text-blue-800 font-medium truncate max-w-[100px]">
+                        {act.name}
+                      </span>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
 
               <div>
                 {group.gigs && group.gigs.length > 0 && (
-                  <div>
+                  <div className="pl-2 mt-1">
                     {group.gigs.map(gig => (
-                      <div key={gig.id} data-gig-id={gig.id} className="py-2.5 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded">
+                      <div key={gig.id} data-gig-id={gig.id} className="py-1 first:pt-0 last:pb-0 px-2 hover:bg-gray-50 transition-colors duration-150 rounded">
                         <div className="flex justify-between items-start">
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-gray-900 text-xs truncate">
                               {gig.name}
                             </h4>
                             <span className="text-gray-500 text-xs">
-                              {formatDate(gig.start_time)}
+                              {formatGigTime(gig.start_time, venue)}
                             </span>
                           </div>
                           
@@ -126,7 +118,7 @@ const PopupContent = ({ venue, gigs }) => {
                   </div>
                 )}
               </div>
-            </>
+            </div>
           ))}
 
         </div>

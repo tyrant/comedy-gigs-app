@@ -8,30 +8,15 @@ class Gig < ApplicationRecord
   validates :status, inclusion: { in: %w[scheduled cancelled postponed sold_out] }
   validate :end_time_after_start_time, if: -> { start_time.present? && end_time.present? }
 
-  # Ensure external_ids is always a hash
   attribute :external_ids, :jsonb, default: -> { {} }
 
-  # Scopes
-  scope :upcoming, -> { where("start_time > ?", Time.current).order(:start_time) }
-  scope :past, -> { where("start_time <= ?", Time.current).order(start_time: :desc) }
-
-  scope :between, ->(start_date, end_date) {
-    where(start_time: start_date..end_date)
-  }
-
-  scope :by_status, ->(status) { where(status: status) }
-
-  scope :by_external_id, ->(source, id) {
-    where("external_ids->>'#{source}' = ?", id.to_s)
-  }
-
-  scope :featuring_act, ->(act_id) {
-    joins(:acts).where(acts: { id: act_id })
-  }
-
-  scope :within_bounds, ->(bounds) {
-    joins(:venue).merge(Venue.within_bounding_box(bounds))
-  }
+  scope :upcoming,       -> { where("start_time > ?", Time.current).order(:start_time) }
+  scope :past,           -> { where("start_time <= ?", Time.current).order(start_time: :desc) }
+  scope :between,        ->(start_date, end_date) { where(start_time: start_date..end_date) }
+  scope :by_status,      ->(status)               { where(status: status) }
+  scope :by_external_id, ->(source, id)           { where("external_ids->>'#{source}' = ?", id.to_s) }
+  scope :featuring_act,  ->(act_id)               { joins(:acts).where(acts: { id: act_id }) }
+  scope :within_bounds,  ->(bounds)               { joins(:venue).merge(Venue.within_bounding_box(bounds)) }
 
   scope :featuring_acts, ->(act_ids) {
     return all if act_ids.blank?
@@ -58,31 +43,26 @@ class Gig < ApplicationRecord
     where("start_time <= ?", parsed_date.end_of_day)
   }
 
-  # Class method for filtering gigs based on API parameters
   def self.filtered_for_api(params = {})
     scope = includes(:venue, :acts)
 
-    # Apply bounds filtering if bounds parameters are present
     if bounds_params_present?(params)
       sw = [ params[:south].to_f, params[:west].to_f ]
       ne = [ params[:north].to_f, params[:east].to_f ]
       scope = scope.within_bounds([ sw, ne ])
     end
 
-    # Apply act filtering
     if params[:act_ids].present?
       act_ids = params[:act_ids].split(",")
       scope = scope.featuring_acts(act_ids)
     end
 
-    # Apply date filtering
     scope = scope.starting_after(params[:start_date])
     scope = scope.starting_before(params[:end_date])
 
     scope.order(:id)
   end
 
-  # Serialize gig data for API responses
   def self.serialize_for_api(gigs)
     gigs.map do |gig|
       gig_json = gig.as_json
@@ -100,7 +80,6 @@ class Gig < ApplicationRecord
     errors.add(:end_time, "must be after start time")
   end
 
-  # Class-level private methods
   class << self
     private
 

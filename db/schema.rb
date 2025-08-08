@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_09_103734) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_08_104900) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -78,12 +78,14 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_09_103734) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "images", default: {}
+    t.string "timezone"
     t.index ["city"], name: "index_venues_on_city"
     t.index ["country"], name: "index_venues_on_country"
     t.index ["external_ids"], name: "index_venues_on_external_ids", using: :gin
     t.index ["images"], name: "index_venues_on_images", using: :gin
     t.index ["latitude", "longitude"], name: "index_venues_on_latitude_and_longitude"
     t.index ["name"], name: "index_venues_on_name"
+    t.index ["timezone"], name: "index_venues_on_timezone"
   end
 
   add_foreign_key "acts_gigs", "acts"

@@ -82,6 +82,7 @@ module Api
         longitude: venue.dig("location", "longitude")&.to_f,
         description: venue["description"],
         capacity: venue["capacity"]&.to_i,
+        timezone: extract_timezone(venue),
         external_ids: {
           "ticketmaster" => venue["id"]
         },
@@ -146,6 +147,92 @@ module Api
         "postponed" => "postponed",
         "offsale" => "sold_out"
       }[status_code] || "scheduled"
+    end
+
+    def self.extract_timezone(venue)
+      # Extract timezone from venue data
+      # Ticketmaster API provides timezone in venue.timezone field
+      timezone = venue["timezone"]
+      
+      # If no timezone is provided, try to infer from location
+      if timezone.blank?
+        # Fall back to country-based timezone mapping for common countries
+        country = venue.dig("country", "name")
+        city = venue.dig("city", "name")
+        
+        timezone = infer_timezone_from_location(country, city)
+      end
+      
+      # Validate timezone format (should be IANA timezone identifier)
+      if timezone.present? && valid_timezone?(timezone)
+        timezone
+      else
+        Rails.logger.warn "Invalid or missing timezone for venue #{venue['name']}: #{timezone}"
+        nil
+      end
+    end
+
+    def self.infer_timezone_from_location(country, city)
+      # Basic timezone inference for common countries
+      # This is a fallback when Ticketmaster doesn't provide timezone
+      case country&.downcase
+      when "united states", "usa", "us"
+        # Basic US timezone mapping by city
+        case city&.downcase
+        when /new york|boston|atlanta|miami|philadelphia|washington/
+          "America/New_York"
+        when /chicago|dallas|houston|minneapolis|new orleans/
+          "America/Chicago"
+        when /denver|salt lake city|phoenix|albuquerque/
+          "America/Denver"
+        when /los angeles|san francisco|seattle|portland|las vegas/
+          "America/Los_Angeles"
+        else
+          "America/New_York" # Default to Eastern
+        end
+      when "canada"
+        case city&.downcase
+        when /toronto|montreal|ottawa/
+          "America/Toronto"
+        when /vancouver|victoria/
+          "America/Vancouver"
+        when /calgary|edmonton/
+          "America/Edmonton"
+        else
+          "America/Toronto" # Default to Eastern
+        end
+      when "united kingdom", "uk", "england", "scotland", "wales"
+        "Europe/London"
+      when "australia"
+        case city&.downcase
+        when /sydney|melbourne|canberra/
+          "Australia/Sydney"
+        when /perth/
+          "Australia/Perth"
+        when /adelaide/
+          "Australia/Adelaide"
+        when /brisbane/
+          "Australia/Brisbane"
+        else
+          "Australia/Sydney" # Default to Sydney
+        end
+      when "new zealand"
+        "Pacific/Auckland"
+      else
+        nil # Unknown country, no inference
+      end
+    end
+
+    def self.valid_timezone?(timezone)
+      # Check if timezone is a valid IANA timezone identifier
+      return false if timezone.blank?
+      
+      begin
+        TZInfo::Timezone.get(timezone)
+        true
+      rescue TZInfo::InvalidTimezoneIdentifier
+        false
+      end
     end
 
     def self.extract_images(images_data)
