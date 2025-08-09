@@ -96,8 +96,6 @@ module SystemTestHelper
     # Find and click the option with the act name
     find('.react-select__option', text: act_name).click
     sleep 1
-
-    sleep 2 # Additional wait for debounced API calls
   end
 end
 

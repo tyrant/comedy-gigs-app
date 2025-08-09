@@ -10,8 +10,6 @@ class Gig < ApplicationRecord
 
   attribute :external_ids, :jsonb, default: -> { {} }
 
-  scope :upcoming,       -> { where("start_time > ?", Time.current).order(:start_time) }
-  scope :past,           -> { where("start_time <= ?", Time.current).order(start_time: :desc) }
   scope :between,        ->(start_date, end_date) { where(start_time: start_date..end_date) }
   scope :by_status,      ->(status)               { where(status: status) }
   scope :by_external_id, ->(source, id)           { where("external_ids->>'#{source}' = ?", id.to_s) }
