@@ -28,6 +28,7 @@ const normalizeLongitude = (lng) => {
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleString('en-US', {
+    year: 'numeric',
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -48,6 +49,7 @@ const formatDateWithTimezone = (dateString, timezone = null) => {
   
   try {
     return date.toLocaleString('en-US', {
+      year: 'numeric',
       weekday: 'short',
       month: 'short',
       day: 'numeric',

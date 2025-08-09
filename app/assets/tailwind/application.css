@@ -78,15 +78,23 @@
   width: 100% !important;
 }
 
-.leaflet-container a[data-role="ticket-url"] {
+.leaflet-container [data-role="ticket-url"] {
   color: white;
 }
 
-.leaflet-container a[data-role="gig-title"] {
-  @apply text-gray-900;
+.leaflet-container [data-role="gig-link"] {
+  [data-role="gig-name"] {
+    @apply text-gray-900;
+  }
 
   &:hover {
-    @apply text-blue-600;
+    [data-role="gig-name"] {
+      @apply text-blue-600;
+    }
+
+    [data-role="gig-hash"] {
+      @apply visible;
+    }
   }
 }
 

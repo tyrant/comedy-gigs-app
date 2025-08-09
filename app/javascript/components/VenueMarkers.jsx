@@ -28,21 +28,21 @@ const PopupContent = ({ venue, gigs }) => {
   // Scroll to specific gig if gigId is in URL
   useEffect(() => {
     const urlParams = getMapParamsFromUrl();
-    if (urlParams.gigId && scrollContainerRef.current) {
-      // Small delay to ensure DOM is rendered
+    if (!urlParams.gigId || !scrollContainerRef.current) return;
+
+    // Small delay to ensure DOM is rendered
+    setTimeout(() => {
+      const gigElement = scrollContainerRef.current.querySelector(`[data-gig-id="${urlParams.gigId}"]`);
+      if (!gigElement) return;
+
+      gigElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Add temporary highlight
+      gigElement.classList.add('bg-blue-100');
       setTimeout(() => {
-        const gigElement = scrollContainerRef.current.querySelector(`[data-gig-id="${urlParams.gigId}"]`);
-        if (gigElement) {
-          gigElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          // Add temporary highlight
-          gigElement.classList.add('bg-blue-100');
-          setTimeout(() => {
-            gigElement.classList.remove('bg-blue-100');
-          }, 2000);
-        }
-      }, 1000);
-    }
+        gigElement.classList.remove('bg-blue-100');
+      }, 2000);
+    }, 1000);
   }, [venue.id]);
 
   // Group this popup's Gigs by Act: 
@@ -97,7 +97,7 @@ const PopupContent = ({ venue, gigs }) => {
               <div key={group.acts.map(act => act.id).join('-')}>
                 <div className="mt-1 flex gap-1 w-full h-10 overflow-x-auto no-scrollbar">
                   {group.acts.map(act => (
-                    <div key={act.id} data-act-id={act.id} title={act.name} className={`inline-flex items-center bg-blue-100 rounded-full p-1 duration-150 transition-all overflow-hidden flex-shrink-0 ${group.acts.length > 1 ? 'w-10 hover:w-28 hover:pr-2' : 'w-28'}`}>
+                    <div key={act.id} data-act-id={act.id} title={act.name} className={`inline-flex items-center bg-blue-100 rounded-full p-1 duration-150 transition-all overflow-hidden flex-shrink-0 ${group.acts.length > 1 ? 'w-10 hover:w-28 hover:pr-1' : 'w-auto pr-2'}`}>
                       <div className="w-8 h-8 rounded-full overflow-hidden mr-1 flex-shrink-0">
                         <img 
                           src={act.primary_image_url}
@@ -105,7 +105,7 @@ const PopupContent = ({ venue, gigs }) => {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <span className="text-xs text-blue-800 font-medium truncate max-w-[100px]">
+                      <span className="text-xs text-blue-800 font-medium truncate w-full text-center">
                         {act.name}
                       </span>
                     </div>
@@ -117,20 +117,21 @@ const PopupContent = ({ venue, gigs }) => {
                 {group.gigs && group.gigs.length > 0 && (
                   <div className="mt-1">
                     {group.gigs.map(gig => (
-                      <div key={gig.id} data-gig-id={gig.id} className="py-1 first:pt-0 last:pb-0 px-1 ml-1 pl-5 hover:bg-gray-100 transition-colors duration-150 rounded">
+                      <div key={gig.id} data-gig-id={gig.id} className="p-1 first:pt-0 ml-1 hover:bg-gray-100 transition-colors duration-150 rounded">
                         <div className="flex justify-between items-center">
                           <div className="flex-1 min-w-0 flex flex-wrap items-center">
-                            <h4 className="font-medium text-gray-900 text-xs truncate">
+                            <h4 data-role="gig-link" className="truncate">
                               <a 
                                 href="#"
-                                data-role="gig-title"
+                                data-role="gig-name"
                                 onClick={(e) => handleGigClick(gig.id, e)}
-                                className="text-gray-900 hover:text-blue-600 font-semibold mr-1 transition-colors duration-150 cursor-pointer"
+                                className="font-medium text-xs text-gray-900 hover:text-blue-600 font-semibold transition-colors duration-150 cursor-pointer"
                               >
-                                {gig.name}
+                                <span data-role="gig-hash" className="invisible"># </span>
+                                {gig.name.trim()}
                               </a>
                             </h4>
-                            <span className="text-gray-500 text-xs">
+                            <span className="text-gray-500 text-xs ml-2.5 leading-3">
                               {formatGigTime(gig.start_time, venue)}
                             </span>
                           </div>
