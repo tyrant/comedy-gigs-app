@@ -56,6 +56,42 @@ RSpec.configure do |config|
   if ENV['TEST_ENV_NUMBER']
     config.use_transactional_fixtures = false
   end
+
+  # Include SystemTestHelper for system tests
+  config.include SystemTestHelper, type: :system
+
+  # System test cleanup hooks to prevent browser state contamination
+  config.before(:each, type: :system) do
+    begin
+      reset_browser_state if respond_to?(:reset_browser_state)
+    rescue => e
+      # Log the error but don't fail the test
+      puts "Warning: Error in before hook reset_browser_state: #{e.message}"
+    end
+  end
+
+  config.after(:each, type: :system) do
+    begin
+      reset_browser_state if respond_to?(:reset_browser_state)
+      # Force a page refresh to clear any lingering state
+      if page.respond_to?(:execute_script)
+        page.execute_script(<<~JS)
+          // Clear all timeouts and intervals
+          for (let i = 1; i < 99999; i++) {
+            window.clearTimeout(i);
+            window.clearInterval(i);
+          }
+          // Clear any event listeners on the map
+          if (window.mapInstance) {
+            window.mapInstance.off();
+          }
+        JS
+      end
+    rescue => e
+      # Log the error but don't fail the test
+      puts "Warning: Error in after hook reset_browser_state: #{e.message}"
+    end
+  end
 end
 
 # Shoulda Matchers configuration

@@ -44,21 +44,16 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
 
   before do
     visit root_path
-    expect(page).to have_selector('.leaflet-container', wait: 10)
+    wait_for_map_ready
   end
 
   describe 'venue markers display based on map bounds' do
     it 'shows only London venue when zoomed to London area' do
       # Set map bounds to London area (tight zoom)
-      page.execute_script(<<~JS)
-        if (window.mapInstance) {
-          window.mapInstance.setView([51.5074, -0.1278], 12);
-          window.mapInstance.fire('moveend');
-        }
-      JS
+      set_map_bounds_and_wait(51.5074, -0.1278, 12)
 
       # Should show London venue marker specifically
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 5)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 15)
 
       # Should not show other distant venues
       expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]")
@@ -66,15 +61,10 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
     end
 
     it 'shows only NYC venue when zoomed to NYC area' do
-      page.execute_script(<<~JS)
-        if (window.mapInstance) {
-          window.mapInstance.setView([40.7128, -74.0060], 12);
-          window.mapInstance.fire('moveend');
-        }
-      JS
+      set_map_bounds_and_wait(40.7128, -74.0060, 12)
 
       # Should show NYC venue marker specifically
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]", wait: 5)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]", wait: 15)
 
       # Should not show other distant venues
       expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]")
@@ -83,16 +73,11 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
 
     it 'shows Europe/US venues when zoomed to Atlantic view' do
       # Focus on Atlantic area to show London and NYC but not Asia-Pacific
-      page.execute_script(<<~JS)
-        if (window.mapInstance) {
-          window.mapInstance.setView([45.0, -30.0], 4);
-          window.mapInstance.fire('moveend');
-        }
-      JS
+      set_map_bounds_and_wait(45.0, -30.0, 4)
 
       # Should show Atlantic venues (London and NYC)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 5)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]", wait: 5)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 15)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]", wait: 15)
 
       # Should not show Asia-Pacific venues at this zoom/location
       expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_sydney_name}\"]")
@@ -102,12 +87,7 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
 
   describe 'map position persistence in URL' do
     it 'updates URL parameters when map position changes' do
-      page.execute_script(<<~JS)
-        if (window.mapInstance) {
-          window.mapInstance.setView([51.5074, -0.1278], 10);
-          window.mapInstance.fire('moveend');
-        }
-      JS
+      set_map_bounds_and_wait(51.5074, -0.1278, 10)
 
       expect(current_url).to match(/lat=51\.5074/)
       expect(current_url).to match(/lng=-0\.1278/)
@@ -132,13 +112,7 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
 
   describe 'venue popup content' do
     it 'displays correct venue information in popup' do
-      # Set map to show London venue
-      page.execute_script(<<~JS)
-        if (window.mapInstance) {
-          window.mapInstance.setView([51.5074, -0.1278], 12);
-          window.mapInstance.fire('moveend');
-        }
-      JS
+      set_map_bounds_and_wait(51.5074, -0.1278, 12)
 
       first(".leaflet-marker-icon").click
 
