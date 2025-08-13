@@ -1,51 +1,71 @@
 # See https://docs.docker.com/engine/reference/builder/#dockerignore-file for more about ignoring files.
 
-# Ignore git directory.
-/.git/
-/.gitignore
+# Git
+.git
+.gitignore
+README.md
 
-# Ignore bundler config.
-/.bundle
+# Docker files
+Dockerfile*
+.dockerignore
+docker-compose*.yml
 
-# Ignore all environment files.
-/.env*
+# Development files
+.byebug_history
+.irb_history
+.pry_history
 
-# Ignore all default key files.
-/config/master.key
-/config/credentials/*.key
+# Logs
+log/*
+*.log
 
-# Ignore all logfiles and tempfiles.
-/log/*
-/tmp/*
-!/log/.keep
-!/tmp/.keep
+# Temporary files
+tmp/*
+storage/*
 
-# Ignore pidfiles, but keep the directory.
-/tmp/pids/*
-!/tmp/pids/.keep
+# Environment files
+.env*
+!.env.example
 
-# Ignore storage (uploaded files in development and any SQLite databases).
-/storage/*
-!/storage/.keep
-/tmp/storage/*
-!/tmp/storage/.keep
+# Test files
+coverage/
+.nyc_output
+spec/
+test/
 
-# Ignore assets.
-/node_modules/
-/app/assets/builds/*
-!/app/assets/builds/.keep
-/public/assets
+# Node modules (will be installed in container)
+node_modules/
 
-# Ignore CI service files.
-/.github
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Ignore Kamal files.
-/config/deploy*.yml
-/.kamal
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
 
-# Ignore development files
-/.devcontainer
+# Ruby/Rails specific
+.bundle/
+vendor/bundle/
+.rspec
+.ruby-version
+.ruby-gemset
 
-# Ignore Docker-related files
-/.dockerignore
-/Dockerfile*
+# Assets (will be compiled in container)
+public/assets/
+public/packs/
+
+# Database
+*.sqlite3
+*.sqlite3-*
+
+# Kamal deployment
+.kamal/
