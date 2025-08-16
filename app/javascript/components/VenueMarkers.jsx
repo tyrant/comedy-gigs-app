@@ -38,9 +38,9 @@ const PopupContent = ({ venue, gigs }) => {
       gigElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       
       // Add temporary highlight
-      gigElement.classList.add('bg-blue-100');
+      gigElement.classList.add('bg-blue-200');
       setTimeout(() => {
-        gigElement.classList.remove('bg-blue-100');
+        gigElement.classList.remove('bg-blue-200');
       }, 2000);
     }, 1000);
   }, [venue.id]);
@@ -117,7 +117,7 @@ const PopupContent = ({ venue, gigs }) => {
                 {group.gigs && group.gigs.length > 0 && (
                   <div className="mt-1">
                     {group.gigs.map(gig => (
-                      <div key={gig.id} data-gig-id={gig.id} className="p-1 first:pt-0 ml-1 hover:bg-gray-100 transition-colors duration-150 rounded">
+                      <div key={gig.id} data-gig-id={gig.id} className="p-1 first:pt-0 ml-1 hover:bg-gray-100 transition-all duration-150 rounded">
                         <div className="flex justify-between items-center">
                           <div className="flex-1 min-w-0 flex flex-wrap items-center">
                             <h4 data-role="gig-link" className="truncate">
