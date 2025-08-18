@@ -371,7 +371,7 @@ const App = () => {
                     }
 
                     return (
-                      <div {...props} id="acts_select_container" className="flex items-center flex-1 overflow-hidden">
+                      <div id="acts_select_container" className="flex items-center flex-1 overflow-hidden">
                         <div className="flex items-center flex-wrap">
                           {children}
                         </div>

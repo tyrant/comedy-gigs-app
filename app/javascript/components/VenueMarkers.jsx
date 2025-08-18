@@ -147,24 +147,22 @@ const PopupContent = ({ venue, gigs }) => {
         <div className="p-1">
           {gigsGroupedByActs.map(group => (
 
-            <div className="mb-3 last:mb-0">
-              <div key={group.acts.map(act => act.id).join('-')}>
-                <div className="mt-1 flex gap-1 w-full h-10 overflow-x-auto no-scrollbar">
-                  {group.acts.map(act => (
-                    <div key={act.id} data-act-id={act.id} title={act.name} className={`inline-flex items-center bg-blue-100 rounded-full p-1 duration-150 transition-all overflow-hidden flex-shrink-0 ${group.acts.length > 1 ? 'w-10 hover:w-28 hover:pr-1' : 'w-auto pr-2'}`}>
-                      <div className="w-8 h-8 rounded-full overflow-hidden mr-1 flex-shrink-0">
-                        <img 
-                          src={act.primary_image_url}
-                          alt={act.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <span className="text-xs text-blue-800 font-medium truncate w-full text-center">
-                        {act.name}
-                      </span>
+            <div className="mb-3 last:mb-0" key={group.acts.map(act => act.id).join('-')}>
+              <div className="mt-1 flex gap-1 w-full h-10 overflow-x-auto no-scrollbar">
+                {group.acts.map(act => (
+                  <div key={act.id} data-act-id={act.id} title={act.name} className={`inline-flex items-center bg-blue-100 rounded-full p-1 duration-150 transition-all overflow-hidden flex-shrink-0 ${group.acts.length > 1 ? 'w-10 hover:w-28 hover:pr-1' : 'w-auto pr-2'}`}>
+                    <div className="w-8 h-8 rounded-full overflow-hidden mr-1 flex-shrink-0">
+                      <img 
+                        src={act.primary_image_url}
+                        alt={act.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                  ))}
-                </div>
+                    <span className="text-xs text-blue-800 font-medium truncate w-full text-center">
+                      {act.name}
+                    </span>
+                  </div>
+                ))}
               </div>
 
               <div>
