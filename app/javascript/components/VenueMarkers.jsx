@@ -275,34 +275,39 @@ const VenueMarkers = ({ venueGroups }) => {
         
         createGigCountIcon(gigs.length, (newIcon) => {
           marker.setIcon(newIcon);
-          marker._icon.title = `${venue.name} (${gigs.length} gig${gigs.length !== 1 ? 's' : ''})`;
+          if (marker._icon)
+            marker._icon.title = `${venue.name} (${gigs.length} gig${gigs.length !== 1 ? 's' : ''})`;
         });
         
         if (currentPos.lat !== lat || currentPos.lng !== lng)
           marker.setLatLng([lat, lng]);
         
-        // Only update popup if it's not currently open to prevent duplication
-        if (!marker.isPopupOpen()) {
-          // Unbind existing popup before creating new one
-          marker.unbindPopup();
-          
-          // Always update popup content with new gig data
-          const popupContent = createPopupContent(venue, gigs);
-          const popup = L.popup({
-            autoClose: false,
-            closeOnClick: true,
-            className: 'venue-popup-container',
-            maxWidth: 340,
-            minWidth: 280,
-            offset: [0, -5],
-            closeButton: true
-          }).setContent(popupContent);
-          
-          marker.bindPopup(popup);
-          
-          // Check if popup was open before and reopen it
-          if (popupStatesRef.current[venueId])
-            setTimeout(() => marker.openPopup(), 100); // Small delay to ensure proper rendering
+        // Always update popup content with new gig data to reflect current filters
+        const wasPopupOpen = marker.isPopupOpen();
+        
+        // Close existing popup first, then unbind it
+        if (wasPopupOpen) {
+          marker.closePopup();
+        }
+        marker.unbindPopup();
+        
+        // Create new popup content with current gig data
+        const popupContent = createPopupContent(venue, gigs);
+        const popup = L.popup({
+          autoClose: false,
+          closeOnClick: true,
+          className: 'venue-popup-container',
+          maxWidth: 340,
+          minWidth: 280,
+          offset: [0, -5],
+          closeButton: true
+        }).setContent(popupContent);
+        
+        marker.bindPopup(popup);
+        
+        // If popup was open before, reopen it with updated content
+        if (wasPopupOpen || popupStatesRef.current[venueId]) {
+          setTimeout(() => marker.openPopup(), 100); // Small delay to ensure proper rendering
         }
 
       } else {

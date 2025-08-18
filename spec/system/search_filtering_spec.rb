@@ -310,4 +310,118 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       end
     end
   end
+
+  describe 'Venue popup content updates with filter changes' do
+    it 'updates open popup content when Acts filter is changed' do
+      # Expand date range to show all gigs
+      set_date_via_picker('start_date', 1.month.ago)
+      set_date_via_picker('end_date', 3.months.from_now)
+      
+      wait_for_api_completion
+      
+      # Click on venue1 to open popup (has past_gig with act1 and future_gig2 with act3)
+      click_venue_marker_and_wait_for_popup(venue1_name)
+      
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup', wait: 10)
+        # Should initially show both gigs
+        expect(page).to have_content(past_gig_name)
+        expect(page).to have_content(future_gig2_name)
+        # Should show both acts
+        expect(page).to have_selector("[data-act-id=\"#{act1.id}\"]")
+        expect(page).to have_selector("[data-act-id=\"#{act3.id}\"]")
+      end
+      
+      # Now filter by act1 only - popup should update to show only past_gig
+      select_act_via_dropdown(act1.name)
+      wait_for_api_completion
+      
+      # Popup should still be open but with updated content
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup', wait: 10)
+        # Should now only show past_gig (with act1)
+        expect(page).to have_content(past_gig_name)
+        expect(page).not_to have_content(future_gig2_name)
+        # Should only show act1
+        expect(page).to have_selector("[data-act-id=\"#{act1.id}\"]")
+        expect(page).not_to have_selector("[data-act-id=\"#{act3.id}\"]")
+      end
+    end
+
+    it 'updates open popup content when date filter is changed' do
+      # Start with default date range
+      wait_for_api_completion
+      
+      # Click on venue2 to open popup (has current_gig and far_future_gig)
+      click_venue_marker_and_wait_for_popup(venue2_name)
+      
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup', wait: 10)
+        # Should initially show both current and far future gigs
+        expect(page).to have_content(current_gig_name)
+        expect(page).to have_content(far_future_gig_name)
+      end
+      
+      # Change end date to exclude far_future_gig
+      set_date_via_picker('end_date', 4.weeks.from_now)
+      wait_for_api_completion
+      
+      # Popup should still be open but with updated content
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup', wait: 10)
+        # Should now only show current_gig
+        expect(page).to have_content(current_gig_name)
+        expect(page).not_to have_content(far_future_gig_name)
+      end
+    end
+
+    it 'maintains popup state when filtering results in no change for that venue' do
+      # Filter by act2 first
+      select_act_via_dropdown(act2.name)
+      wait_for_api_completion
+      
+      # Click on venue2 to open popup (has current_gig and far_future_gig, both with act2)
+      click_venue_marker_and_wait_for_popup(venue2_name)
+      
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup', wait: 10)
+        expect(page).to have_content(current_gig_name)
+        expect(page).to have_content(far_future_gig_name)
+      end
+      
+      # Change date range but still includes both gigs for venue2
+      set_date_via_picker('start_date', 1.week.ago)
+      wait_for_api_completion
+      
+      # Popup should still be open with same content (no change for this venue)
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup', wait: 10)
+        expect(page).to have_content(current_gig_name)
+        expect(page).to have_content(far_future_gig_name)
+      end
+    end
+
+    it 'closes popup when venue no longer matches filter criteria' do
+      # Expand date range to show past gigs
+      set_date_via_picker('start_date', 1.month.ago)
+      wait_for_api_completion
+      
+      # Click on venue1 to open popup
+      click_venue_marker_and_wait_for_popup(venue1_name)
+      
+      within '.leaflet-popup' do
+        expect(page).to have_selector('.venue-popup', wait: 10)
+        expect(page).to have_content(venue1_name)
+      end
+      
+      # Filter by act2 - venue1 has no gigs with act2, so it should disappear
+      select_act_via_dropdown(act2.name)
+      wait_for_api_completion
+      
+      # Popup should be closed since venue1 no longer matches filter
+      expect(page).not_to have_selector('.leaflet-popup')
+      # Venue1 marker should also be gone
+      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]")
+    end
+  end
 end
