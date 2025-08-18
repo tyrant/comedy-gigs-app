@@ -27,18 +27,15 @@ module SystemTestHelper
         let handlerFound = false;
 
         if (reactProps && input[reactProps] && input[reactProps].onChange) {
-          console.log('Found React props onChange handler');
           input[reactProps].onChange(event);
           handlerFound = true;
         } else {
           // Fallback: try to find React fiber and call onChange
           const reactFiber = Object.keys(input).find(key => key.startsWith('__reactInternalInstance') || key.startsWith('__reactFiber'));
           if (reactFiber && input[reactFiber] && input[reactFiber].memoizedProps && input[reactFiber].memoizedProps.onChange) {
-            console.log('Found React fiber onChange handler');
             input[reactFiber].memoizedProps.onChange(event);
             handlerFound = true;
           } else {
-            console.log('No React handlers found, using native events');
             // Last resort: dispatch native events and hope React picks them up
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));

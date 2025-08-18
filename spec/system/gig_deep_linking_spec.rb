@@ -35,7 +35,6 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
                              acts: [ act3 ] }
 
   before do
-    # Force a complete page refresh to ensure clean state
     page.driver.browser.navigate.refresh if page.driver.respond_to?(:browser)
     visit root_path
     wait_for_map_ready
@@ -49,14 +48,12 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
         expect(page).to have_selector('.venue-popup')
         expect(page).to have_text(venue1_name)
 
-        # Click on the first gig title (should be a clickable link)
         within "[data-gig-id='#{gig1.id}']" do
           expect(page).to have_text(gig1_name)
           find('a', text: gig1_name).click
         end
       end
 
-      # Verify URL contains both venue and gig parameters
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
     end
@@ -74,24 +71,20 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "gig=#{gig1.id}"
 
       within '.leaflet-popup' do
-        # Click second gig in same venue
         within "[data-gig-id='#{gig2.id}']" do
           find('a', text: gig2_name).click
         end
       end
 
-      # URL should now have the new gig ID
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig2.id}"
       expect(current_url).not_to include "gig=#{gig1.id}"
     end
 
     it 'removes gig ID from URL when closing venue popup' do
-      # Click on venue1 marker to open popup
       click_venue_marker_and_wait_for_popup(venue1_name)
 
       within '.leaflet-popup' do
-        # Click on a gig title
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -100,10 +93,8 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
-      # Close the popup and wait for it to disappear
       close_popup_and_wait
 
-      # Both venue and gig IDs should be removed from URL
       expect(current_url).not_to include "venue=#{venue1.id}"
       expect(current_url).not_to include "gig=#{gig1.id}"
     end
@@ -111,29 +102,24 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
   describe 'URL persistence and page reload' do
     it 'persists gig ID in URL after page reload' do
-      # Manually visit URL with venue and gig parameters
       visit "#{root_path}?venue=#{venue1.id}&gig=#{gig1.id}"
-      expect(page).to have_selector('.leaflet-container', wait: 10)
 
-      # Verify URL contains the parameters
+      expect(page).to have_selector('.leaflet-container', wait: 10)
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
-      # Reload the page
       page.refresh
-      expect(page).to have_selector('.leaflet-container', wait: 10)
 
-      # Parameters should still be in URL
+      expect(page).to have_selector('.leaflet-container', wait: 10)
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
     end
 
     it 'opens venue popup and scrolls to specific gig when both venue and gig IDs are in URL' do
-      # Visit URL with both venue and gig parameters
       visit "#{root_path}?venue=#{venue1.id}&gig=#{gig2.id}"
+
       expect(page).to have_selector('.leaflet-container', wait: 10)
 
-      # Wait for venue popup to automatically open from URL parameters
       wait_for_popup_to_appear
 
       within '.leaflet-popup' do
@@ -147,7 +133,6 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
         # The selector is being added to [data-gig-id=ID] itself; it's not *within*
         # it. Testing `within` fails. So let's fall back to the #popup-container.
         within '#venue-popup-scroll-container' do
-          # Check for highlight class (temporary highlight effect)
           expect(page).to have_selector('.bg-blue-100', wait: 3) || true # May be temporary
         end
       end
@@ -155,12 +140,10 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
     it 'handles invalid gig ID gracefully' do
       invalid_gig_id = 99999
-
-      # Visit URL with valid venue but invalid gig ID
       visit "#{root_path}?venue=#{venue1.id}&gig=#{invalid_gig_id}"
+
       expect(page).to have_selector('.leaflet-container', wait: 10)
 
-      # Wait for venue popup to open from URL parameters
       wait_for_popup_to_appear
 
       within '.leaflet-popup' do
@@ -176,6 +159,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'handles gig ID without venue ID gracefully' do
       # Visit URL with gig ID but no venue ID
       visit "#{root_path}?gig=#{gig1.id}"
+
       expect(page).to have_selector('.leaflet-container', wait: 10)
 
       # Should load normally without opening any popup
@@ -188,19 +172,16 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
   describe 'gig deep-linking with search filters' do
     it 'maintains gig deep-link when search filters are applied' do
-      # Set up a search filter first
       set_date_via_picker('start_date', Date.current)
 
       # Visit URL with venue and gig parameters
       visit "#{current_url}&venue=#{venue1.id}&gig=#{gig1.id}"
-      expect(page).to have_selector('.leaflet-container', wait: 10)
 
-      # Should maintain both search filters and gig deep-link
+      expect(page).to have_selector('.leaflet-container', wait: 10)
       expect(current_url).to include 'start='
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
-      # Wait for venue popup to open from URL parameters
       wait_for_popup_to_appear
 
       within '.leaflet-popup' do
@@ -215,20 +196,17 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     end
 
     it 'preserves search filters when clicking gig titles' do
-      # Set up search filters
       set_date_via_picker('start_date', Date.current)
       select_act_via_dropdown(act1.name)
 
-      # Get current URL with filters
       current_url_with_filters = current_url
+
       expect(current_url_with_filters).to include 'start='
       expect(current_url_with_filters).to include 'act='
 
-      # Click on venue marker
-      find(".leaflet-marker-icon[title=\"#{venue1_name}\"]").click
+      find(".leaflet-marker-icon[title=\"#{venue1_name} (1 gig)\"]").click
 
       within '.leaflet-popup' do
-        # Click on gig title
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -250,7 +228,6 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'maintains map position when using gig deep-links' do
       set_map_bounds_and_wait(-42.8, 174.2, 12)
 
-      # Get current URL with map parameters
       current_url_with_map = current_url
       expect(current_url_with_map).to include 'lat='
       expect(current_url_with_map).to include 'lng='
@@ -258,6 +235,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
       # Add gig deep-link parameters
       visit "#{current_url_with_map}&venue=#{venue2.id}&gig=#{gig3.id}"
+
       expect(page).to have_selector('.leaflet-container', wait: 10)
 
       # Should maintain both map position and gig deep-link
@@ -267,7 +245,6 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "venue=#{venue2.id}"
       expect(current_url).to include "gig=#{gig3.id}"
 
-      # Wait for venue popup to open from URL parameters
       wait_for_popup_to_appear
 
       within '.leaflet-popup' do
@@ -281,11 +258,10 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
   describe 'gig scrolling and highlighting' do
     it 'scrolls to and highlights the target gig when deep-linking' do
-      # Visit URL with venue and gig parameters
       visit "#{root_path}?venue=#{venue1.id}&gig=#{gig2.id}"
+
       expect(page).to have_selector('.leaflet-container', wait: 10)
 
-      # Wait for popup to open from URL parameters and scrolling to complete
       wait_for_popup_to_appear
 
       within '.leaflet-popup' do
@@ -304,7 +280,6 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     end
 
     it 'handles scrolling when there are multiple gigs in venue' do
-      # Create additional gigs to ensure scrolling is needed
       additional_gigs = []
       5.times do |i|
         additional_gigs << create(:gig,
@@ -316,13 +291,11 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
         )
       end
 
-      # Target the last gig (should require scrolling)
       target_gig = additional_gigs.last
 
       visit "#{root_path}?venue=#{venue1.id}&gig=#{target_gig.id}"
       expect(page).to have_selector('.leaflet-container', wait: 10)
 
-      # Wait for venue popup to open from URL parameters
       wait_for_popup_to_appear
 
       within '.leaflet-popup' do

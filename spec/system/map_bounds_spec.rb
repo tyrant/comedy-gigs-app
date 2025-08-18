@@ -53,22 +53,22 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
       set_map_bounds_and_wait(51.5074, -0.1278, 12)
 
       # Should show London venue marker specifically
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 15)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name} (1 gig)\"]", wait: 15)
 
       # Should not show other distant venues
-      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_sydney_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_nyc_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_sydney_name}\"]")
     end
 
     it 'shows only NYC venue when zoomed to NYC area' do
       set_map_bounds_and_wait(40.7128, -74.0060, 12)
 
       # Should show NYC venue marker specifically
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]", wait: 15)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name} (1 gig)\"]", wait: 15)
 
       # Should not show other distant venues
-      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_sydney_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_london_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_sydney_name}\"]")
     end
 
     it 'shows Europe/US venues when zoomed to Atlantic view' do
@@ -76,12 +76,12 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
       set_map_bounds_and_wait(45.0, -30.0, 4)
 
       # Should show Atlantic venues (London and NYC)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name}\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name}\"]", wait: 15)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name} (1 gig)\"]", wait: 15)
 
       # Should not show Asia-Pacific venues at this zoom/location
-      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_sydney_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title=\"#{venue_tokyo_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_sydney_name}\"]")
+      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_tokyo_name}\"]")
     end
   end
 

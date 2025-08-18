@@ -16,7 +16,6 @@ const comedyIcon = L.icon({
   shadowAnchor: [24, 70]
 });
 
-// Function to create a marker icon with gig count overlay on the original marker image
 const createGigCountIcon = (gigCount, callback) => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -41,15 +40,12 @@ const createGigCountIcon = (gigCount, callback) => {
     ctx.textBaseline = 'middle';
     
     // Handle different number lengths with appropriate font sizes
-    let fontSize = 14;
-    if (gigCount > 99) {
-      fontSize = 11;
-    } else if (gigCount > 9) {
-      fontSize = 12;
-    }
+    let fontSize = 16;
+    if      (gigCount > 99) fontSize = 12;
+    else if (gigCount > 9)  fontSize = 14;
     
     ctx.font = `bold ${fontSize}px Arial`;
-    
+
     // Draw white outline for better visibility
     ctx.strokeText(gigCount.toString(), 24, 19);
     // Draw the number
@@ -255,7 +251,6 @@ const VenueMarkers = ({ venueGroups }) => {
     };
   }, [map]);
   
-  // Effect to create and manage markers
   useEffect(() => {
     if (!markerClusterRef.current || !map) return;
     
@@ -280,10 +275,9 @@ const VenueMarkers = ({ venueGroups }) => {
         const marker = markersRef.current[venueId];
         const currentPos = marker.getLatLng();
         
-        // Update marker icon with current gig count
-        const gigCount = gigs.length;
-        createGigCountIcon(gigCount, (newIcon) => {
+        createGigCountIcon(gigs.length, (newIcon) => {
           marker.setIcon(newIcon);
+          marker._icon.title = `${venue.name} (${gigs.length} gig${gigs.length !== 1 ? 's' : ''})`;
         });
         
         if (currentPos.lat !== lat || currentPos.lng !== lng)
@@ -315,14 +309,13 @@ const VenueMarkers = ({ venueGroups }) => {
 
       } else {
         // Create new marker with gig count icon
-        const gigCount = gigs.length;
         const marker = L.marker([lat, lng], { 
           icon: comedyIcon, // Start with default icon, will be updated asynchronously
-          title: `${venue.name} (${gigCount} gig${gigCount !== 1 ? 's' : ''})`
+          title: `${venue.name} (${gigs.length} gig${gigs.length !== 1 ? 's' : ''})`
         });
         
         // Update marker icon with gig count overlay
-        createGigCountIcon(gigCount, (newIcon) => {
+        createGigCountIcon(gigs.length, (newIcon) => {
           marker.setIcon(newIcon);
         });
         
@@ -341,32 +334,23 @@ const VenueMarkers = ({ venueGroups }) => {
         // Bind popup to marker
         marker.bindPopup(popup);
         
-        // Track popup open state and update URL
         marker.on('popupopen', () => {
           popupStatesRef.current[venueId] = true;
-          
-          // Update URL with venue ID and map position
+
           const mapCenter = map.getCenter();
           const mapZoom = map.getZoom();
           
-          // Update map parameters
           updateMapUrlParams(mapCenter.lat, mapCenter.lng, mapZoom);
-          
-          // Update venue parameter
           updateVenueUrlParam(venueId);
         });
         
         marker.on('popupclose', () => {
           popupStatesRef.current[venueId] = false;
-          
-          // Remove venue and gig IDs from URL but preserve map position
+
           const mapCenter = map.getCenter();
           const mapZoom = map.getZoom();
           
-          // Update map parameters
           updateMapUrlParams(mapCenter.lat, mapCenter.lng, mapZoom);
-          
-          // Remove venue and gig parameters
           updateVenueAndGigUrlParams(null, null);
         });
         
