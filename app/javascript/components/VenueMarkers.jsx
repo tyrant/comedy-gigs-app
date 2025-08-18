@@ -7,13 +7,71 @@ import 'leaflet.markercluster'
 
 // Custom comedy marker icon
 const comedyIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
+  iconUrl: '/images/map-marker-2-48.png',
+  iconSize: [48, 48],
+  iconAnchor: [24, 48],
+  popupAnchor: [0, -36],
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+  shadowSize: [72, 72],
+  shadowAnchor: [24, 70]
 });
+
+// Function to create a marker icon with gig count overlay on the original marker image
+const createGigCountIcon = (gigCount, callback) => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Set canvas dimensions to match the original marker size
+  canvas.width = 48;
+  canvas.height = 48;
+  
+  // Load the original marker image
+  const img = new Image();
+  img.crossOrigin = 'Anonymous';
+  img.onload = function() {
+    // Draw the original marker image
+    ctx.drawImage(img, 0, 0, 48, 48);
+    
+    // Overlay the gig count number in the center white circle area
+    ctx.fillStyle = '#8A2BE2'; // violet color to match marker
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Handle different number lengths with appropriate font sizes
+    let fontSize = 14;
+    if (gigCount > 99) {
+      fontSize = 11;
+    } else if (gigCount > 9) {
+      fontSize = 12;
+    }
+    
+    ctx.font = `bold ${fontSize}px Arial`;
+    
+    // Draw white outline for better visibility
+    ctx.strokeText(gigCount.toString(), 24, 19);
+    // Draw the number
+    ctx.fillText(gigCount.toString(), 24, 19);
+    
+    // Convert canvas to data URL and create icon
+    const iconUrl = canvas.toDataURL();
+    const icon = L.icon({
+      iconUrl: iconUrl,
+      iconSize: [48, 48],
+      iconAnchor: [24, 48],
+      popupAnchor: [0, -36],
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      shadowSize: [72, 72],
+      shadowAnchor: [24, 70]
+    });
+    
+    callback(icon);
+  };
+  
+  img.src = '/images/map-marker-2-48.png';
+};
 
 // Popup content component
 const PopupContent = ({ venue, gigs }) => {
@@ -222,6 +280,12 @@ const VenueMarkers = ({ venueGroups }) => {
         const marker = markersRef.current[venueId];
         const currentPos = marker.getLatLng();
         
+        // Update marker icon with current gig count
+        const gigCount = gigs.length;
+        createGigCountIcon(gigCount, (newIcon) => {
+          marker.setIcon(newIcon);
+        });
+        
         if (currentPos.lat !== lat || currentPos.lng !== lng)
           marker.setLatLng([lat, lng]);
         
@@ -250,10 +314,16 @@ const VenueMarkers = ({ venueGroups }) => {
         }
 
       } else {
-        // Create new marker
+        // Create new marker with gig count icon
+        const gigCount = gigs.length;
         const marker = L.marker([lat, lng], { 
-          icon: comedyIcon,
-          title: venue.name
+          icon: comedyIcon, // Start with default icon, will be updated asynchronously
+          title: `${venue.name} (${gigCount} gig${gigCount !== 1 ? 's' : ''})`
+        });
+        
+        // Update marker icon with gig count overlay
+        createGigCountIcon(gigCount, (newIcon) => {
+          marker.setIcon(newIcon);
         });
         
         // Create popup with content
