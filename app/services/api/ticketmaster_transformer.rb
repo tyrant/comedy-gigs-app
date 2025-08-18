@@ -153,16 +153,16 @@ module Api
       # Extract timezone from venue data
       # Ticketmaster API provides timezone in venue.timezone field
       timezone = venue["timezone"]
-      
+
       # If no timezone is provided, try to infer from location
       if timezone.blank?
         # Fall back to country-based timezone mapping for common countries
         country = venue.dig("country", "name")
         city = venue.dig("city", "name")
-        
+
         timezone = infer_timezone_from_location(country, city)
       end
-      
+
       # Validate timezone format (should be IANA timezone identifier)
       if timezone.present? && valid_timezone?(timezone)
         timezone
@@ -226,7 +226,7 @@ module Api
     def self.valid_timezone?(timezone)
       # Check if timezone is a valid IANA timezone identifier
       return false if timezone.blank?
-      
+
       begin
         TZInfo::Timezone.get(timezone)
         true

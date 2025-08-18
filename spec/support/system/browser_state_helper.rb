@@ -47,7 +47,7 @@ module SystemTestHelper
             window.mapInstance.closePopup();
           }
         JS
-        
+
         # Wait for popup to disappear
         expect(page).not_to have_selector('.leaflet-popup', wait: 5)
       end

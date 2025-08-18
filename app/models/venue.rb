@@ -47,7 +47,7 @@ class Venue < ApplicationRecord
   # Helper method to get timezone object
   def timezone_object
     return nil if timezone.blank?
-    
+
     begin
       TZInfo::Timezone.get(timezone)
     rescue TZInfo::InvalidTimezoneIdentifier
@@ -59,9 +59,9 @@ class Venue < ApplicationRecord
   # Helper method to format time in venue's timezone
   def format_time_in_timezone(time, format = :default)
     return time if timezone.blank? || timezone_object.nil?
-    
+
     local_time = timezone_object.to_local(time)
-    
+
     case format
     when :short
       local_time.strftime("%b %d, %I:%M %p")
