@@ -16,14 +16,12 @@ const App = () => {
   const [loadingActs, setLoadingActs]     = useState(false);
   const [searchFilters, setSearchFilters] = useState(() => getFilterParamsFromUrl()); // Search filters: init from URL params
 
-  // Helper to compare bounds with special handling for antimeridian crossing
   const areBoundsSame = (bounds1, bounds2) => {
     if (!bounds1 || !bounds2) return false;
     const precision = 4; // 4 decimal places
     
     const round = (num) => Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision);
     
-    // Normalize east/west for comparison to handle antimeridian crossing
     const east1 = normalizeLongitude(bounds1.getEast());
     const west1 = normalizeLongitude(bounds1.getWest());
     const east2 = normalizeLongitude(bounds2.getEast());
@@ -33,7 +31,6 @@ const App = () => {
     const crossesAntimeridian1 = west1 > east1;
     const crossesAntimeridian2 = west2 > east2;
     
-    // If one crosses and the other doesn't, they're definitely different
     if (crossesAntimeridian1 !== crossesAntimeridian2) return false;
     
     return round(bounds1.getNorth()) === round(bounds2.getNorth()) &&
@@ -60,8 +57,9 @@ const App = () => {
         
         setActs(sortedActs);
         const urlFilterParams = getFilterParamsFromUrl();
-        // Now that we have the acts data, we can set the selected acts from URL
+
         if (urlFilterParams && urlFilterParams.actIds && urlFilterParams.actIds.length > 0) {
+          
           // The URL contains just the IDs, find the corresponding act objects
           const selectedActs = sortedActs.filter(act => 
             urlFilterParams.actIds.includes(act.value)
@@ -77,7 +75,6 @@ const App = () => {
             // If we have map bounds and this is still the first page load, make the API call now
             if (lastBoundsRef.current && isFirstPageLoad.current) {
               isFirstPageLoad.current = false;
-              // Use the newFilters which contain the full act objects
               fetchGigsForBounds(lastBoundsRef.current, newFilters);
             }
           }
@@ -154,17 +151,14 @@ const App = () => {
       acts: selectedActs
     };
     
-    // Update search filters state
     setSearchFilters(filtersWithActs);
-    
-    // Make the API call with the correct filters
     isFirstPageLoad.current = false;
     fetchGigsForBounds(lastBoundsRef.current, filtersWithActs);
     
   }, [acts, fetchGigsForBounds]);
 
 
-  // Fires on each change - and once on app load.
+  // Fires on each change, and once on app load.
   const handleBoundsChange = useCallback((bounds) => {
     if (areBoundsSame(bounds, lastBoundsRef.current)) return;
 
@@ -183,14 +177,11 @@ const App = () => {
         
         if (!acts.length) return;
         
-        // Find the corresponding act objects from our acts array
         const selectedActs = acts.filter(act => urlFilterParams.actIds.includes(act.value));
 
         if (selectedActs.length > 0) {
-          // Set the act objects in the API filters
           filtersForApi.actIds = selectedActs;
           
-          // Also update the search filters state to reflect the URL params
           setSearchFilters(prev => ({
             ...prev,
             startDate: urlFilterParams.startDate || prev.startDate,
@@ -203,68 +194,47 @@ const App = () => {
       if (urlFilterParams.startDate) filtersForApi.startDate = urlFilterParams.startDate;
       if (urlFilterParams.endDate)   filtersForApi.endDate = urlFilterParams.endDate;
       
-      // Now we're actually making the API call, so set the flag
       isFirstPageLoad.current = false;
-
-      // Fetch gigs with URL filters
       fetchGigsForBounds(bounds, filtersForApi);
 
     } else {
-      // For subsequent bounds changes, use the current filters from component state
       fetchGigsForBounds(bounds, searchFilters);
     }
   }, [fetchGigsForBounds, searchFilters, acts]);
 
-  // Handle search filter changes
-  const handleFilterChange = useCallback((name, value) => {
 
-    // Update the filter state
+  const handleFilterChange = useCallback((name, value) => {
     const newFilters = {
       ...searchFilters,
       [name]: value
     };
 
-    // Set the new filters
     setSearchFilters(newFilters);
-    
-    // Update URL with new filters using the granular utility function
-    // This will only update the filter parameters without affecting map parameters
     updateFilterUrlParams(newFilters);
-    
-    // Trigger an API call with the new filters
     if (lastBoundsRef.current) fetchGigsForBounds(lastBoundsRef.current, newFilters);
 
   }, [fetchGigsForBounds, searchFilters]);
   
-  // Special handler for multi-select acts
+
   const handleActsChange = useCallback((selectedOptions) => {
     const selectedActs = selectedOptions || []; // Handle null when all options are cleared
-    
-    // Extract just the IDs for URL parameters
     const actIds = selectedActs.map(act => act.value);
-
-    // Update component state with full act objects
     const newFilters = {
       ...searchFilters,
       acts: selectedActs,
       actIds: actIds
     };
+
     setSearchFilters(newFilters);
- 
-    // Update URL with just the IDs
-    updateFilterUrlParams({
-      ...newFilters,
-     // actIds: actIds // Override with just IDs for URL
-    });
-    
+    updateFilterUrlParams(newFilters);
     if (lastBoundsRef.current) fetchGigsForBounds(lastBoundsRef.current, newFilters);
 
   }, [fetchGigsForBounds, searchFilters]);
   
-  // Clear all filters
-  const handleClearFilters = useCallback(() => {
 
+  const handleClearFilters = useCallback(() => {
     const clearedFilters = { actIds: [], startDate: '', endDate: '' };
+
     setSearchFilters(clearedFilters);
     updateFilterUrlParams(clearedFilters);
     if (lastBoundsRef.current) fetchGigsForBounds(lastBoundsRef.current, clearedFilters);
@@ -275,8 +245,6 @@ const App = () => {
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-gray-100">
       <header className="bg-white shadow-sm top-0">
         <div className="w-full p-2 flex flex-wrap items-center gap-2">
-          
-          {/* Integrated Search Form */}
           <div className="flex flex-1 flex-wrap gap-2">
 
             {/* Act multi-select dropdown with thumbnails */}
@@ -445,7 +413,6 @@ const App = () => {
           </div>
           
           <div className="flex flex-col md:flex-row gap-2 items-center">
-            {/* Clear filters button */}
             <button
                 onClick={handleClearFilters}
                 className="flex-none py-0 px-3 h-10 text-sm border border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-sm"
