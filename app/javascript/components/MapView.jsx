@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, ZoomControl, ScaleControl, useMap, useMapEvents } from 'react-leaflet';
 import { debounce, getMapParamsFromUrl, updateMapUrlParams } from '../fiddly-bits';
 import VenueMarkers from './VenueMarkers';

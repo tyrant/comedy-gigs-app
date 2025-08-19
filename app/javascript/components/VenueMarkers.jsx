@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { createRoot } from 'react-dom/client';
-import { formatDate, formatGigTime, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam, updateVenueAndGigUrlParams } from '../fiddly-bits';
+import { formatGigTime, getMapParamsFromUrl, updateMapUrlParams, updateVenueUrlParam, updateVenueAndGigUrlParams } from '../fiddly-bits';
 import L from 'leaflet'
 import 'leaflet.markercluster'
 
