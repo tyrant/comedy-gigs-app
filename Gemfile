@@ -85,6 +85,10 @@ end
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+  gem "capistrano", "~> 3.10", require: false
+  gem "capistrano-rails", "~> 1.6", require: false
+  gem "capistrano-rbenv"
+  gem "capistrano-passenger"
 end
 
 group :test do
@@ -101,3 +105,5 @@ gem "tailwindcss-rails", "~> 4.2"
 gem "geocoder", "~> 1.8"
 
 gem "whenever", "~> 1.0"
+
+gem "nokogiri", platform: :ruby

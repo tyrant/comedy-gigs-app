@@ -233,7 +233,7 @@ const VenueMarkers = ({ venueGroups }) => {
 
     markerClusterRef.current = L.markerClusterGroup({
       chunkedLoading: true,
-      maxClusterRadius: 50,
+      maxClusterRadius: 40,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: true,
       zoomToBoundsOnClick: true
