@@ -49,7 +49,7 @@ namespace :deploy do
   namespace :check do
     before :linked_files, :set_production_key do
       on roles(:app), in: :sequence, wait: 10 do
-        %w[master].each do |file|
+        %w[master credentials/production.key].each do |file|
           unless test("[ -f #{shared_path}/config/#{file}.key ]")
             upload! "config/#{file}.key", "#{shared_path}/config/#{file}.key"
           end
