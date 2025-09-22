@@ -2,7 +2,8 @@
   "name": "app",
   "private": true,
   "scripts": {
-    "build": "node config/esbuild.config.js"
+    "build": "node config/esbuild.config.js",
+    "build:css": "postcss ./app/assets/stylesheets/application.css -o ./app/assets/builds/application.css"
   },
   "description": "This README would normally document whatever steps are necessary to get the application up and running.",
   "version": "1.0.0",
