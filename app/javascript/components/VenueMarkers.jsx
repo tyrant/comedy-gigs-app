@@ -7,29 +7,30 @@ import 'leaflet.markercluster'
 
 // Custom comedy marker icon
 const comedyIcon = L.icon({
-  iconUrl: '/images/map-marker-2-48.png',
-  iconSize: [48, 48],
-  iconAnchor: [24, 48],
+  iconUrl: '/images/map-marker-2-32.png',
+  iconSize: [32, 32],
+  iconAnchor: [18, 32],
   popupAnchor: [0, -36],
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  shadowSize: [72, 72],
-  shadowAnchor: [24, 70]
+  shadowSize: [42, 42],
+  shadowAnchor: [14, 42]
 });
 
 const createGigCountIcon = (gigCount, callback) => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-  
+
   // Set canvas dimensions to match the original marker size
-  canvas.width = 48;
-  canvas.height = 48;
+  canvas.width = 32;
+  canvas.height = 32;
   
   // Load the original marker image
   const img = new Image();
   img.crossOrigin = 'Anonymous';
   img.onload = function() {
+    ctx.scale(1, 1)
     // Draw the original marker image
-    ctx.drawImage(img, 0, 0, 48, 48);
+    ctx.drawImage(img, 0, 0, 32, 32);
     
     // Overlay the gig count number in the center white circle area
     ctx.fillStyle = '#8A2BE2'; // violet color to match marker
@@ -40,33 +41,33 @@ const createGigCountIcon = (gigCount, callback) => {
     ctx.textBaseline = 'middle';
     
     // Handle different number lengths with appropriate font sizes
-    let fontSize = 16;
-    if      (gigCount > 99) fontSize = 12;
-    else if (gigCount > 9)  fontSize = 14;
+    let fontSize = 13;
+    if      (gigCount > 99) fontSize = 9;
+    else if (gigCount > 9)  fontSize = 11;
     
     ctx.font = `bold ${fontSize}px Arial`;
 
     // Draw white outline for better visibility
-    ctx.strokeText(gigCount.toString(), 24, 19);
+    ctx.strokeText(gigCount.toString(), 16, 12.5);
     // Draw the number
-    ctx.fillText(gigCount.toString(), 24, 19);
+    ctx.fillText(gigCount.toString(), 16, 12.5);
     
     // Convert canvas to data URL and create icon
     const iconUrl = canvas.toDataURL();
     const icon = L.icon({
       iconUrl: iconUrl,
-      iconSize: [48, 48],
-      iconAnchor: [24, 48],
+      iconSize: [32, 32],
+      iconAnchor: [18, 32],
       popupAnchor: [0, -36],
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-      shadowSize: [72, 72],
-      shadowAnchor: [24, 70]
+      shadowSize: [42, 42],
+      shadowAnchor: [14, 42]
     });
     
     callback(icon);
   };
   
-  img.src = '/images/map-marker-2-48.png';
+  img.src = '/images/map-marker-2-32.png';
 };
 
 // Popup content component
@@ -299,7 +300,7 @@ const VenueMarkers = ({ venueGroups }) => {
           className: 'venue-popup-container',
           maxWidth: 340,
           minWidth: 280,
-          offset: [0, -5],
+          offset: [0, 10],
           closeButton: true
         }).setContent(popupContent);
         
@@ -330,7 +331,7 @@ const VenueMarkers = ({ venueGroups }) => {
           className: 'venue-popup-container',
           maxWidth: 340,
           minWidth: 280,
-          offset: [0, -5],
+          offset: [0, 10],
           autoPanPadding: [20, 20]
         }).setContent(popupContent);
         
