@@ -21,7 +21,11 @@
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
 
-    <base href="<%= Rails.application.config.relative_url_root || "" %>" target="_blank">
+    <script>
+      window.APP_CONFIG = {
+        apiBaseUrl: "<%= Rails.application.config.relative_url_root || "" %>"
+      };
+    </script>
   </head>
 
   <body>

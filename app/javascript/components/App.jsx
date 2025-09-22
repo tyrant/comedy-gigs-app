@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import MapView from './MapView';
-import { normalizeLongitude, getFilterParamsFromUrl, updateFilterUrlParams } from '../fiddly-bits';
+import { normalizeLongitude, getFilterParamsFromUrl, updateFilterUrlParams, buildApiUrl } from '../fiddly-bits';
 import Select from 'react-select';
 
 const App = () => {
@@ -44,7 +44,7 @@ const App = () => {
       setLoadingActs(true);
 
       try {
-        const response = await fetch('/api/acts');
+        const response = await fetch(buildApiUrl('/api/acts'));
         if (!response.ok) throw new Error('Failed to fetch acts');
         
         const data = await response.json();
@@ -114,7 +114,7 @@ const App = () => {
       if (filters.startDate) params.append('start_date', filters.startDate);
       if (filters.endDate)   params.append('end_date', filters.endDate);
       
-      const response = await fetch(`/api/gigs?${params}`, { signal: abortController.signal });
+      const response = await fetch(buildApiUrl(`/api/gigs?${params}`), { signal: abortController.signal });
       if (!response.ok) throw new Error('Failed to fetch gigs');
       
       const data = await response.json();
