@@ -19,6 +19,7 @@
     "@babel/preset-react": "^7.27.1",
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/turbo-rails": "^8.0.16",
+    "@tailwindcss/postcss": "^4.1.13",
     "esbuild": "^0.25.5",
     "esbuild-loader": "^4.3.0",
     "leaflet": "^1.9.4",
