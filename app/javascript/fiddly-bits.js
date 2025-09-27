@@ -203,11 +203,6 @@ const updateFilterUrlParams = (filters) => {
   updateUrlParams(paramsToUpdate, paramsToRemove);
 };
 
-const buildApiUrl = (path) => {
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  return `${window.APP_CONFIG.apiBaseUrl}/${cleanPath}`;
-};
-
 export { 
   debounce, 
   normalizeLongitude, 
@@ -221,6 +216,5 @@ export {
   updateFilterUrlParams,
   formatDate,
   formatDateWithTimezone,
-  formatGigTime,
-  buildApiUrl
+  formatGigTime
 };
