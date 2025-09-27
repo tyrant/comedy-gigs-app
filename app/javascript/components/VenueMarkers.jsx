@@ -106,8 +106,8 @@ const PopupContent = ({ venue, gigs }) => {
 
   gigs.forEach(gig => {
     const existingActs = gigsGroupedByActs.find(group => {
-      const groupActIds = group.acts.map(a => a.id);
-      const gigActIds = gig.acts.map(a => a.id);
+      const groupActIds = group.acts.map(a => a.id).sort();
+      const gigActIds = gig.acts.map(a => a.id).sort();
 
       return groupActIds.every((id, i) => id == gigActIds[i]);
     });
