@@ -5,7 +5,7 @@
 set :environment, "production"
 
 # Set output path for cron logs
-set :output, { error: "log/cron_error.log", standard: "log/cron.log" }
+set :output, { error: "/home/noob/comedy-gigs-app/shared/log/cron_error.log", standard: "/home/noob/comedy-gigs-app/shared/log/cron.log" }
 
 # Set job template to include the correct environment and path
 set :job_template, '/bin/bash -l -c ":job"'
