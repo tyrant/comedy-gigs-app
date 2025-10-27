@@ -100,7 +100,7 @@ group :test do
   gem "parallel_tests"
 end
 
-gem "tailwindcss-rails", "~> 4.2"
+gem "tailwindcss-rails", "~> 4.4"
 
 gem "geocoder", "~> 1.8"
 
