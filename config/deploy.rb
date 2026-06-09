@@ -27,7 +27,8 @@ append :linked_files, "config/database.yml", 'config/credentials/production.key'
 append :linked_dirs, "log", "tmp/pids", "tmp/cache", "tmp/sockets", "public/system", "vendor", "storage"
 
 # Default value for default_env is {}
-# set :default_env, { path: "/opt/ruby/bin:$PATH" }
+# nodenv shims first so asset precompile uses Node 22 (Tailwind 4), not system Node 18
+set :default_env, { path: "/home/noob/.nodenv/shims:$PATH" }
 
 # Default value for local_user is ENV['USER']
 # set :local_user, -> { `git config user.name`.chomp }
@@ -39,11 +40,15 @@ append :linked_dirs, "log", "tmp/pids", "tmp/cache", "tmp/sockets", "public/syst
 # set :ssh_options, verify_host_key: :secure
 
 set :rbenv_path, "/home/noob/.rbenv"
-set :rbenv_ruby, "3.4.3"
+set :rbenv_ruby, "4.0.5"
+
+# Forward the local ssh agent so the server can pull this repo from GitHub
+# (the server's own deploy key is scoped to the blog repo only)
+set :ssh_options, { forward_agent: true }
 
 # Reduce bundle install memory usage
 set :bundle_jobs, 1  # Reduce from default 4 to 1 to use less memory
-set :bundle_flags, "--deployment --quiet"
+set :bundle_flags, "--quiet"
 
 namespace :deploy do
   namespace :check do
