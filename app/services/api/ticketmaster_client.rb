@@ -4,6 +4,9 @@ module Api
     COMEDY_SEGMENT_ID = "KZFzniwnSyZfZ7v7na".freeze # Ticketmaster's ID for Comedy events
     COMEDY_GENRE_ID = "KnvZfZ7vAe1".freeze # Ticketmaster's ID for Comedy genre
 
+    PAGE_SIZE = 100
+    MAX_RESULTS = 1000 # Discovery API rejects deep paging past 1000 items with HTTP 400
+
     MAX_RETRIES = 3
     RETRY_DELAY = 1 # seconds
 
@@ -37,7 +40,7 @@ module Api
       end
     end
 
-    def fetch_comedy_events(country_code: "NZ", size: 100, page: 0)
+    def fetch_comedy_events(country_code: "", size: PAGE_SIZE, page: 0)
       with_retries do
         @rate_limiter.with_rate_limit do
           response = @client.get("events", {

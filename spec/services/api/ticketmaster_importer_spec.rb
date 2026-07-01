@@ -71,7 +71,30 @@ RSpec.describe Api::TicketmasterImporter do
                                successful: 0,
                                failed: 0,
                                skipped: 1,
-                               rate_limited: 0)
+                               rate_limited: 0,
+                               source: 'ticketmaster')
+      end
+    end
+
+    context 'when the API reports more pages than its deep-paging ceiling allows' do
+      let(:deep_response) do
+        {
+          '_embedded' => { 'events' => [ event_data ] },
+          'page' => { 'totalPages' => 100 }
+        }
+      end
+
+      before do
+        allow(client).to receive(:fetch_comedy_events).and_return(deep_response)
+        allow(metrics).to receive(:record_import)
+        allow(notification_service).to receive(:notify_import_success)
+
+        subject
+      end
+
+      it 'stops at the 1000-item ceiling instead of paging into a 400' do
+        expected_pages = Api::TicketmasterClient::MAX_RESULTS / Api::TicketmasterClient::PAGE_SIZE
+        expect(client).to have_received(:fetch_comedy_events).exactly(expected_pages).times
       end
     end
 
@@ -100,7 +123,8 @@ RSpec.describe Api::TicketmasterImporter do
               rate_limited: 0,
               start_time: kind_of(Time),
               end_time: kind_of(Time),
-              event: nil
+              event: nil,
+              source: 'ticketmaster'
             )
           )
       end
@@ -150,7 +174,8 @@ RSpec.describe Api::TicketmasterImporter do
                    rate_limited: 1,
                    start_time: kind_of(Time),
                    end_time: kind_of(Time),
-                   event: nil
+                   event: nil,
+                   source: 'ticketmaster'
                  )
                ) }
 
@@ -204,11 +229,10 @@ RSpec.describe Api::TicketmasterImporter do
       describe 'notify_error method' do
         let(:error) { StandardError.new('Event processing error') }
         let(:event) { { 'name' => 'Test Event', 'id' => '123' } }
-        let(:stats) { { total_processed: 10, successful: 8, failed: 2 } }
 
         it 'converts exceptions to serializable hashes' do
           # Call the notify_error method directly
-          importer.send(:notify_error, error, event, stats)
+          importer.send(:notify_error, error, event)
 
           # Verify the notification service was called with serialized data
           expect(notification_service).to have_received(:notify_import_error)
@@ -219,10 +243,8 @@ RSpec.describe Api::TicketmasterImporter do
                 backtrace: kind_of(Array)
               },
               stats: hash_including(
-                total_processed: 10,
-                successful: 8,
-                failed: 2,
-                event: { 'name' => 'Test Event', 'id' => '123' }
+                event: { 'name' => 'Test Event', 'id' => '123' },
+                source: 'ticketmaster'
               )
             )
         end

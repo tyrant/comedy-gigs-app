@@ -107,6 +107,14 @@ namespace :ticketmaster do
       metrics = Metrics::ImportMetrics.new
       metrics.record_import(stats)
 
+      MonitorClient.report_run(
+        script: "ticketmaster_import",
+        status: "success",
+        processed: stats[:successful],
+        failed: stats[:failed],
+        skipped: stats[:skipped]
+      )
+
       Rails.logger.info "Daily Ticketmaster import completed successfully"
     rescue StandardError => e
       Rails.logger.error "Daily Ticketmaster import failed: #{e.message}"
@@ -119,6 +127,11 @@ namespace :ticketmaster do
           backtrace: e.backtrace&.first(10) || []
         },
         stats: { error_time: Time.current }
+      )
+      MonitorClient.report_run(
+        script: "ticketmaster_import",
+        status: "crashed",
+        errors: [e.message, *(e.backtrace&.first(10) || [])]
       )
     end
   end
