@@ -25,6 +25,15 @@ class Act < ApplicationRecord
     where("external_ids->>'#{source}' = ?", id.to_s)
   }
 
+  def self.from_existing(data, source)
+    act = Act.by_external_id(source, data[:external_ids][source]).first
+    return act if act
+
+    return nil unless data[:name].present?
+
+    Act.where("LOWER(name) = ?", data[:name].downcase).first
+  end
+
   # Use a placeholder image that will definitely work
   # For production, you should use your own hosted image
   IMAGE_PLACEHOLDER = "/images/comedian_placeholder.png"

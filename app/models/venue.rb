@@ -27,6 +27,22 @@ class Venue < ApplicationRecord
     where("external_ids->>'#{source}' = ?", id.to_s)
   }
 
+  def self.from_existing(data, source)
+    venue = Venue.by_external_id(source, data[:external_ids][source]).first
+    return venue if venue
+
+    return nil unless data[:name].present? && data[:latitude].present?
+
+    Venue.where("LOWER(name) = ?", data[:name].downcase)
+      .where("latitude BETWEEN ? AND ?",
+             data[:latitude] - 0.001,
+             data[:latitude] + 0.001)
+      .where("longitude BETWEEN ? AND ?",
+             data[:longitude] - 0.001,
+             data[:longitude] + 0.001)
+      .first
+  end
+
   IMAGE_PLACEHOLDER = "/images/venue_placeholder.webp"
 
   # Helper method to get the primary image URL

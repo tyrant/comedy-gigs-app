@@ -70,6 +70,19 @@ class Gig < ApplicationRecord
     end
   end
 
+  def self.from_existing(data, source)
+    gig = Gig.by_external_id(source, data[:external_ids][source]).first
+    return gig if gig
+
+    return nil unless data[:name].present? && data[:start_time].present?
+
+    Gig.where("LOWER(name) = ?", data[:name].downcase)
+      .where("start_time BETWEEN ? AND ?",
+             data[:start_time] - 1.hour,
+             data[:start_time] + 1.hour)
+      .first
+  end
+
   private
 
   def end_time_after_start_time
