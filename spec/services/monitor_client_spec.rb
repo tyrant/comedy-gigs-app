@@ -44,11 +44,34 @@ RSpec.describe MonitorClient do
         )
       end
 
+      it 'reports the host the run executed on' do
+        captured = nil
+        allow(Net::HTTP).to receive(:start).and_yield(http)
+        allow(http).to receive(:request) { |req| captured = req }
+        allow(described_class).to receive(:run_host).and_return('Prod')
+
+        described_class.report_run(script: 'ticketmaster_import', status: 'success')
+
+        expect(JSON.parse(captured.body)['host']).to eq 'Prod'
+      end
+
       it 'swallows network errors so a monitor outage never fails the import' do
         allow(Net::HTTP).to receive(:start).and_raise(SocketError.new('boom'))
         expect { described_class.report_run(script: 'ticketmaster_import', status: 'success') }
           .to_not raise_error
       end
+    end
+  end
+
+  describe '.run_host' do
+    it 'is Mac on macOS' do
+      stub_const('RUBY_PLATFORM', 'arm64-darwin24')
+      expect(described_class.run_host).to eq 'Mac'
+    end
+
+    it 'is Prod elsewhere' do
+      stub_const('RUBY_PLATFORM', 'x86_64-linux')
+      expect(described_class.run_host).to eq 'Prod'
     end
   end
 end

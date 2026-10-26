@@ -20,7 +20,8 @@ class MonitorClient
       failed: failed,
       skipped: skipped,
       errors: errors,
-      ran_at: Time.current.utc.iso8601
+      ran_at: Time.current.utc.iso8601,
+      host: run_host
     }.to_json
 
     Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 10) do |http|
@@ -28,5 +29,9 @@ class MonitorClient
     end
   rescue StandardError => e
     Rails.logger.warn "Monitor report failed (non-fatal): #{e.message}"
+  end
+
+  def self.run_host
+    RUBY_PLATFORM.include?("darwin") ? "Mac" : "Prod"
   end
 end
