@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_27_050505) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_28_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,6 +52,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_050505) do
     t.index ["name"], name: "index_gigs_on_name"
     t.index ["start_time"], name: "index_gigs_on_start_time"
     t.index ["status"], name: "index_gigs_on_status"
+    t.index ["venue_id", "start_time"], name: "index_gigs_on_venue_id_and_start_time_live", where: "((status)::text <> 'cancelled'::text)"
     t.index ["venue_id"], name: "index_gigs_on_venue_id"
   end
 

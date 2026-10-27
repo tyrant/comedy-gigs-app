@@ -79,17 +79,6 @@ RSpec.describe Gig, type: :model do
       it { expect(gigs_with_act1).not_to include gig2 }
     end
 
-    describe '.within_bounds' do
-      # Bounds that include NYC and LA but not London
-      let(:sw) { [ 30.0, -125.0 ] }
-      let(:ne) { [ 45.0, -70.0 ] }
-      let(:bounds) { [ sw, ne ] }
-      let(:gigs_in_bounds) { Gig.within_bounds(bounds) }
-
-      it { expect(gigs_in_bounds).to include gig1, gig2, past_gig }
-      it { expect(gigs_in_bounds).not_to include gig3 }
-    end
-
     describe '.featuring_acts' do
       context 'with blank act_ids' do
         it { expect(Gig.featuring_acts(nil)).to eq(Gig.all) }
@@ -169,54 +158,37 @@ RSpec.describe Gig, type: :model do
 
     describe '.filtered_for_api' do
       context 'with no parameters' do
-        let(:result) { Gig.filtered_for_api({}) }
-
-        it { expect(result.to_a).to include gig1, gig2, gig3 }
-        it { expect(result.includes_values).to include :venue, :acts }
+        it { expect(Gig.filtered_for_api({})).to include gig1, gig2, gig3 }
       end
 
       context 'with a cancelled gig' do
         let!(:cancelled_gig) { create :gig, status: 'cancelled', venue: venue1 }
 
-        it { expect(Gig.filtered_for_api({}).to_a).not_to include cancelled_gig }
-      end
-
-      context 'with bounds parameters' do
-        let(:params) do
-          {
-            north: 45.0,
-            south: 30.0,
-            east: -70.0,
-            west: -125.0
-          }
-        end
-        let(:result) { Gig.filtered_for_api(params) }
-
-        it { expect(result.to_a).to include gig1, gig2 }
-        it { expect(result.to_a).not_to include gig3 }
-      end
-
-      context 'with incomplete bounds parameters' do
-        let(:params) { { north: 45.0, south: 30.0 } }
-        let(:result) { Gig.filtered_for_api(params) }
-
-        it { expect(result.to_a).to include gig1, gig2, gig3 }
+        it { expect(Gig.filtered_for_api({})).not_to include cancelled_gig }
       end
 
       context 'with act_ids parameter' do
         context 'with multiple act_ids' do
-          let(:params) { { act_ids: "#{act1.id},#{act2.id}" } }
-          let(:result) { Gig.filtered_for_api(params) }
+          let(:result) { Gig.filtered_for_api(act_ids: "#{act1.id},#{act2.id}") }
 
-          it { expect(result.to_a).to include gig1, gig2, gig3 }
+          it { expect(result).to include gig1, gig2, gig3 }
         end
 
         context 'with single act_id' do
-          let(:params) { { act_ids: act1.id.to_s } }
-          let(:result) { Gig.filtered_for_api(params) }
+          let(:result) { Gig.filtered_for_api(act_ids: act1.id.to_s) }
 
-          it { expect(result.to_a).to include gig1, gig3 }
-          it { expect(result.to_a).not_to include gig2 }
+          it { expect(result).to include gig1, gig3 }
+          it { expect(result).not_to include gig2 }
+        end
+
+        context 'with junk in the list' do
+          let(:result) { Gig.filtered_for_api(act_ids: "#{act1.id},abc,") }
+
+          it { expect(result).to contain_exactly gig1, gig3 }
+        end
+
+        it 'lists each gig once when several of its acts match' do
+          expect(Gig.filtered_for_api(act_ids: "#{act1.id},#{act2.id}").where(id: gig3).count).to eq 1
         end
       end
 
@@ -229,85 +201,26 @@ RSpec.describe Gig, type: :model do
         end
         let(:result) { Gig.filtered_for_api(params) }
 
-        it { expect(result.to_a).to include gig2 }
-        it { expect(result.to_a).not_to include gig1, gig3 }
+        it { expect(result).to include gig2 }
+        it { expect(result).not_to include gig1, gig3 }
       end
 
       context 'with combined parameters' do
         let(:params) do
           {
-            north: 45.0,
-            south: 30.0,
-            east: -70.0,
-            west: -125.0,
             act_ids: act1.id.to_s,
             start_date: 0.5.days.from_now.to_date.to_s,
             end_date: 1.5.days.from_now.to_date.to_s
           }
         end
-        let(:result) { Gig.filtered_for_api(params) }
 
-        it { expect(result.to_a).to include gig1 }
-        it { expect(result.to_a).not_to include gig2, gig3 }
-      end
-
-      describe 'ordering' do
-        let(:result) { Gig.filtered_for_api({}) }
-
-        it { expect(result.order_values.first.to_sql).to include('"gigs"."id"') }
-      end
-    end
-
-    describe '.serialize_for_api' do
-      context 'with gigs data' do
-        let(:gigs) { [ gig1, gig2 ] }
-        let(:result) { Gig.serialize_for_api(gigs) }
-        let(:gig_json) { result.first }
-        let(:venue_json) { gig_json['venue'] }
-        let(:acts_json) { gig_json['acts'] }
-
-        it { expect(result).to be_an Array }
-        it { expect(result.length).to eq 2 }
-        it { expect(gig_json).to have_key 'name' }
-        it { expect(gig_json).to have_key 'venue' }
-        it { expect(gig_json).to have_key 'acts' }
-        it { expect(venue_json).to have_key 'latitude' }
-        it { expect(venue_json).to have_key 'longitude' }
-        it { expect(venue_json).to have_key 'primary_image_url' }
-        it { expect(acts_json).to be_an Array }
-        it { expect(acts_json.first).to have_key 'primary_image_url' }
-      end
-
-      context 'with empty gigs array' do
-        let(:result) { Gig.serialize_for_api([]) }
-
-        it { expect(result).to eq [] }
+        it { expect(Gig.filtered_for_api(params)).to contain_exactly gig1 }
       end
     end
   end
 
   # Test private class methods
   describe 'private class methods' do
-    describe '.bounds_params_present?' do
-      context 'with complete bounds parameters' do
-        let(:params) { { north: 45.0, south: 30.0, east: -70.0, west: -125.0 } }
-
-        it { expect(Gig.send(:bounds_params_present?, params)).to be true }
-      end
-
-      context 'with missing bounds parameters' do
-        let(:params) { { north: 45.0, south: 30.0, east: -70.0 } }
-
-        it { expect(Gig.send(:bounds_params_present?, params)).to be false }
-      end
-
-      context 'with blank bounds parameters' do
-        let(:params) { { north: '', south: 30.0, east: -70.0, west: -125.0 } }
-
-        it { expect(Gig.send(:bounds_params_present?, params)).to be false }
-      end
-    end
-
     describe '.parse_date' do
       context 'with valid date string' do
         let(:date_string) { '2024-12-25' }

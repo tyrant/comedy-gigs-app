@@ -1,6 +1,6 @@
+// Small shared helpers: URL state, dates and geometry
 
-// Debounce helper
-const debounce = (func, wait) => {
+export const debounce = (func, wait) => {
   let timeout;
   return (...args) => {
     clearTimeout(timeout);
@@ -8,213 +8,139 @@ const debounce = (func, wait) => {
   };
 };
 
-// Normalize longitude to -180 to 180 range
-const normalizeLongitude = (lng) => {
-  // First, ensure we're working with a number
+// Normalise longitude to the -180..180 range
+export const normalizeLongitude = (lng) => {
   lng = parseFloat(lng);
   if (isNaN(lng)) return 0;
-  
+
   // Many thanks to https://stackoverflow.com/a/17323608
-  lng = ((lng % 360) + 360) % 360;
-
-  // Convert to -180 to 180 range
-  lng = ((lng + 180) % 360) - 180;
-
-  // Handle edge case where modulo might give 180
+  lng = ((((lng % 360) + 360) % 360) + 180) % 360 - 180;
   return lng === 180 ? -180 : lng;
 };
 
-// Format date for display (legacy function - maintains backward compatibility)
-const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
+// Is a point inside the map's bounds? Copes with views that cross the
+// antimeridian or show more than one copy of the world.
+export const inBounds = (bounds, lat, lng) => {
+  if (!bounds) return false;
+  if (lat < bounds.getSouth() || lat > bounds.getNorth()) return false;
+
+  const west = bounds.getWest();
+  const east = bounds.getEast();
+  if (east - west >= 360) return true;
+
+  const shifted = west + ((((lng - west) % 360) + 360) % 360);
+  return shifted <= east;
 };
 
-// Format date with timezone awareness
-const formatDateWithTimezone = (dateString, timezone = null) => {
-  const date = new Date(dateString);
-  
-  // If no timezone provided, use the legacy formatting
-  if (!timezone) {
-    return formatDate(dateString);
-  }
-  
-  try {
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: timezone
-    });
-  } catch (error) {
-    console.warn(`Invalid timezone '${timezone}', falling back to default formatting:`, error);
-    return formatDate(dateString);
-  }
-};
+const isoDate = (date) => date.toISOString().split('T')[0];
 
-// Format date in venue's timezone for gig display
-const formatGigTime = (gigStartTime, venue) => {
-  if (!venue || !venue.timezone) {
-    return formatDate(gigStartTime);
-  }
-  
-  return formatDateWithTimezone(gigStartTime, venue.timezone);
-};
-
-// URL parameter handling
-const getMapParamsFromUrl = () => {
-  const params = new URLSearchParams(window.location.search);
-  
-  return {
-    lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
-    lng: params.get('lng') ? normalizeLongitude(parseFloat(params.get('lng'))) : null,
-    zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null,
-    venueId: params.get('venue') || null,
-    gigId: params.get('gig') || null
-  };
-};
-
-// Get filter parameters from URL
-const getFilterParamsFromUrl = () => {
-  const params = new URLSearchParams(window.location.search);
-  
-  // Default dates: today to one year from today
+// Default date range: today to a year from today
+export const defaultDates = () => {
   const today = new Date();
-  const oneYearFromToday = new Date(today);
-  oneYearFromToday.setFullYear(today.getFullYear() + 1);
-  
-  const defaultStartDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-  const defaultEndDate = oneYearFromToday.toISOString().split('T')[0];
+  const nextYear = new Date(today);
+  nextYear.setFullYear(today.getFullYear() + 1);
+  return { startDate: isoDate(today), endDate: isoDate(nextYear) };
+};
+
+// --- URL state ---------------------------------------------------------------
+// The URL is the source of truth on load; after that the app writes to it with
+// replaceState, so every view can be shared or reloaded.
+
+const urlParams = () => new URLSearchParams(window.location.search);
+
+const positiveInt = (value) => {
+  const n = parseInt(value, 10);
+  return n > 0 ? n : null;
+};
+
+export const readFilters = () => {
+  const params = urlParams();
+  const defaults = defaultDates();
 
   return {
-    actIds: params.getAll('act')
-              .map(id => parseInt(id, 10))
-              .filter(id => !isNaN(id)) || [],
-    startDate: params.get('start') || defaultStartDate,
-    endDate: params.get('end') || defaultEndDate
+    actIds: params.getAll('act').map(positiveInt).filter(Boolean),
+    startDate: params.get('start') || defaults.startDate,
+    endDate: params.get('end') || defaults.endDate
   };
 };
 
-/**
- * Updates URL parameters without affecting other parameters
- * @param {Object} paramsToUpdate - Object containing parameters to update
- * @param {Object} paramsToRemove - Object containing parameters to remove
- */
-const updateUrlParams = (paramsToUpdate = {}, paramsToRemove = []) => {
-  const params = new URLSearchParams(window.location.search);
-  
-  // Update parameters
-  Object.entries(paramsToUpdate).forEach(([key, value]) => {
-    if (value !== null && value !== undefined) {
+export const filtersToParams = ({ actIds, startDate, endDate }) => ({
+  act: actIds,
+  start: startDate || null,
+  end: endDate || null
+});
 
-      if (key === 'lat') {
-        params.set(key, parseFloat(value).toFixed(6));
-      }
-      else if (key === 'lng') {
-        params.set(key, normalizeLongitude(parseFloat(value)).toFixed(6));
-      }
-      else if (key === 'act' && Array.isArray(value) && value.length > 0) {
-        params.delete('act');
-        value.forEach(actId => params.append('act', actId));
-      }
-      
-      else {
-        params.set(key, value);
-      }
-    }
+export const readSelection = () => {
+  const params = urlParams();
+  return { venueId: positiveInt(params.get('venue')), gigId: positiveInt(params.get('gig')) };
+};
+
+export const selectionToParams = ({ venueId, gigId }) => ({ venue: venueId, gig: venueId ? gigId : null });
+
+export const readMapView = () => {
+  const params = urlParams();
+  const lat = parseFloat(params.get('lat'));
+  const lng = parseFloat(params.get('lng'));
+  const zoom = parseInt(params.get('zoom'), 10);
+
+  return {
+    center: [ isNaN(lat) ? -41.959490 : lat, isNaN(lng) ? 171.595459 : normalizeLongitude(lng) ],
+    zoom: isNaN(zoom) ? 5 : zoom
+  };
+};
+
+export const mapViewToParams = ({ lat, lng }, zoom) => ({
+  lat: lat.toFixed(6),
+  lng: normalizeLongitude(lng).toFixed(6),
+  zoom
+});
+
+// Sets the given params, leaving the rest alone. Arrays become repeated params;
+// null, undefined and empty arrays remove the param.
+export const writeUrlParams = (updates) => {
+  const params = urlParams();
+
+  Object.entries(updates).forEach(([ key, value ]) => {
+    params.delete(key);
+    if (Array.isArray(value)) value.forEach(v => params.append(key, v));
+    else if (value !== null && value !== undefined) params.set(key, value);
   });
-  
-  // Remove parameters
-  paramsToRemove.forEach(key => params.delete(key));
-  
-  window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+
+  const query = params.toString();
+  window.history.replaceState({}, '', query ? `${window.location.pathname}?${query}` : window.location.pathname);
 };
 
-/**
- * Helper functions for updating specific URL parameter groups
- */
-
-// Update map position parameters in URL
-const updateMapUrlParams = (lat, lng, zoom) => {
-  const paramsToUpdate = {};
-  
-  if (lat !== undefined && lat !== null) paramsToUpdate.lat = lat;
-  if (lng !== undefined && lng !== null) paramsToUpdate.lng = lng;
-  if (zoom !== undefined && zoom !== null) paramsToUpdate.zoom = zoom;
-  
-  updateUrlParams(paramsToUpdate, []);
+// Query string for the API endpoints that take the map's filters
+export const filterQuery = ({ actIds, startDate, endDate }) => {
+  const params = new URLSearchParams();
+  if (startDate) params.set('start_date', startDate);
+  if (endDate) params.set('end_date', endDate);
+  if (actIds.length) params.set('act_ids', actIds.join(','));
+  return params.toString();
 };
 
-// Update venue selection in URL
-const updateVenueUrlParam = (venueId) => {
-  if (venueId) updateUrlParams({ venue: venueId }, []);
-  else         updateUrlParams({}, ['venue']);
+// Deep link to a gig, for its link's href
+export const gigHref = (venueId, gigId) => {
+  const params = urlParams();
+  params.set('venue', venueId);
+  params.set('gig', gigId);
+  return `${window.location.pathname}?${params}`;
 };
 
-// Update gig selection in URL
-const updateGigUrlParam = (gigId) => {
-  if (gigId) updateUrlParams({ gig: gigId }, []);
-  else       updateUrlParams({}, ['gig']);
+// --- Formatting --------------------------------------------------------------
+
+// A gig's start, in its venue's time zone when known
+export const formatGigTime = (startTime, timezone) => {
+  const options = {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true
+  };
+
+  try {
+    return new Date(startTime).toLocaleString('en-US', timezone ? { ...options, timeZone: timezone } : options);
+  } catch {
+    return new Date(startTime).toLocaleString('en-US', options);
+  }
 };
 
-// Update both venue and gig in URL (for gig deep-linking)
-const updateVenueAndGigUrlParams = (venueId, gigId) => {
-  const paramsToUpdate = {};
-  const paramsToRemove = [];
-  
-  if (venueId) paramsToUpdate.venue = venueId;
-  else         paramsToRemove.push('venue');
-  
-  if (gigId) paramsToUpdate.gig = gigId;
-  else       paramsToRemove.push('gig');
-  
-  updateUrlParams(paramsToUpdate, paramsToRemove);
-};
-
-// Update filter parameters in URL
-const updateFilterUrlParams = (filters) => {
-  const paramsToUpdate = {};
-  const paramsToRemove = [];
-  
-  // Handle start date
-  if (filters.startDate) paramsToUpdate.start = filters.startDate;
-  else                   paramsToRemove.push('start');
-  
-  // Handle end date
-  if (filters.endDate) paramsToUpdate.end = filters.endDate;
-  else                 paramsToRemove.push('end');
-  
-  // Handle act IDs 
-  if (filters.actIds && filters.actIds.length > 0) paramsToUpdate.act = filters.actIds;
-  else                                             paramsToRemove.push('act');
-    
-  updateUrlParams(paramsToUpdate, paramsToRemove);
-};
-
-export { 
-  debounce, 
-  normalizeLongitude, 
-  getMapParamsFromUrl, 
-  getFilterParamsFromUrl, 
-  updateUrlParams, 
-  updateMapUrlParams,
-  updateVenueUrlParam,
-  updateGigUrlParam,
-  updateVenueAndGigUrlParams,
-  updateFilterUrlParams,
-  formatDate,
-  formatDateWithTimezone,
-  formatGigTime
-};
+export const pluralize = (count, noun) => `${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`;

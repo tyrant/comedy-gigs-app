@@ -7,7 +7,9 @@ Rails.application.routes.draw do
 
   # API routes
   namespace :api do
-    resources :gigs, only: [ :index ]
+    resources :venues, only: [ :index ] do
+      resources :gigs, only: [ :index ]
+    end
     resources :acts, only: [ :index ]
   end
 

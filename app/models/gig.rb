@@ -14,13 +14,12 @@ class Gig < ApplicationRecord
   scope :by_status,      ->(status)               { where(status: status) }
   scope :by_external_id, ->(source, id)           { where("external_ids @> ?", { source => id.to_s }.to_json) }
   scope :featuring_act,  ->(act_id)               { joins(:acts).where(acts: { id: act_id }) }
-  scope :within_bounds,  ->(bounds)               { joins(:venue).merge(Venue.within_bounding_box(bounds)) }
 
+  # EXISTS rather than plucking matching IDs first: one query, no unbounded IN list
   scope :featuring_acts, ->(act_ids) {
     return all if act_ids.blank?
 
-    gig_ids_with_acts = joins(:acts).where(acts: { id: act_ids }).distinct.pluck(:id)
-    where(id: gig_ids_with_acts)
+    where("EXISTS (SELECT 1 FROM acts_gigs WHERE acts_gigs.gig_id = gigs.id AND acts_gigs.act_id IN (?))", act_ids)
   }
 
   scope :starting_after, ->(start_date) {
@@ -29,7 +28,7 @@ class Gig < ApplicationRecord
     parsed_date = Gig.send(:parse_date, start_date)
     return all unless parsed_date
 
-    where("start_time >= ?", parsed_date.beginning_of_day)
+    where(start_time: parsed_date.beginning_of_day..)
   }
 
   scope :starting_before, ->(end_date) {
@@ -38,36 +37,16 @@ class Gig < ApplicationRecord
     parsed_date = Gig.send(:parse_date, end_date)
     return all unless parsed_date
 
-    where("start_time <= ?", parsed_date.end_of_day)
+    where(start_time: ..parsed_date.end_of_day)
   }
 
+  # The filters the map's API endpoints share: start_date, end_date and act_ids
+  # (comma-separated). Cancelled gigs are never shown.
   def self.filtered_for_api(params = {})
-    scope = includes(:venue, :acts).where.not(status: "cancelled")
-
-    if bounds_params_present?(params)
-      sw = [ params[:south].to_f, params[:west].to_f ]
-      ne = [ params[:north].to_f, params[:east].to_f ]
-      scope = scope.within_bounds([ sw, ne ])
-    end
-
-    if params[:act_ids].present?
-      act_ids = params[:act_ids].split(",")
-      scope = scope.featuring_acts(act_ids)
-    end
-
+    scope = where.not(status: "cancelled")
+    scope = scope.featuring_acts(params[:act_ids].to_s.split(",").map(&:to_i).select(&:positive?))
     scope = scope.starting_after(params[:start_date])
-    scope = scope.starting_before(params[:end_date])
-
-    scope.order(:id)
-  end
-
-  def self.serialize_for_api(gigs)
-    gigs.map do |gig|
-      gig_json = gig.as_json
-      gig_json["venue"] = gig.venue.as_json(methods: [ :latitude, :longitude, :primary_image_url ])
-      gig_json["acts"] = gig.acts.map { |act| act.as_json(methods: [ :primary_image_url ]) }
-      gig_json
-    end
+    scope.starting_before(params[:end_date])
   end
 
   def self.from_existing(data, source)
@@ -93,11 +72,6 @@ class Gig < ApplicationRecord
 
   class << self
     private
-
-    def bounds_params_present?(params)
-      params[:north].present? && params[:south].present? &&
-      params[:east].present? && params[:west].present?
-    end
 
     def parse_date(date_string)
       return nil if date_string.nil?
