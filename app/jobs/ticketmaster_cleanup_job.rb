@@ -37,6 +37,8 @@ class TicketmasterCleanupJob < ApplicationJob
         error: cleanup_stats[:error],
         stats: cleanup_stats
       ).deliver_later
+
+      raise # Let callers (the daily rake task) report the failure
     ensure
       # Log cleanup results
       duration = ((cleanup_stats[:end_time] - cleanup_stats[:start_time]) / 60.0).round(2)

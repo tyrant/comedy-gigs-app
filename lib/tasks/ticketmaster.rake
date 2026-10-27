@@ -86,7 +86,7 @@ namespace :ticketmaster do
     end
   end
 
-  desc "Production Ticketmaster scheduled import"
+  desc "Production Ticketmaster scheduled import, followed by cleanup of stale gigs"
   task daily_import: :environment do
     begin
       Rails.logger.info "Starting daily Ticketmaster import..."
@@ -103,35 +103,35 @@ namespace :ticketmaster do
       Rails.logger.info "Skipped: #{stats[:skipped]}"
       Rails.logger.info "Rate limited: #{stats[:rate_limited]}"
 
-      # Record metrics
-      metrics = Metrics::ImportMetrics.new
-      metrics.record_import(stats)
+      # The importer swallows fatal errors into stats[:error] so it can record
+      # partial progress; surface them here, along with suspiciously empty runs.
+      errors = []
+      errors << "#{stats[:error][:class]}: #{stats[:error][:message]}" if stats[:error]
+      errors << "Ticketmaster returned no events" if stats[:total_processed].zero?
+
+      begin
+        TicketmasterCleanupJob.perform_now
+      rescue StandardError => e
+        errors << "Cleanup failed: #{e.class}: #{e.message}"
+      end
 
       MonitorClient.report_run(
         script: "ticketmaster_import",
-        status: "success",
+        status: (stats[:error] || stats[:total_processed].zero?) ? "crashed" : "success",
         processed: stats[:successful],
         failed: stats[:failed],
-        skipped: stats[:skipped]
+        skipped: stats[:skipped],
+        errors: errors
       )
 
-      Rails.logger.info "Daily Ticketmaster import completed successfully"
+      Rails.logger.info "Daily Ticketmaster import finished"
     rescue StandardError => e
       Rails.logger.error "Daily Ticketmaster import failed: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      # Send error notification
-      NotificationService.new.notify_import_error(
-        error: {
-          message: e.message,
-          class: e.class.to_s,
-          backtrace: e.backtrace&.first(10) || []
-        },
-        stats: { error_time: Time.current }
-      )
       MonitorClient.report_run(
         script: "ticketmaster_import",
         status: "crashed",
-        errors: [e.message, *(e.backtrace&.first(10) || [])]
+        errors: [ e.message, *(e.backtrace&.first(10) || []) ]
       )
     end
   end

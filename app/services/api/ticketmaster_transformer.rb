@@ -65,17 +65,19 @@ module Api
     def self.build_venue(venue)
       return nil unless venue
 
-      Rails.logger.info "=== TICKETMASTER VENUE DATA DEBUGGING ==="
-      Rails.logger.info "Venue: #{venue['name']}"
-      Rails.logger.info "Has images? #{venue['images'].present?}"
+      Rails.logger.debug "=== TICKETMASTER VENUE DATA DEBUGGING ==="
+      Rails.logger.debug "Venue: #{venue['name']}"
+      Rails.logger.debug "Has images? #{venue['images'].present?}"
       if venue["images"].present?
-        Rails.logger.info "Number of venue images: #{venue['images'].size}"
-        Rails.logger.info "First image sample: #{venue['images'].first.inspect}"
+        Rails.logger.debug "Number of venue images: #{venue['images'].size}"
+        Rails.logger.debug "First image sample: #{venue['images'].first.inspect}"
       end
 
       result = {
-        name: venue["name"],
-        address: venue.dig("address", "line1"),
+        # Some Scandinavian venues arrive nameless; the street address is the next best label
+        name: venue["name"].presence || venue.dig("address", "line1"),
+        # Some venues (often outside the US/UK) come without a street address
+        address: venue.dig("address", "line1").presence || venue.dig("city", "name").presence || venue["name"],
         city: venue.dig("city", "name"),
         country: venue.dig("country", "name"),
         latitude: venue.dig("location", "latitude")&.to_f,
@@ -89,8 +91,8 @@ module Api
         images: extract_images(venue["images"])
       }
 
-      Rails.logger.info "Final venue images: #{result[:images].inspect}"
-      Rails.logger.info "=== END TICKETMASTER VENUE DATA DEBUGGING ==="
+      Rails.logger.debug "Final venue images: #{result[:images].inspect}"
+      Rails.logger.debug "=== END TICKETMASTER VENUE DATA DEBUGGING ==="
 
       result
     end
@@ -98,15 +100,16 @@ module Api
     def self.build_acts(attractions)
       return [] unless attractions
 
-      Rails.logger.info "=== TICKETMASTER ACTS DATA DEBUGGING ==="
-      Rails.logger.info "Number of attractions: #{attractions.size}"
+      Rails.logger.debug "=== TICKETMASTER ACTS DATA DEBUGGING ==="
+      Rails.logger.debug "Number of attractions: #{attractions.size}"
 
-      attractions.map do |act|
-        Rails.logger.info "Processing act: #{act['name']}"
-        Rails.logger.info "Has images? #{act['images'].present?}"
+      # Attractions occasionally arrive nameless, or listed twice on one event
+      attractions.select { |act| act["name"].present? }.uniq { |act| act["id"] || act["name"] }.map do |act|
+        Rails.logger.debug "Processing act: #{act['name']}"
+        Rails.logger.debug "Has images? #{act['images'].present?}"
         if act["images"].present?
-          Rails.logger.info "Number of act images: #{act['images'].size}"
-          Rails.logger.info "First image sample: #{act['images'].first.inspect}"
+          Rails.logger.debug "Number of act images: #{act['images'].size}"
+          Rails.logger.debug "First image sample: #{act['images'].first.inspect}"
         end
 
         act_data = {
@@ -119,10 +122,10 @@ module Api
           images: extract_images(act["images"])
         }
 
-        Rails.logger.info "Final act images for #{act['name']}: #{act_data[:images].inspect}"
+        Rails.logger.debug "Final act images for #{act['name']}: #{act_data[:images].inspect}"
         act_data
       end.tap do
-        Rails.logger.info "=== END TICKETMASTER ACTS DATA DEBUGGING ==="
+        Rails.logger.debug "=== END TICKETMASTER ACTS DATA DEBUGGING ==="
       end
     end
 
@@ -235,51 +238,21 @@ module Api
       end
     end
 
+    # Ticketmaster offers each image at many sizes, from 100px wide up to a
+    # multi-megapixel original. Pick the smallest that's big enough for its use.
+    PREFERRED_WIDTH = 640   # Venue popup heroes are ~330 CSS px wide; 2x for retina
+    THUMB_MIN_SIDE  = 96    # Act avatars are 32 CSS px circles; 3x for retina
+
     def self.extract_images(images_data)
-      Rails.logger.info "=== TICKETMASTER IMAGE DATA DEBUGGING ==="
-      Rails.logger.info "Raw images_data: #{images_data.inspect}"
+      return {} unless images_data.is_a?(Array)
 
-      if !images_data.is_a?(Array)
-        Rails.logger.warn "Images data is not an array: #{images_data.class}"
-        return {}
-      end
-
-      if images_data.empty?
-        Rails.logger.warn "Images data array is empty"
-        return {}
-      end
+      usable = images_data.select { |img| img["url"].present? && !img["fallback"] }
+      return {} if usable.empty?
 
       result = {}
-      best_images = {}
 
-      # First pass: collect best images by ratio and width
-      images_data.each_with_index do |img, index|
-        Rails.logger.info "Processing image #{index}: #{img.inspect}"
-
-        if !img["url"].present?
-          Rails.logger.warn "Image #{index} has no URL"
-          next
-        end
-
-        if img["fallback"]
-          Rails.logger.info "Image #{index} is a fallback image, skipping"
-          next
-        end
-
-        # Store best image for each ratio (prefer higher width)
-        ratio = img["ratio"] || "unknown"
-        width = img["width"] || 0
-
-        if best_images[ratio].nil? || width > (best_images[ratio]["width"] || 0)
-          best_images[ratio] = img
-          Rails.logger.info "Stored best image for ratio #{ratio} (width: #{width})"
-        end
-      end
-
-      Rails.logger.info "Best images by ratio: #{best_images.keys.join(', ')}"
-
-      # Second pass: map ratios to our size categories
-      best_images.each do |ratio, img|
+      # One image per ratio: the narrowest at least PREFERRED_WIDTH wide, else the widest
+      usable.group_by { |img| img["ratio"] || "unknown" }.each do |ratio, imgs|
         size_key = case ratio
         when "16_9", "16_9_large" then "large"
         when "3_2", "4_3" then "medium"
@@ -287,39 +260,28 @@ module Api
         else "standard"
         end
 
-        # Only store if we don't already have this size
-        if result[size_key].nil?
-          result[size_key] = img["url"]
-          Rails.logger.info "Mapped ratio #{ratio} to size #{size_key}: #{img['url']}"
-        end
+        result[size_key] ||= right_sized(imgs, PREFERRED_WIDTH)["url"]
       end
 
-      # Ensure all required sizes exist by creating fallbacks
-      required_sizes = [ "standard", "large", "medium", "square" ]
+      # Fill in missing sizes so callers can always ask for any of them
+      fallback_url = result.values_at("large", "medium", "standard", "square").compact.first
+      %w[standard large medium square].each { |size| result[size] ||= fallback_url }
 
-      # If we have any image, use it as a base fallback
-      fallback_url = nil
-      [ "large", "medium", "standard", "square" ].each do |size|
-        if result[size].present?
-          fallback_url = result[size]
-          break
-        end
-      end
-
-      # Fill in missing sizes with fallbacks
-      if fallback_url.present?
-        required_sizes.each do |size|
-          if result[size].nil?
-            result[size] = fallback_url
-            Rails.logger.info "Created fallback for missing size #{size}: #{fallback_url}"
-          end
-        end
-      end
-
-      Rails.logger.info "Final image result: #{result.inspect}"
-      Rails.logger.info "=== END TICKETMASTER IMAGE DATA DEBUGGING ==="
-
+      result["thumb"] = thumbnail(usable)["url"]
       result
+    end
+
+    def self.right_sized(imgs, min_width)
+      big_enough = imgs.select { |img| img["width"].to_i >= min_width }
+      big_enough.min_by { |img| img["width"].to_i } || imgs.max_by { |img| img["width"].to_i }
+    end
+
+    # Smallest image whose shorter side still covers a retina avatar; images
+    # without dimensions sort last so a known-small one wins when available
+    def self.thumbnail(imgs)
+      short_side = ->(img) { [ img["width"].to_i, img["height"].to_i ].min }
+      big_enough = imgs.select { |img| short_side.(img) >= THUMB_MIN_SIDE }
+      big_enough.min_by(&short_side) || imgs.max_by(&short_side)
     end
   end
 end

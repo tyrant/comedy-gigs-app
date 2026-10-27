@@ -321,7 +321,7 @@ const App = () => {
                 components={{
                   MultiValueLabel: ({ data }) => (
                     <div className="w-8 h-8 rounded-full overflow-hidden">
-                      <img 
+                      <img loading="lazy" decoding="async" 
                         src={data.image} 
                         alt={data.label} 
                         className="w-full h-full object-cover" 
@@ -357,7 +357,7 @@ const App = () => {
                   if (context === 'menu') {
                     return (
                       <div className="flex items-center gap-2">
-                        <img src={option.image} alt={option.label} className="w-8 h-8 rounded-full object-cover" />
+                        <img loading="lazy" decoding="async" src={option.image} alt={option.label} className="w-8 h-8 rounded-full object-cover" />
                         <span className="text-sm">{option.label}</span>
                       </div>
                     );

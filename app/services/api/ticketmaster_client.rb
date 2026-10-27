@@ -40,19 +40,22 @@ module Api
       end
     end
 
-    def fetch_comedy_events(country_code: "", size: PAGE_SIZE, page: 0)
+    def fetch_comedy_events(country_code: "", size: PAGE_SIZE, page: 0, starts_after: Time.current, starts_before: nil)
+      params = {
+        apikey: @api_key,
+        countryCode: country_code,
+        segmentId: COMEDY_SEGMENT_ID,
+        genreId: COMEDY_GENRE_ID,
+        size: size,
+        page: page,
+        sort: "date,asc",
+        startDateTime: format_time(starts_after)
+      }
+      params[:endDateTime] = format_time(starts_before) if starts_before
+
       with_retries do
         @rate_limiter.with_rate_limit do
-          response = @client.get("events", {
-            apikey: @api_key,
-            countryCode: country_code,
-            segmentId: COMEDY_SEGMENT_ID,
-            genreId: COMEDY_GENRE_ID,
-            size: size,
-            page: page,
-            sort: "date,asc",
-            startDateTime: Time.current.iso8601
-          })
+          response = @client.get("events", params)
 
           handle_response(response)
         end
@@ -60,6 +63,11 @@ module Api
     end
 
     private
+
+    # Discovery API wants UTC with a literal Z and no fractional seconds
+    def format_time(time)
+      time.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    end
 
     def with_retries
       retries = 0

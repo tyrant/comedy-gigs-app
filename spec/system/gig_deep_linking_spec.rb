@@ -220,7 +220,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
       # Form fields should maintain their values
       expect(find_field('start_date').value).to eq(Date.current.strftime('%Y-%m-%d'))
-      expect(page).to have_selector(".react-select__multi-value img[alt='#{act1_name}']", wait: 5)
+      expect(page).to have_selector(".react-select__multi-value img[alt=#{act1_name.to_json}]", wait: 5)
     end
   end
 

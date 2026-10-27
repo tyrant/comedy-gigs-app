@@ -21,8 +21,9 @@ class Act < ApplicationRecord
       .distinct
   }
 
+  # Containment (@>) rather than ->> so the GIN index on external_ids is used
   scope :by_external_id, ->(source, id) {
-    where("external_ids->>'#{source}' = ?", id.to_s)
+    where("external_ids @> ?", { source => id.to_s }.to_json)
   }
 
   def self.from_existing(data, source)
@@ -38,8 +39,8 @@ class Act < ApplicationRecord
   # For production, you should use your own hosted image
   IMAGE_PLACEHOLDER = "/images/comedian_placeholder.png"
 
-  # Helper method to get the primary image URL
-  def primary_image_url(size = "standard")
+  # Acts are shown as small avatars, so default to the thumbnail
+  def primary_image_url(size = "thumb")
     return IMAGE_PLACEHOLDER if images.blank?
 
     # Try to find an image with the requested size

@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [ mistress ]
 
 jobs:
   scan_ruby:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -50,18 +50,23 @@ jobs:
           - 5432:5432
         options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
-      # redis:
-      #   image: redis
-      #   ports:
-      #     - 6379:6379
-      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432
+      REDIS_URL: redis://localhost:6379/1
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev node-gyp pkg-config python-is-python3 google-chrome-stable
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libyaml-dev
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -69,17 +74,30 @@ jobs:
           ruby-version: .ruby-version
           bundler-cache: true
 
-      - name: Run tests
-        env:
-          RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432
-          # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test test:system
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: yarn
 
-      - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v4
+      - name: Build JS and CSS
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+          yarn build:css
+          bin/rails tailwindcss:build
+
+      - name: Run specs (system specs use the runner's preinstalled Chrome)
+        run: |
+          bin/rails db:test:prepare
+          bundle exec rspec
+
+      - name: Keep screenshots from failed system specs
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: screenshots
-          path: ${{ github.workspace }}/tmp/screenshots
+          path: |
+            ${{ github.workspace }}/tmp/capybara
+            ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore

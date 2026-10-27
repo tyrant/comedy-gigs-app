@@ -68,7 +68,7 @@ module Api
     def generate_stats_message
       duration = ((@stats[:end_time] - @stats[:start_time]) / 60.0).round(2)
       <<~MSG
-        Eventfinda import completed in #{duration} minutes
+        #{@source.titleize} import completed in #{duration} minutes
         Total processed: #{@stats[:total_processed]}
         Successful: #{@stats[:successful]}
         Failed: #{@stats[:failed]}

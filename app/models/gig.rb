@@ -12,7 +12,7 @@ class Gig < ApplicationRecord
 
   scope :between,        ->(start_date, end_date) { where(start_time: start_date..end_date) }
   scope :by_status,      ->(status)               { where(status: status) }
-  scope :by_external_id, ->(source, id)           { where("external_ids->>'#{source}' = ?", id.to_s) }
+  scope :by_external_id, ->(source, id)           { where("external_ids @> ?", { source => id.to_s }.to_json) }
   scope :featuring_act,  ->(act_id)               { joins(:acts).where(acts: { id: act_id }) }
   scope :within_bounds,  ->(bounds)               { joins(:venue).merge(Venue.within_bounding_box(bounds)) }
 
@@ -42,7 +42,7 @@ class Gig < ApplicationRecord
   }
 
   def self.filtered_for_api(params = {})
-    scope = includes(:venue, :acts)
+    scope = includes(:venue, :acts).where.not(status: "cancelled")
 
     if bounds_params_present?(params)
       sw = [ params[:south].to_f, params[:west].to_f ]

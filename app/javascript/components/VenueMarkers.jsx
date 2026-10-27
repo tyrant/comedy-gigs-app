@@ -121,7 +121,7 @@ const PopupContent = ({ venue, gigs }) => {
       {venue.primary_image_url && (
         <div className="relative">
           <div className="w-full h-40 overflow-hidden">
-            <img 
+            <img loading="lazy" decoding="async" 
               src={venue.primary_image_url} 
               alt={venue.name} 
               className="w-full h-full object-cover" 
@@ -153,7 +153,7 @@ const PopupContent = ({ venue, gigs }) => {
                 {group.acts.map(act => (
                   <div key={act.id} data-act-id={act.id} title={act.name} className={`inline-flex items-center bg-blue-100 rounded-full p-1 duration-150 transition-all overflow-hidden flex-shrink-0 ${group.acts.length > 1 ? 'w-10 hover:w-28 hover:pr-1' : 'w-auto pr-2'}`}>
                     <div className="w-8 h-8 rounded-full overflow-hidden mr-1 flex-shrink-0">
-                      <img 
+                      <img loading="lazy" decoding="async" 
                         src={act.primary_image_url}
                         alt={act.name}
                         className="w-full h-full object-cover"

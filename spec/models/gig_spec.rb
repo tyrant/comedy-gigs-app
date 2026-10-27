@@ -175,6 +175,12 @@ RSpec.describe Gig, type: :model do
         it { expect(result.includes_values).to include :venue, :acts }
       end
 
+      context 'with a cancelled gig' do
+        let!(:cancelled_gig) { create :gig, status: 'cancelled', venue: venue1 }
+
+        it { expect(Gig.filtered_for_api({}).to_a).not_to include cancelled_gig }
+      end
+
       context 'with bounds parameters' do
         let(:params) do
           {

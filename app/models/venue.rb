@@ -23,8 +23,9 @@ class Venue < ApplicationRecord
   scope :in_city, ->(city) { where("lower(city) = ?", city.downcase) }
   scope :in_country, ->(country) { where("lower(country) = ?", country.downcase) }
 
+  # Containment (@>) rather than ->> so the GIN index on external_ids is used
   scope :by_external_id, ->(source, id) {
-    where("external_ids->>'#{source}' = ?", id.to_s)
+    where("external_ids @> ?", { source => id.to_s }.to_json)
   }
 
   def self.from_existing(data, source)
@@ -45,8 +46,8 @@ class Venue < ApplicationRecord
 
   IMAGE_PLACEHOLDER = "/images/venue_placeholder.webp"
 
-  # Helper method to get the primary image URL
-  def primary_image_url(size = "standard")
+  # Venues are shown as ~330px popup headers, which "medium" (~640px) suits
+  def primary_image_url(size = "medium")
     return IMAGE_PLACEHOLDER if images.blank?
 
     # Try to find an image with the requested size

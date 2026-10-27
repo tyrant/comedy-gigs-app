@@ -63,6 +63,33 @@ RSpec.describe Api::TicketmasterTransformer do
       end
     end
 
+    context 'with the full range of sizes Ticketmaster offers' do
+      let(:images_data) do
+        [
+          [ '16_9', 100, 56 ], [ '16_9', 205, 115 ], [ '16_9', 640, 360 ], [ '16_9', 2426, 1365 ],
+          [ '3_2', 305, 203 ], [ '3_2', 640, 427 ], [ '3_2', 1024, 683 ]
+        ].map { |ratio, width, height| { 'url' => "https://example.com/#{ratio}_#{width}.jpg", 'ratio' => ratio, 'width' => width, 'height' => height } }
+      end
+      let(:result) { described_class.extract_images(images_data) }
+
+      it 'picks the narrowest image at least 640px wide for each ratio, not the original' do
+        expect(result['large']).to eq 'https://example.com/16_9_640.jpg'
+        expect(result['medium']).to eq 'https://example.com/3_2_640.jpg'
+      end
+
+      it 'picks the smallest image whose short side covers a retina avatar as the thumbnail' do
+        expect(result['thumb']).to eq 'https://example.com/16_9_205.jpg'
+      end
+    end
+
+    context 'when every image is smaller than the preferred sizes' do
+      let(:images_data) { [ { 'url' => 'https://example.com/tiny.jpg', 'ratio' => '16_9', 'width' => 100, 'height' => 56 } ] }
+      let(:result) { described_class.extract_images(images_data) }
+
+      it { expect(result['large']).to eq 'https://example.com/tiny.jpg' }
+      it { expect(result['thumb']).to eq 'https://example.com/tiny.jpg' }
+    end
+
     context 'with invalid image data' do
       it 'returns an empty hash when images_data is nil' do
         expect(described_class.extract_images(nil)).to eq({})
@@ -102,6 +129,35 @@ RSpec.describe Api::TicketmasterTransformer do
         expect(result['medium']).to eq('https://example.com/valid.jpg')
       end
     end
+  end
+
+  describe '.build_acts with messy attractions' do
+    let(:result) do
+      described_class.build_acts([
+        { 'id' => 'a1', 'name' => 'Joanne McNally' },
+        { 'id' => 'a1', 'name' => 'Joanne McNally' },
+        { 'id' => 'a2', 'name' => '' },
+        { 'name' => 'No ID One' },
+        { 'name' => 'No ID Two' }
+      ])
+    end
+
+    it 'drops nameless and repeated attractions' do
+      expect(result.map { |act| act[:name] }).to eq [ 'Joanne McNally', 'No ID One', 'No ID Two' ]
+    end
+  end
+
+  describe '.build_venue without a street address' do
+    let(:venue) { { 'id' => 'v1', 'name' => 'Cavern Club', 'city' => { 'name' => 'Sao Paulo' } } }
+
+    it { expect(described_class.build_venue(venue)[:address]).to eq 'Sao Paulo' }
+    it { expect(described_class.build_venue(venue.except('city'))[:address]).to eq 'Cavern Club' }
+  end
+
+  describe '.build_venue without a name' do
+    let(:venue) { { 'id' => 'v2', 'address' => { 'line1' => 'Youngs gate 6' }, 'city' => { 'name' => 'Oslo' } } }
+
+    it { expect(described_class.build_venue(venue)[:name]).to eq 'Youngs gate 6' }
   end
 
   describe '.build_venue' do

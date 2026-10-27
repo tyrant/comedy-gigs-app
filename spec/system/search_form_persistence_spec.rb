@@ -140,7 +140,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       wait_for_map_ready
 
       # Verify act selection is maintained by checking if the act appears in selected values
-      expect(page).to have_selector(".react-select__multi-value img[alt='#{act1_name}']", wait: 15)
+      expect(page).to have_selector(".react-select__multi-value img[alt=#{act1_name.to_json}]", wait: 15)
 
       # Verify same venues are displayed
       reloaded_act_markers_count = all('.leaflet-marker-icon').count
@@ -165,7 +165,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
 
       # Verify all filters are maintained
       expect(find_field('start_date').value).to eq(start_date.strftime('%Y-%m-%d'))
-      expect(page).to have_selector(".react-select__multi-value img[alt='#{act3_name}']", wait: 15)
+      expect(page).to have_selector(".react-select__multi-value img[alt=#{act3_name.to_json}]", wait: 15)
 
       reloaded_combined_markers_count = all('.leaflet-marker-icon').count
       expect(reloaded_combined_markers_count).to eq(combined_filter_markers_count)
@@ -239,7 +239,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       # More robust check for act selection - check if any multi-value exists first
       if page.has_selector?('.react-select__multi-value', wait: 5)
         # Try multiple approaches to verify the act is selected
-        act_selected = page.has_selector?(".react-select__multi-value img[alt='#{act2_name}']", wait: 10) ||
+        act_selected = page.has_selector?(".react-select__multi-value img[alt=#{act2_name.to_json}]", wait: 10) ||
                       page.has_selector?(".react-select__multi-value", text: act2_name, wait: 10) ||
                       page.has_selector?(".react-select__multi-value-label", text: act2_name, wait: 10)
 
