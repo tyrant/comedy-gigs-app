@@ -1,5 +1,5 @@
 # config valid for current version and patch releases of Capistrano
-lock "~> 3.19.2"
+lock "~> 3.20.1"
 
 set :application, "comedy-gigs-app"
 set :repo_url, "git@github.com:tyrant/comedy-gigs-app.git"
