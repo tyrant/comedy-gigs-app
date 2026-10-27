@@ -57,19 +57,6 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  primary: &primary_production
-    <<: *default
-    database: comedy_gigs_app_production
-    url: <%= ENV['DATABASE_URL'] %>
-  cache:
-    <<: *primary_production
-    database: comedy_gigs_app_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: comedy_gigs_app_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: comedy_gigs_app_production_cable
-    migrations_paths: db/cable_migrate
+  <<: *default
+  database: comedy_gigs_app_production
+  url: <%= ENV['DATABASE_URL'] %>

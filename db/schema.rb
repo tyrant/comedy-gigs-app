@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_08_104900) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_050505) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -35,16 +35,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_104900) do
     t.index ["act_id", "gig_id"], name: "index_acts_gigs_on_act_id_and_gig_id", unique: true
     t.index ["act_id"], name: "index_acts_gigs_on_act_id"
     t.index ["gig_id"], name: "index_acts_gigs_on_gig_id"
-  end
-
-  create_table "events", force: :cascade do |t|
-    t.string "name"
-    t.datetime "start_time"
-    t.string "ticket_url"
-    t.bigint "venue_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["venue_id"], name: "index_events_on_venue_id"
   end
 
   create_table "gigs", force: :cascade do |t|
@@ -90,6 +80,5 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_104900) do
 
   add_foreign_key "acts_gigs", "acts"
   add_foreign_key "acts_gigs", "gigs"
-  add_foreign_key "events", "venues"
   add_foreign_key "gigs", "venues"
 end

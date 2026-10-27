@@ -104,13 +104,14 @@ namespace :ticketmaster do
       Rails.logger.info "Rate limited: #{stats[:rate_limited]}"
 
       # The importer swallows fatal errors into stats[:error] so it can record
-      # partial progress; surface them here, along with suspiciously empty runs.
+      # partial progress; surface them here, along with suspiciously empty runs,
+      # and a sample of the individual events that failed.
       errors = []
       errors << "#{stats[:error][:class]}: #{stats[:error][:message]}" if stats[:error]
       errors << "Ticketmaster returned no events" if stats[:total_processed].zero?
 
       begin
-        TicketmasterCleanupJob.perform_now
+        GigCleanup.call
       rescue StandardError => e
         errors << "Cleanup failed: #{e.class}: #{e.message}"
       end
@@ -121,7 +122,7 @@ namespace :ticketmaster do
         processed: stats[:successful],
         failed: stats[:failed],
         skipped: stats[:skipped],
-        errors: errors
+        errors: errors + stats[:error_samples]
       )
 
       Rails.logger.info "Daily Ticketmaster import finished"

@@ -3,7 +3,7 @@ require 'rake'
 
 RSpec.describe 'ticketmaster:daily_import' do
   let(:importer) { instance_double(Api::TicketmasterImporter) }
-  let(:stats) { { total_processed: 120, successful: 100, failed: 0, skipped: 20, rate_limited: 0 } }
+  let(:stats) { { total_processed: 120, successful: 100, failed: 0, skipped: 20, rate_limited: 0, error_samples: [] } }
 
   before(:all) { Rails.application.load_tasks if Rake::Task.tasks.none? { |t| t.name == 'ticketmaster:daily_import' } }
 
@@ -11,7 +11,7 @@ RSpec.describe 'ticketmaster:daily_import' do
     Rake::Task['ticketmaster:daily_import'].reenable
     allow(Api::TicketmasterImporter).to receive(:new).and_return(importer)
     allow(importer).to receive(:import_events).and_return(stats)
-    allow(TicketmasterCleanupJob).to receive(:perform_now)
+    allow(GigCleanup).to receive(:call)
     allow(MonitorClient).to receive(:report_run)
   end
 
@@ -25,7 +25,7 @@ RSpec.describe 'ticketmaster:daily_import' do
 
   it 'runs the cleanup' do
     run_task
-    expect(TicketmasterCleanupJob).to have_received(:perform_now)
+    expect(GigCleanup).to have_received(:call)
   end
 
   context 'when the importer swallowed a fatal error' do
@@ -39,7 +39,7 @@ RSpec.describe 'ticketmaster:daily_import' do
   end
 
   context 'when Ticketmaster returned nothing at all' do
-    let(:stats) { { total_processed: 0, successful: 0, failed: 0, skipped: 0, rate_limited: 0 } }
+    let(:stats) { { total_processed: 0, successful: 0, failed: 0, skipped: 0, rate_limited: 0, error_samples: [] } }
 
     it 'reports the run as crashed' do
       run_task
@@ -48,8 +48,18 @@ RSpec.describe 'ticketmaster:daily_import' do
     end
   end
 
+  context 'when some events failed' do
+    let(:stats) { super().merge(failed: 2, error_samples: [ 'Show A: boom', 'Show B: bang' ]) }
+
+    it 'passes the sampled failures to the monitor' do
+      run_task
+      expect(MonitorClient).to have_received(:report_run)
+        .with(hash_including(status: 'success', failed: 2, errors: [ 'Show A: boom', 'Show B: bang' ]))
+    end
+  end
+
   context 'when the cleanup fails' do
-    before { allow(TicketmasterCleanupJob).to receive(:perform_now).and_raise(ActiveRecord::StatementInvalid, 'boom') }
+    before { allow(GigCleanup).to receive(:call).and_raise(ActiveRecord::StatementInvalid, 'boom') }
 
     it 'still reports the import, noting the cleanup failure' do
       run_task

@@ -1,15 +1,16 @@
 const path = require('path');
-const rails = require('esbuild-rails');
 
 const watch = process.argv.includes('--watch');
+const production = process.env.RAILS_ENV === 'production';
 
 require('esbuild').context({
   entryPoints: ['app/javascript/application.js'],
   bundle: true,
   outdir: 'app/assets/builds',
   absWorkingDir: path.join(process.cwd()),
-  plugins: [rails()],
-  sourcemap: true,
+  sourcemap: production ? 'linked' : true,
+  minify: production,
+  define: { 'process.env.NODE_ENV': JSON.stringify(production ? 'production' : 'development') },
   format: 'iife',
   loader: {
     '.js': 'jsx',
@@ -24,7 +25,7 @@ require('esbuild').context({
   if (watch) {
     context.watch();
   } else {
-    context.rebuild().then(result => {
+    context.rebuild().then(() => {
       context.dispose();
     });
   }

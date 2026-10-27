@@ -26,8 +26,6 @@ module Api
         end
 
         @stats[:end_time] = Time.current
-        @metrics.record_import(@stats)
-        notify_success
 
       rescue Api::RateLimitError => e
         @stats[:rate_limited] += 1
@@ -84,7 +82,7 @@ module Api
 
     rescue StandardError => e
       @stats[:failed] += 1
-      notify_error(e, event)
+      record_event_error(e, event)
 
     ensure
       @stats[:total_processed] += 1
@@ -93,8 +91,7 @@ module Api
     def fail_import(error)
       @stats[:end_time] = Time.current
       @stats[:error] = { class: error.class.name, message: error.message }
-      @metrics.record_import(@stats)
-      notify_error(error, nil)
+      Rails.logger.error "Ticketmaster import failed: #{error.class}: #{error.message}"
     end
 
     def import_event(event_data)

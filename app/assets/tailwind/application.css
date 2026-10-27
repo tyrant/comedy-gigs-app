@@ -7,10 +7,6 @@
   --breakpoint-xs: 475px;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @utility no-scrollbar {
   @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
 }

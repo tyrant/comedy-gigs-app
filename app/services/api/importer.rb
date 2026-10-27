@@ -1,14 +1,16 @@
 module Api
   class Importer
+    # How many per-event failures to keep for the monitor; the rest are counted
+    MAX_ERROR_SAMPLES = 10
+
     def initialize
-      @notification_service = NotificationService.new
-      @metrics = Metrics::ImportMetrics.new
       @stats = {
         total_processed: 0,
         successful: 0,
         failed: 0,
         skipped: 0,
-        rate_limited: 0
+        rate_limited: 0,
+        error_samples: []
       }
     end
 
@@ -40,29 +42,11 @@ module Api
       act
     end
 
-    def notify_error(error, event)
-      # Convert exception to a serializable hash
-      error_data = if error.is_a?(Exception)
-        {
-          message: error.message,
-          class: error.class.to_s,
-          backtrace: error.backtrace&.first(10) || []
-        }
-      else
-        { message: error.to_s, class: error.class.to_s }
-      end
+    def record_event_error(error, event)
+      Rails.logger.warn "#{@source} event #{event&.dig('id')} (#{event&.dig('name')}) failed: #{error.class}: #{error.message}"
+      return if @stats[:error_samples].size >= MAX_ERROR_SAMPLES
 
-      # Make sure event is also serializable
-      event_data = event.is_a?(Hash) ? event.slice("name", "id") : nil
-
-      @notification_service.notify_import_error(
-        error: error_data,
-        stats: @stats.merge(event: event_data, source: @source)
-      )
-    end
-
-    def notify_success
-      @notification_service.notify_import_success(@stats.merge(source: @source))
+      @stats[:error_samples] << "#{event&.dig('name')}: #{error.class}: #{error.message}".truncate(300)
     end
 
     def generate_stats_message

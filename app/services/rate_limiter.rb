@@ -1,61 +1,40 @@
+# Spaces out calls to an external API so no more than max_requests start in
+# any rolling interval. Imports run as a single sequential process, so the
+# window lives in memory; there's nothing to share across processes.
 class RateLimiter
   def initialize(key, max_requests: 5, interval: 1.second)
     @key = key
     @max_requests = max_requests
-    @interval = interval
-    @redis = Redis.new(url: ENV["REDIS_URL"] || "redis://localhost:6379/1")
+    @interval = interval.to_f
+    @started_at = []
   end
 
   def with_rate_limit
-    return yield if allowed?
-
-    wait_time = next_available_slot
-    Rails.logger.info "Rate limit reached for #{@key}. Waiting #{wait_time} seconds..."
-    sleep(wait_time)
-
+    wait_for_slot
+    @started_at << monotonic_now
     yield
-  ensure
-    record_request
   end
 
   private
 
-  def allowed?
-    current_requests < @max_requests
+  def wait_for_slot
+    prune
+    return if @started_at.size < @max_requests
+
+    wait_time = @interval - (monotonic_now - @started_at.first)
+    if wait_time.positive?
+      Rails.logger.debug "Rate limit reached for #{@key}. Waiting #{wait_time.round(3)}s"
+      sleep(wait_time)
+    end
+    prune
   end
 
-  def current_requests
-    recent_requests.count
+  def prune
+    cutoff = monotonic_now - @interval
+    @started_at.shift while @started_at.any? && @started_at.first <= cutoff
   end
 
-  def recent_requests
-    requests = @redis.zrangebyscore(cache_key, min_time, max_time)
-    # Clean up old entries
-    @redis.zremrangebyscore(cache_key, "-inf", min_time)
-    requests
-  end
-
-  def record_request
-    @redis.zadd(cache_key, Time.current.to_f, SecureRandom.uuid)
-  end
-
-  def next_available_slot
-    oldest_request = @redis.zrange(cache_key, 0, 0, with_scores: true)&.first
-    return 0 unless oldest_request
-
-    time_diff = Time.current.to_f - oldest_request[1]
-    [ @interval - time_diff, 0 ].max
-  end
-
-  def cache_key
-    "rate_limit:#{@key}"
-  end
-
-  def min_time
-    (Time.current - @interval).to_f
-  end
-
-  def max_time
-    Time.current.to_f
+  def monotonic_now
+    Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 end

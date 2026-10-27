@@ -2,40 +2,17 @@
   "name": "app",
   "private": true,
   "scripts": {
-    "build": "node config/esbuild.config.js",
-    "build:css": "postcss ./app/assets/tailwind/application.css -o ./app/assets/builds/application.css"
+    "build": "node config/esbuild.config.js"
   },
-  "description": "This README would normally document whatever steps are necessary to get the application up and running.",
-  "version": "1.0.0",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib",
-    "test": "test"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@babel/preset-react": "^7.27.1",
-    "@hotwired/stimulus": "^3.2.2",
-    "@hotwired/turbo-rails": "^8.0.16",
-    "@tailwindcss/postcss": "^4.1.13",
-    "esbuild": "^0.25.5",
-    "esbuild-loader": "^4.3.0",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-leaflet": "^5.0.0",
-    "react-leaflet-cluster": "^2.1.0",
-    "react-select": "^5.10.1"
+    "react-select": "^5.10.2"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.21",
-    "esbuild-rails": "^1.0.7",
-    "postcss": "^8.5.5",
-    "postcss-cli": "^11.0.1",
-    "postcss-import": "^16.1.0",
-    "tailwindcss": "^4.1.10"
+    "esbuild": "^0.28.2"
   }
 }
