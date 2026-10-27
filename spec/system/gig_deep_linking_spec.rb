@@ -44,7 +44,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'adds gig ID to URL when clicking a gig title' do
       click_venue_marker_and_wait_for_popup(venue1_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup')
         expect(page).to have_text(venue1_name)
 
@@ -61,7 +61,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'updates gig ID in URL when clicking different gig titles in same venue' do
       click_venue_marker_and_wait_for_popup(venue1_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -70,7 +70,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         within "[data-gig-id='#{gig2.id}']" do
           find('a', text: gig2_name).click
         end
@@ -84,7 +84,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'removes gig ID from URL when closing venue popup' do
       click_venue_marker_and_wait_for_popup(venue1_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -104,13 +104,13 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'persists gig ID in URL after page reload' do
       visit "#{root_path}?venue=#{venue1.id}&gig=#{gig1.id}"
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
       page.refresh
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
     end
@@ -118,11 +118,11 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'opens venue popup and scrolls to specific gig when both venue and gig IDs are in URL' do
       visit "#{root_path}?venue=#{venue1.id}&gig=#{gig2.id}"
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
 
       wait_for_popup_to_appear
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup')
         expect(page).to have_text(venue1_name)
 
@@ -142,11 +142,11 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       invalid_gig_id = 99999
       visit "#{root_path}?venue=#{venue1.id}&gig=#{invalid_gig_id}"
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
 
       wait_for_popup_to_appear
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup')
         expect(page).to have_text(venue1_name)
 
@@ -160,13 +160,13 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       # Visit URL with gig ID but no venue ID
       visit "#{root_path}?gig=#{gig1.id}"
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
 
       # Should load normally without opening any popup
-      expect(page).not_to have_selector('.leaflet-popup')
+      expect(page).not_to have_selector('.maplibregl-popup')
 
       # Map should show all venue markers
-      expect(page).to have_selector('.leaflet-marker-icon', wait: 5)
+      expect(page).to have_selector('.venue-marker', wait: 5)
     end
   end
 
@@ -177,14 +177,14 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       # Visit URL with venue and gig parameters
       visit "#{current_url}&venue=#{venue1.id}&gig=#{gig1.id}"
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
       expect(current_url).to include 'start='
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
       wait_for_popup_to_appear
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_text(venue1_name)
         within "[data-gig-id='#{gig1.id}']" do
           expect(page).to have_text(gig1_name)
@@ -204,9 +204,9 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url_with_filters).to include 'start='
       expect(current_url_with_filters).to include 'act='
 
-      find(".leaflet-marker-icon[title=\"#{venue1_name} (1 gig)\"]").click
+      find(".venue-marker[title=\"#{venue1_name} (1 gig)\"]").click
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -226,7 +226,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
   describe 'gig deep-linking with map position' do
     it 'maintains map position when using gig deep-links' do
-      set_map_bounds_and_wait(-42.8, 174.2, 12)
+      set_map_bounds_and_wait(-42.8, 174.2, 11)
 
       current_url_with_map = current_url
       expect(current_url_with_map).to include 'lat='
@@ -236,7 +236,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       # Add gig deep-link parameters
       visit "#{current_url_with_map}&venue=#{venue2.id}&gig=#{gig3.id}"
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
 
       # Should maintain both map position and gig deep-link
       expect(current_url).to include 'lat='
@@ -247,7 +247,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
       wait_for_popup_to_appear
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_text(venue2_name)
         within "[data-gig-id='#{gig3.id}']" do
           expect(page).to have_text(gig3_name)
@@ -260,11 +260,11 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     it 'scrolls to and highlights the target gig when deep-linking' do
       visit "#{root_path}?venue=#{venue1.id}&gig=#{gig2.id}"
 
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
 
       wait_for_popup_to_appear
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup')
 
         # Wait for scroll and highlight effect
@@ -294,11 +294,11 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       target_gig = additional_gigs.last
 
       visit "#{root_path}?venue=#{venue1.id}&gig=#{target_gig.id}"
-      expect(page).to have_selector('.leaflet-container', wait: 10)
+      expect(page).to have_selector('.maplibregl-map', wait: 10)
 
       wait_for_popup_to_appear
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         # Wait for scrolling to complete
         sleep 1.5
 

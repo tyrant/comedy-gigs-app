@@ -50,55 +50,55 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
   describe 'venue markers display based on map bounds' do
     it 'shows only London venue when zoomed to London area' do
       # Set map bounds to London area (tight zoom)
-      set_map_bounds_and_wait(51.5074, -0.1278, 12)
+      set_map_bounds_and_wait(51.5074, -0.1278, 11)
 
       # Should show London venue marker specifically
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue_london_name} (1 gig)\"]", wait: 15)
 
       # Should not show other distant venues
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_nyc_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_sydney_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_nyc_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_sydney_name}\"]")
     end
 
     it 'shows only NYC venue when zoomed to NYC area' do
-      set_map_bounds_and_wait(40.7128, -74.0060, 12)
+      set_map_bounds_and_wait(40.7128, -74.0060, 11)
 
       # Should show NYC venue marker specifically
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue_nyc_name} (1 gig)\"]", wait: 15)
 
       # Should not show other distant venues
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_london_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_sydney_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_london_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_sydney_name}\"]")
     end
 
     it 'shows Europe/US venues when zoomed to Atlantic view' do
       # Focus on Atlantic area to show London and NYC but not Asia-Pacific
-      set_map_bounds_and_wait(45.0, -30.0, 4)
+      set_map_bounds_and_wait(45.0, -30.0, 3)
 
       # Should show Atlantic venues (London and NYC)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_london_name} (1 gig)\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue_nyc_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue_london_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue_nyc_name} (1 gig)\"]", wait: 15)
 
       # Should not show Asia-Pacific venues at this zoom/location
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_sydney_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue_tokyo_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_sydney_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_tokyo_name}\"]")
     end
   end
 
   describe 'map position persistence in URL' do
     it 'updates URL parameters when map position changes' do
-      set_map_bounds_and_wait(51.5074, -0.1278, 10)
+      set_map_bounds_and_wait(51.5074, -0.1278, 9)
 
       expect(current_url).to match(/lat=51\.5074/)
       expect(current_url).to match(/lng=-0\.1278/)
-      expect(current_url).to match(/zoom=10/)
+      expect(current_url).to match(/zoom=9/)
     end
 
     it 'restores map position from URL parameters on page load' do
       # Visit with specific map parameters
-      visit root_path + '?lat=40.7128&lng=-74.0060&zoom=12'
+      visit root_path + '?lat=40.7128&lng=-74.0060&zoom=11'
 
-      expect(page).to have_selector(".leaflet-container", wait: 10)
+      expect(page).to have_selector(".maplibregl-map", wait: 10)
 
       lat = page.evaluate_script('window.mapInstance ? window.mapInstance.getCenter().lat : null')
       lng = page.evaluate_script('window.mapInstance ? window.mapInstance.getCenter().lng : null')
@@ -106,23 +106,45 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
 
       expect(lat).to be_within(0.01).of(40.7128)
       expect(lng).to be_within(0.01).of(-74.0060)
-      expect(zoom).to eq(12)
+      expect(zoom).to eq(11)
     end
   end
 
   describe 'venue popup content' do
     it 'displays correct venue information in popup' do
-      set_map_bounds_and_wait(51.5074, -0.1278, 12)
+      set_map_bounds_and_wait(51.5074, -0.1278, 11)
 
-      first(".leaflet-marker-icon").click
+      first(".venue-marker").click
 
-      expect(page).to have_selector(".leaflet-popup", wait: 3)
+      expect(page).to have_selector(".maplibregl-popup", wait: 3)
 
-      within ".leaflet-popup" do
+      within ".maplibregl-popup" do
         expect(page).to have_selector(".venue-popup")
         expect(page).to have_text(venue_london_name) # Should show venue name
         expect(page).to have_text(act1_name) # Should show act name
       end
+    end
+  end
+
+  describe 'clustering' do
+    let!(:venue_near_london) { create :venue, name: 'Down the Road', latitude: 51.52, longitude: -0.10 }
+    let!(:gig_near_london) { create :gig, start_time: 5.weeks.from_now, end_time: 5.weeks.from_now + 2.hours,
+                                          venue: venue_near_london, acts: [ act2 ] }
+
+    it 'groups nearby venues and zooms in to split them when clicked' do
+      # The outer before visited the page before these records existed
+      visit "#{root_path}?lat=51.5&lng=-0.1&zoom=3"
+      wait_for_map_ready
+
+      cluster = find('.cluster-marker[aria-label="2 venues, 2 gigs; zoom in"]')
+      expect(cluster).to have_text('2', exact: true)
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_london_name}\"]")
+
+      cluster.click
+
+      expect(page).to have_selector(".venue-marker[title=\"#{venue_london_name} (1 gig)\"]")
+      expect(page).to have_selector('.venue-marker[title="Down the Road (1 gig)"]')
+      expect(page.evaluate_script('window.mapInstance.getZoom()')).to be > 3
     end
   end
 end

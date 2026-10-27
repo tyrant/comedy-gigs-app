@@ -57,7 +57,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
 
       set_date_via_picker('start_date', start_date)
 
-      initial_markers_count = all('.leaflet-marker-icon').count
+      initial_markers_count = all('.venue-marker').count
 
       # Get current URL with filter parameters
       current_url_with_params = current_url
@@ -70,7 +70,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       expect(find_field('start_date').value).to eq start_date.strftime('%Y-%m-%d')
 
       # Verify same venues are displayed after reload
-      reloaded_markers_count = all('.leaflet-marker-icon').count
+      reloaded_markers_count = all('.venue-marker').count
 
       expect(reloaded_markers_count).to eq initial_markers_count
     end
@@ -80,7 +80,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
 
       set_date_via_picker('end_date', end_date)
 
-      initial_to_markers_count = all('.leaflet-marker-icon').count
+      initial_to_markers_count = all('.venue-marker').count
 
       # Get current URL
       current_url_with_params = current_url
@@ -93,7 +93,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       expect(find_field('end_date').value).to eq end_date.strftime('%Y-%m-%d')
 
       # Verify same venues are displayed after reload
-      reloaded_to_markers_count = all('.leaflet-marker-icon').count
+      reloaded_to_markers_count = all('.venue-marker').count
       expect(reloaded_to_markers_count).to eq initial_to_markers_count
     end
 
@@ -105,7 +105,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       set_date_via_picker('start_date', start_date)
       set_date_via_picker('end_date', end_date)
 
-      both_date_markers_count = all('.leaflet-marker-icon').count
+      both_date_markers_count = all('.venue-marker').count
 
       # Get current URL
       current_url_with_params = current_url
@@ -121,7 +121,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       expect(find_field('end_date').value).to eq(end_date.strftime('%Y-%m-%d'))
 
       # Verify same filtering is applied
-      reloaded_both_markers_count = all('.leaflet-marker-icon').count
+      reloaded_both_markers_count = all('.venue-marker').count
 
       expect(reloaded_both_markers_count).to eq both_date_markers_count
     end
@@ -130,7 +130,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       select_act_via_dropdown(act1_name)
 
       # Should show venues where act1 performs
-      act_filter_markers_count = all('.leaflet-marker-icon').count
+      act_filter_markers_count = all('.venue-marker').count
 
       current_url_with_params = current_url
       expect(current_url_with_params).to include 'act='
@@ -143,7 +143,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       expect(page).to have_selector(".react-select__multi-value img[alt=#{act1_name.to_json}]", wait: 15)
 
       # Verify same venues are displayed
-      reloaded_act_markers_count = all('.leaflet-marker-icon').count
+      reloaded_act_markers_count = all('.venue-marker').count
 
       expect(reloaded_act_markers_count).to eq act_filter_markers_count
     end
@@ -154,7 +154,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       set_date_via_picker('start_date', start_date)
       select_act_via_dropdown(act3_name)
 
-      combined_filter_markers_count = all('.leaflet-marker-icon').count
+      combined_filter_markers_count = all('.venue-marker').count
 
       current_url_with_params = current_url
       expect(current_url_with_params).to include 'start='
@@ -167,13 +167,13 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       expect(find_field('start_date').value).to eq(start_date.strftime('%Y-%m-%d'))
       expect(page).to have_selector(".react-select__multi-value img[alt=#{act3_name.to_json}]", wait: 15)
 
-      reloaded_combined_markers_count = all('.leaflet-marker-icon').count
+      reloaded_combined_markers_count = all('.venue-marker').count
       expect(reloaded_combined_markers_count).to eq(combined_filter_markers_count)
 
       # Click on venue to verify popup shows correct filtered gig
-      first('.leaflet-marker-icon').click
+      first('.venue-marker').click
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         expect(page).to have_selector("[data-act-id='#{act3.id}']")
       end
@@ -182,7 +182,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
     it 'maintains map position along with search filters' do
       start_date = 1.week.ago
 
-      set_map_bounds_and_wait(-42.8, 174.2, 10)
+      set_map_bounds_and_wait(-42.8, 174.2, 9)
       set_date_via_picker('start_date', start_date)
 
       current_url_with_params = current_url
@@ -211,7 +211,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       reset_browser_state
 
       # Set multiple filters and map position
-      set_map_bounds_and_wait(-40.0, 175.0, 8)
+      set_map_bounds_and_wait(-40.0, 175.0, 6)
       set_date_via_picker('start_date', custom_start_date)
       select_act_via_dropdown(act2_name)
 
@@ -219,7 +219,8 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       sleep 1
 
       # Capture initial state
-      initial_markers_count = all('.leaflet-marker-icon').count
+      initial_markers_count = all('.venue-marker').count
+      expect(initial_markers_count).to be_positive
       current_url_with_params = current_url
 
       # Verify URL contains all expected parameters
@@ -250,7 +251,7 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       end
 
       # Verify same number of venues displayed (with some tolerance for timing)
-      reloaded_markers_count = all('.leaflet-marker-icon').count
+      reloaded_markers_count = all('.venue-marker').count
       expect(reloaded_markers_count).to eq(initial_markers_count),
         "Expected #{initial_markers_count} markers after reload, but found #{reloaded_markers_count}"
 

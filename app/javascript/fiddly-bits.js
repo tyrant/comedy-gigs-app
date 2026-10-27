@@ -81,18 +81,19 @@ export const readMapView = () => {
   const params = urlParams();
   const lat = parseFloat(params.get('lat'));
   const lng = parseFloat(params.get('lng'));
-  const zoom = parseInt(params.get('zoom'), 10);
+  const zoom = parseFloat(params.get('zoom'));
 
   return {
     center: [ isNaN(lat) ? -41.959490 : lat, isNaN(lng) ? 171.595459 : normalizeLongitude(lng) ],
-    zoom: isNaN(zoom) ? 5 : zoom
+    zoom: isNaN(zoom) ? 4 : zoom
   };
 };
 
+// Zoom is fractional after pinching or scrolling; two places is plenty
 export const mapViewToParams = ({ lat, lng }, zoom) => ({
   lat: lat.toFixed(6),
   lng: normalizeLongitude(lng).toFixed(6),
-  zoom
+  zoom: Math.round(zoom * 100) / 100
 });
 
 // Sets the given params, leaving the rest alone. Arrays become repeated params;

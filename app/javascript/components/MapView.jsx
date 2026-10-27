@@ -1,175 +1,277 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MapContainer, TileLayer, ZoomControl, ScaleControl, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet.markercluster';
+import { Map as MapLibreMap, Marker, NavigationControl, Popup, ScaleControl } from 'maplibre-gl';
 import VenueGigs from './VenueGigs';
-import { mapViewToParams, pluralize, readMapView, writeUrlParams } from '../fiddly-bits';
+import { inBounds, mapViewToParams, pluralize, readMapView, writeUrlParams } from '../fiddly-bits';
 
-// --- Marker icons ------------------------------------------------------------
-// The pin image with the venue's gig count drawn on it, built once per count.
+// MapLibre clusters the venues on the GPU side; the markers themselves are
+// HTML buttons, so they can be focused, tabbed through and clicked in specs.
 
-const MARKER_IMAGE = '/images/map-marker-2-32.png';
-const iconCache = new Map();
+const SOURCE = 'venues';
+const MARKER_HEIGHT = 36; // pin plus its point, for the popup's offset
+const POPUP_MARGIN = 12;
 
-const markerImage = new Promise((resolve, reject) => {
-  const img = new Image();
-  img.onload = () => resolve(img);
-  img.onerror = reject;
-  img.src = MARKER_IMAGE;
+const toGeoJSON = (venues) => ({
+  type: 'FeatureCollection',
+  features: venues.map(venue => ({
+    type: 'Feature',
+    id: venue.id,
+    geometry: { type: 'Point', coordinates: [ venue.lng, venue.lat ] },
+    properties: { id: venue.id, name: venue.name, gigs: venue.gigs }
+  }))
 });
 
-const countIcon = (img, count) => {
-  if (iconCache.has(count)) return iconCache.get(count);
+const addVenueSource = (map, data) => {
+  if (map.getSource(SOURCE)) return;
+  map.addSource(SOURCE, {
+    type: 'geojson',
+    data,
+    cluster: true,
+    clusterRadius: 48,
+    clusterMaxZoom: 14,
+    clusterProperties: { gigs: [ '+', [ 'get', 'gigs' ] ] }
+  });
 
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 32;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, 32, 32);
-
-  const fontSize = count > 99 ? 9 : count > 9 ? 11 : 13;
-  ctx.font = `bold ${fontSize}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'white';
-  ctx.fillStyle = '#8A2BE2';
-  ctx.strokeText(String(count), 16, 12.5);
-  ctx.fillText(String(count), 16, 12.5);
-
-  const icon = L.icon({ iconUrl: canvas.toDataURL(), iconSize: [ 32, 32 ], iconAnchor: [ 18, 32 ], popupAnchor: [ 0, -36 ] });
-  iconCache.set(count, icon);
-  return icon;
+  // MapLibre only tiles a source some layer uses. This one draws nothing; the
+  // markers are read back from its tiles.
+  map.addLayer({ id: SOURCE, type: 'circle', source: SOURCE, paint: { 'circle-radius': 0, 'circle-opacity': 0 } });
 };
 
-const markerTitle = (venue) => `${venue.name} (${pluralize(venue.gigs, 'gig')})`;
+const compactCount = (n) => n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '')}k`;
 
-// --- Map behaviour -----------------------------------------------------------
+const venueLabel = ({ name, gigs }) => `${name} (${pluralize(gigs, 'gig')})`;
+const clusterLabel = ({ point_count, gigs }) => `${pluralize(point_count, 'venue')}, ${pluralize(gigs, 'gig')}; zoom in`;
 
-// Mirrors the view into the URL and reports the visible bounds. Panning never
-// fetches anything: every matching venue is already on the map.
-const ViewTracker = ({ onViewChange }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    window.mapInstance = map; // for system specs
-
-    const handleMove = () => {
-      writeUrlParams(mapViewToParams(map.getCenter(), map.getZoom()));
-      onViewChange(map.getBounds());
-    };
-
-    onViewChange(map.getBounds());
-    map.on('moveend', handleMove);
-    return () => {
-      map.off('moveend', handleMove);
-      window.mapInstance = null;
-    };
-  }, [ map, onViewChange ]);
-
-  return null;
+const markerButton = (className, onClick) => {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = className;
+  el.addEventListener('click', (e) => {
+    e.stopPropagation(); // keep the map's own click (which closes the popup) out of it
+    onClick();
+  });
+  return el;
 };
 
-// Clustered venue markers, plus the one popup that shows the selected venue's
-// gigs. The popup content is a single React root, re-rendered as the
-// selection or filters change.
-const VenueLayer = ({ venues, query, selection, onSelectVenue, onSelectGig }) => {
-  const map = useMap();
-  const clusterRef = useRef(null);
-  const markersRef = useRef(new Map()); // venue ID -> marker
+// Sets the marker's label and count, touching the DOM only when they change
+const updateMarker = (entry, label, count) => {
+  if (entry.label === label) return;
+  entry.label = label;
+  const el = entry.marker.getElement();
+  el.title = label;
+  el.setAttribute('aria-label', label);
+  el.textContent = count;
+};
+
+const clusterSize = (count) => count < 10 ? 'size-9' : count < 100 ? 'size-11' : 'size-13';
+
+// --- The map -------------------------------------------------------------------
+
+const MapView = ({ mapStyle, venues, query, selection, onSelectVenue, onSelectGig, onViewChange }) => {
+  const containerRef = useRef(null);
+  const [ map, setMap ] = useState(null);
+  const [ failed, setFailed ] = useState(false);
+
+  const markersRef = useRef(new Map()); // 'v<venue id>' or 'c<cluster id>' -> { marker, label }
+  const dataRef = useRef(toGeoJSON([])); // what the source holds, for restyling
+  const sentVenuesRef = useRef(null); // the venues last handed to the source
+  const [ syncedVenues, setSyncedVenues ] = useState(null); // ...and once the markers show them
+
   const popupRef = useRef(null);
   const rootRef = useRef(null);
-  const [ markersReady, setMarkersReady ] = useState(0); // bumped after each marker sync
+
   const callbacks = useRef({});
-  callbacks.current = { onSelectVenue, onSelectGig };
-
-  // One cluster group and one popup for the map's lifetime
-  useEffect(() => {
-    const cluster = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 40, showCoverageOnHover: false });
-    map.addLayer(cluster);
-    clusterRef.current = cluster;
-
-    const container = document.createElement('div');
-    rootRef.current = createRoot(container);
-    popupRef.current = L.popup({
-      className: 'venue-popup-container', maxWidth: 340, minWidth: 280, offset: [ 0, 10 ], autoPanPadding: [ 20, 20 ]
-    }).setContent(container);
-
-    // Closing the popup deselects the venue, unless it was only closed to reopen elsewhere
-    popupRef.current.on('remove', () => setTimeout(() => {
-      if (!map.hasLayer(popupRef.current)) callbacks.current.onSelectVenue(null);
-    }));
-
-    return () => {
-      map.removeLayer(cluster);
-      map.closePopup(popupRef.current);
-      const root = rootRef.current;
-      setTimeout(() => root.unmount());
-    };
-  }, [ map ]);
-
-  // Add, update and remove markers to match the venue list
-  useEffect(() => {
-    let cancelled = false;
-
-    markerImage.then(img => {
-      if (cancelled) return;
-
-      const markers = markersRef.current;
-      const seen = new Set();
-      const added = [];
-
-      venues.forEach(venue => {
-        seen.add(venue.id);
-        let marker = markers.get(venue.id);
-
-        if (!marker) {
-          marker = L.marker([ venue.lat, venue.lng ], { icon: countIcon(img, venue.gigs), title: markerTitle(venue) });
-          marker.on('click', () => callbacks.current.onSelectVenue(venue.id));
-          marker.gigCount = venue.gigs;
-          markers.set(venue.id, marker);
-          added.push(marker);
-        } else if (marker.gigCount !== venue.gigs) {
-          marker.gigCount = venue.gigs;
-          marker.options.title = markerTitle(venue);
-          marker.setIcon(countIcon(img, venue.gigs));
-          // Leaflet only applies the title when it creates the element, not when reusing it
-          marker.getElement()?.setAttribute('title', marker.options.title);
-        }
-      });
-
-      const removed = [ ...markers.keys() ].filter(id => !seen.has(id));
-      clusterRef.current.removeLayers(removed.map(id => markers.get(id)));
-      removed.forEach(id => markers.delete(id));
-      clusterRef.current.addLayers(added);
-
-      setMarkersReady(n => n + 1);
-    });
-
-    return () => { cancelled = true; };
-  }, [ venues ]);
-
-  // Open the popup on the selected venue, revealing it from inside a cluster if need be
+  callbacks.current = { onSelectVenue, onSelectGig, onViewChange };
   const { venueId, gigId } = selection;
+  const selectedRef = useRef(venueId);
+  selectedRef.current = venueId;
 
+  // Create the map, its controls and the venue popup, once
   useEffect(() => {
-    const popup = popupRef.current;
-    const marker = venueId && markersRef.current.get(venueId);
+    const { center: [ lat, lng ], zoom } = readMapView();
+    let instance;
 
-    if (!marker) {
-      if (!venueId) map.closePopup(popup);
+    try {
+      instance = new MapLibreMap({
+        container: containerRef.current,
+        style: mapStyle,
+        center: [ lng, lat ],
+        zoom,
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchPitch: false,
+        attributionControl: { compact: true }
+      });
+    } catch (error) {
+      console.error(error); // most likely no WebGL
+      setFailed(true);
       return;
     }
 
-    clusterRef.current.zoomToShowLayer(marker, () => {
-      popup.setLatLng(marker.getLatLng());
-      if (!map.hasLayer(popup)) popup.openOn(map);
+    instance.touchZoomRotate.disableRotation();
+    instance.keyboard.disableRotation();
+    instance.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+    instance.addControl(new ScaleControl(), 'bottom-left');
+
+    // A new style drops the source, so put it back each time one loads
+    instance.on('style.load', () => {
+      addVenueSource(instance, dataRef.current);
+      setMap(instance);
     });
-  }, [ venueId, markersReady ]);
+
+    const container = document.createElement('div');
+    rootRef.current = createRoot(container);
+    popupRef.current = new Popup({
+      className: 'venue-popup-container', maxWidth: 'none', offset: MARKER_HEIGHT, focusAfterOpen: false
+    }).setDOMContent(container);
+    popupRef.current.on('close', () => callbacks.current.onSelectVenue(null));
+
+    window.mapInstance = instance; // for system specs
+
+    return () => {
+      window.mapInstance = null;
+      popupRef.current.off('close');
+      const root = rootRef.current;
+      setTimeout(() => root.unmount());
+      instance.remove();
+    };
+  }, []);
+
+  // Mirror the view into the URL and report the visible bounds. Panning never
+  // fetches anything: every matching venue is already in the source.
+  useEffect(() => {
+    if (!map) return;
+
+    // Only write the URL once the view really changes, so a fresh load leaves it clean
+    let written = JSON.stringify(mapViewToParams(map.getCenter(), map.getZoom()));
+
+    const handleMove = () => {
+      const params = mapViewToParams(map.getCenter(), map.getZoom());
+      if (JSON.stringify(params) !== written) {
+        written = JSON.stringify(params);
+        writeUrlParams(params);
+      }
+      callbacks.current.onViewChange(map.getBounds());
+    };
+
+    callbacks.current.onViewChange(map.getBounds());
+    map.on('moveend', handleMove);
+    return () => map.off('moveend', handleMove);
+  }, [ map ]);
+
+  // Hand the venues to the clustering source
+  useEffect(() => {
+    if (!map) return;
+    dataRef.current = toGeoJSON(venues);
+    sentVenuesRef.current = venues;
+    map.getSource(SOURCE)?.setData(dataRef.current);
+  }, [ map, venues ]);
+
+  // Keep one HTML marker per venue or cluster in view, in step with the source
+  useEffect(() => {
+    if (!map) return;
+    const markers = markersRef.current;
+
+    const createVenueMarker = (props) => {
+      const el = markerButton('venue-marker', () => callbacks.current.onSelectVenue(props.id));
+      el.classList.toggle('is-selected', props.id === selectedRef.current);
+      return new Marker({ element: el, anchor: 'bottom' });
+    };
+
+    const createClusterMarker = (props, lngLat) => {
+      const el = markerButton(`cluster-marker ${clusterSize(props.point_count)}`, async () => {
+        const zoom = await map.getSource(SOURCE).getClusterExpansionZoom(props.cluster_id);
+        map.easeTo({ center: lngLat, zoom });
+      });
+      return new Marker({ element: el });
+    };
+
+    const sync = () => {
+      if (!map.getSource(SOURCE) || !map.isSourceLoaded(SOURCE)) return;
+
+      const bounds = map.getBounds();
+      const seen = new Set();
+
+      map.querySourceFeatures(SOURCE).forEach(feature => {
+        const [ lng, lat ] = feature.geometry.coordinates;
+        const props = feature.properties;
+        const key = props.cluster ? `c${props.cluster_id}` : `v${props.id}`;
+        if (seen.has(key) || !inBounds(bounds, lat, lng)) return;
+        seen.add(key);
+
+        let entry = markers.get(key);
+        if (!entry) {
+          const marker = props.cluster ? createClusterMarker(props, [ lng, lat ]) : createVenueMarker(props);
+          entry = { marker: marker.setLngLat([ lng, lat ]).addTo(map) };
+          markers.set(key, entry);
+        }
+
+        if (props.cluster) updateMarker(entry, clusterLabel(props), compactCount(props.gigs));
+        else updateMarker(entry, venueLabel(props), compactCount(props.gigs));
+      });
+
+      markers.forEach((entry, key) => {
+        if (seen.has(key)) return;
+        entry.marker.remove();
+        markers.delete(key);
+      });
+    };
+
+    // Idle means the source has caught up with the last setData
+    const handleIdle = () => {
+      sync();
+      setSyncedVenues(sentVenuesRef.current);
+    };
+
+    map.on('render', sync);
+    map.on('idle', handleIdle);
+    return () => {
+      map.off('render', sync);
+      map.off('idle', handleIdle);
+    };
+  }, [ map ]);
+
+  // Highlight the selected venue's marker
+  useEffect(() => {
+    markersRef.current.forEach((entry, key) => {
+      if (key.startsWith('v')) entry.marker.getElement().classList.toggle('is-selected', key === `v${venueId}`);
+    });
+  }, [ venueId, syncedVenues ]);
+
+  // Open the popup on the selected venue, bringing it into view if need be
+  useEffect(() => {
+    const popup = popupRef.current;
+    if (!map || !popup) return;
+
+    if (!venueId) {
+      popup.remove();
+      return;
+    }
+
+    const venue = venues.find(v => v.id === venueId);
+    if (!venue) return; // not loaded yet; App deselects venues the filters rule out
+
+    popup.setLngLat([ venue.lng, venue.lat ]);
+    if (!popup.isOpen()) popup.addTo(map);
+    if (!inBounds(map.getBounds(), venue.lat, venue.lng)) map.easeTo({ center: [ venue.lng, venue.lat ] });
+  }, [ map, venueId, venues ]);
 
   // Render the selected venue's gigs into the popup
   useEffect(() => {
-    if (!venueId) return;
+    if (!map || !venueId) return;
+
+    // Once the gigs arrive, pan just enough to fit the popup on screen
+    const keepPopupInView = () => {
+      const el = popupRef.current.isOpen() && popupRef.current.getElement();
+      if (!el) return;
+
+      const box = el.getBoundingClientRect();
+      const frame = map.getContainer().getBoundingClientRect();
+      // How far the popup must move; when it can't fit, keep its top left corner in view
+      const dx = Math.max(0, frame.left + POPUP_MARGIN - box.left) || Math.min(0, frame.right - POPUP_MARGIN - box.right);
+      const dy = Math.max(0, frame.top + POPUP_MARGIN - box.top) || Math.min(0, frame.bottom - POPUP_MARGIN - box.bottom);
+      if (dx || dy) map.panBy([ -dx, -dy ]);
+    };
 
     rootRef.current.render(
       <VenueGigs
@@ -178,29 +280,20 @@ const VenueLayer = ({ venues, query, selection, onSelectVenue, onSelectGig }) =>
         query={query}
         gigId={gigId}
         onSelectGig={(id) => callbacks.current.onSelectGig(id)}
-        onRendered={() => popupRef.current.isOpen() && popupRef.current.update()}
+        onRendered={keepPopupInView}
       />
     );
-  }, [ venueId, gigId, query ]);
+  }, [ map, venueId, gigId, query ]);
 
-  return null;
-};
+  if (failed) {
+    return (
+      <div className="flex size-full items-center justify-center p-6 text-center text-gray-600">
+        This browser can’t draw the map (it needs WebGL).
+      </div>
+    );
+  }
 
-const MapView = ({ venues, query, selection, onSelectVenue, onSelectGig, onViewChange }) => {
-  const [ initialView ] = useState(readMapView);
-
-  return (
-    <MapContainer center={initialView.center} zoom={initialView.zoom} className="size-full" zoomControl={false} worldCopyJump>
-      <ViewTracker onViewChange={onViewChange} />
-      <ZoomControl position="topright" />
-      <ScaleControl position="bottomright" />
-      <TileLayer
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      />
-      <VenueLayer venues={venues} query={query} selection={selection} onSelectVenue={onSelectVenue} onSelectGig={onSelectGig} />
-    </MapContainer>
-  );
+  return <div ref={containerRef} className="size-full" aria-busy={!map || syncedVenues !== venues} />;
 };
 
 export default MapView;

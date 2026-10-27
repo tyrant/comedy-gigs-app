@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 
 const watch = process.argv.includes('--watch');
@@ -21,6 +22,9 @@ require('esbuild').context({
     '.svg': 'file',
   },
   assetNames: 'assets/[name]-[hash]',
+  // MapLibre looks for its worker beside itself via import.meta.url, which an
+  // IIFE bundle doesn't have; application.js points it at the copy below instead.
+  logOverride: { 'empty-import-meta': 'silent' },
 }).then(context => {
   if (watch) {
     context.watch();
@@ -30,3 +34,10 @@ require('esbuild').context({
     });
   }
 }).catch(() => process.exit(1));
+
+// MapLibre's web worker is a self-contained ES module; Propshaft serves it from
+// the builds directory with a digest.
+fs.copyFileSync(
+  require.resolve('maplibre-gl/dist/maplibre-gl-worker.mjs'),
+  path.join(process.cwd(), 'app/assets/builds/maplibre-gl-worker.js')
+);

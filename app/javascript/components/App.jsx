@@ -24,7 +24,7 @@ const DateField = ({ id, label, value, onChange }) => (
   </div>
 );
 
-const App = () => {
+const App = ({ mapStyle }) => {
   // Filters and the selected venue/gig live in the URL; the map position is
   // written there by the map itself.
   const [ filters, setFilters ] = useUrlState(readFilters, filtersToParams);
@@ -89,6 +89,7 @@ const App = () => {
 
       <main className="relative flex-1">
         <MapView
+          mapStyle={mapStyle}
           venues={venues}
           query={query}
           selection={selection}

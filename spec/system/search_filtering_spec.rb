@@ -57,15 +57,15 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       set_date_via_picker('start_date', 1.week.ago)
 
       # Should show venues with current/future gigs (venue2, venue3, venue1).
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name} (1 gig)\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name} (2 gigs)\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue1_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue2_name} (2 gigs)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
 
       # Click on venue1 marker
-      find(".leaflet-marker-icon[title=\"#{venue1_name} (1 gig)\"]").click
+      find(".venue-marker[title=\"#{venue1_name} (1 gig)\"]").click
 
       # Venue1's gigs: future_gig2 (hosted by act3) but not past_gig (hosted by act1).
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         expect(page).to have_text(venue1_name)
 
@@ -84,9 +84,9 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       set_date_via_picker('start_date', 3.weeks.ago)
 
       # Should show all venue markers
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name} (2 gigs)\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name} (2 gigs)\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue1_name} (2 gigs)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue2_name} (2 gigs)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
     end
 
     it 'hides venues when start_date is in the future' do
@@ -95,7 +95,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Should show no venue markers (all gigs are before this date)
       # Wait for markers to be removed
       sleep 2
-      expect(page).not_to have_selector('.leaflet-marker-icon', wait: 15)
+      expect(page).not_to have_selector('.venue-marker', wait: 15)
     end
   end
 
@@ -111,14 +111,14 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
 
       set_date_via_picker('end_date', 3.weeks.from_now)
 
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name} (1 gig)\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue2_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
 
-      find(".leaflet-marker-icon[title=\"#{venue2_name} (1 gig)\"]").click
+      find(".venue-marker[title=\"#{venue2_name} (1 gig)\"]").click
 
       # Venue2 shows current_gig (hosted by act2) but not far_future_gig (hosted by act2).
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         expect(page).to have_text(venue2_name)
 
@@ -139,12 +139,12 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Should show no venues since all gigs are after the end_date
       # Wait for markers to be removed
       sleep 2
-      expect(page).not_to have_selector('.leaflet-marker-icon', wait: 15)
+      expect(page).not_to have_selector('.venue-marker', wait: 15)
 
       # Specifically verify no venue markers are present
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue2_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue3_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue2_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue3_name}\"]")
     end
   end
 
@@ -154,11 +154,11 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       set_date_via_picker('end_date', 3.weeks.from_now)
 
       # Should show venue markers with gigs within the date range
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]", wait: 15)
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]", wait: 15)
 
       # Should show venues with gigs in the specified range
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue2_name} (1 gig)\"]", wait: 15) # current_gig
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name} (1 gig)\"]", wait: 15) # future_gig1
+      expect(page).to have_selector(".venue-marker[title=\"#{venue2_name} (1 gig)\"]", wait: 15) # current_gig
+      expect(page).to have_selector(".venue-marker[title=\"#{venue3_name} (1 gig)\"]", wait: 15) # future_gig1
     end
 
     it 'shows venues with multiple gigs when some are in range' do
@@ -167,13 +167,13 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       set_date_via_picker('end_date', 5.weeks.from_now)
 
       # Should show venue1 (has future_gig2 in range) and venue3 (has future_gig1 in range)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue1_name} (1 gig)\"]", wait: 15)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue1_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
 
       # Click on venue1 to verify popup shows only gigs in range
-      find(".leaflet-marker-icon[title=\"#{venue1_name} (1 gig)\"]").click
+      find(".venue-marker[title=\"#{venue1_name} (1 gig)\"]").click
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         within "[data-act-id='#{act3.id}']" do
           expect(page).to have_text(act3_name)
@@ -193,29 +193,29 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
 
       # Should show venues where act1 performs
       # Should show venue3 (has future_gig1 with act1)
-      expect(page).to have_selector(".leaflet-marker-icon[title*=\"#{venue3_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title*=\"#{venue3_name} (1 gig)\"]", wait: 15)
 
       # Verify gig count is displayed correctly on the marker
       verify_marker_gig_count(venue3_name, 1)
 
       # Shouldn't show venue1 (act1 performs there but it's outside default date range)
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]")
       # Shouldn't show venue2 anyway (act1 doesn't perform there)
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue2_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue2_name}\"]")
     end
 
     it 'shows venues with multiple acts when one is selected' do
       select_act_via_dropdown(act3.name)
 
-      expect(page).to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name} (1 gig)\"]", wait: 15)
+      expect(page).to have_selector(".venue-marker[title*=\"#{venue1_name} (1 gig)\"]", wait: 15)
 
       # Verify gig count is displayed correctly on the marker
       verify_marker_gig_count(venue1_name, 1)
 
-      find(".leaflet-marker-icon[title*=\"#{venue1_name} (1 gig)\"]").click
+      find(".venue-marker[title*=\"#{venue1_name} (1 gig)\"]").click
 
       # Shows Venue1, gigged by Act3 but not Act1.
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         expect(page).to have_selector("[data-act-id=\"#{act3.id}\"]")
         expect(page).not_to have_selector("[data-act-id=\"#{act1.id}\"]")
@@ -227,11 +227,11 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       set_date_via_picker('start_date', Date.current)
 
       # Should show venues with Comedy Act 1 within the date range (venue3)
-      expect(page).to have_selector(".leaflet-marker-icon[title=\"#{venue3_name} (1 gig)\"]", wait: 15) # future_gig1 with act1
+      expect(page).to have_selector(".venue-marker[title=\"#{venue3_name} (1 gig)\"]", wait: 15) # future_gig1 with act1
 
       # Should not show venues outside criteria
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]") # past_gig with act1 is outside date range
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue2_name}\"]") # has act2, not act1
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]") # past_gig with act1 is outside date range
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue2_name}\"]") # has act2, not act1
     end
   end
 
@@ -279,8 +279,8 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       verify_marker_gig_count(venue3_name, 1)
 
       # Verify other venues are not shown
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]")
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue2_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue2_name}\"]")
     end
 
     it 'shows multiple gigs at same venue with correct count' do
@@ -302,7 +302,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Click on venue1 to verify popup shows both gigs
       click_venue_marker_and_wait_for_popup(venue1_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         # Should show both gigs for venue1
         expect(page).to have_content(past_gig_name)
@@ -322,7 +322,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Click on venue1 to open popup (has past_gig with act1 and future_gig2 with act3)
       click_venue_marker_and_wait_for_popup(venue1_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         # Should initially show both gigs
         expect(page).to have_content(past_gig_name)
@@ -337,7 +337,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       wait_for_api_completion
 
       # Popup should still be open but with updated content
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         # Should now only show past_gig (with act1)
         expect(page).to have_content(past_gig_name)
@@ -355,7 +355,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Click on venue2 to open popup (has current_gig and far_future_gig)
       click_venue_marker_and_wait_for_popup(venue2_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         # Should initially show both current and far future gigs
         expect(page).to have_content(current_gig_name)
@@ -367,7 +367,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       wait_for_api_completion
 
       # Popup should still be open but with updated content
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         # Should now only show current_gig
         expect(page).to have_content(current_gig_name)
@@ -383,7 +383,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Click on venue2 to open popup (has current_gig and far_future_gig, both with act2)
       click_venue_marker_and_wait_for_popup(venue2_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         expect(page).to have_content(current_gig_name)
         expect(page).to have_content(far_future_gig_name)
@@ -394,7 +394,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       wait_for_api_completion
 
       # Popup should still be open with same content (no change for this venue)
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         expect(page).to have_content(current_gig_name)
         expect(page).to have_content(far_future_gig_name)
@@ -409,7 +409,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       # Click on venue1 to open popup
       click_venue_marker_and_wait_for_popup(venue1_name)
 
-      within '.leaflet-popup' do
+      within '.maplibregl-popup' do
         expect(page).to have_selector('.venue-popup', wait: 10)
         expect(page).to have_content(venue1_name)
       end
@@ -419,9 +419,9 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       wait_for_api_completion
 
       # Popup should be closed since venue1 no longer matches filter
-      expect(page).not_to have_selector('.leaflet-popup')
+      expect(page).not_to have_selector('.maplibregl-popup')
       # Venue1 marker should also be gone
-      expect(page).not_to have_selector(".leaflet-marker-icon[title*=\"#{venue1_name}\"]")
+      expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]")
     end
   end
 end
