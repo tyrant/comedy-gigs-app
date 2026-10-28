@@ -25,7 +25,12 @@ RSpec.describe ImportTask do
     expect(MonitorClient).to have_received(:report_run).with(hash_including(status: 'crashed', errors: [ 'Eventfinda returned no events' ]))
   end
 
-  it 'reports an exception instead of raising it' do
+  it 'accepts a run with nothing to do, for jobs that only work through what’s due' do
+    described_class.call(source: 'Wikipedia bios', script: 'act_bios', allow_empty: true) { stats.merge(total_processed: 0, successful: 0, failed: 0, error_samples: []) }
+    expect(MonitorClient).to have_received(:report_run).with(hash_including(script: 'act_bios', status: 'success', errors: []))
+  end
+
+    it 'reports an exception instead of raising it' do
     expect(run { raise ArgumentError, 'boom' }).to be_nil
     expect(MonitorClient).to have_received(:report_run)
       .with(hash_including(script: 'eventfinda_import', status: 'crashed', errors: array_including('ArgumentError: boom')))

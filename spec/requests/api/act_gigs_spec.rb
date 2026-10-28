@@ -16,7 +16,8 @@ RSpec.describe 'GET /api/acts/:act_id/gigs' do
   it 'returns the act and its mapped gigs in date order, with their venues' do
     get "/api/acts/#{act.id}/gigs"
 
-    expect(json['act']).to eq('id' => act.id, 'name' => 'Rose Matafeo', 'image' => 'https://example.com/rose.jpg', 'description' => 'NZ comedian')
+    expect(json['act']).to eq('id' => act.id, 'name' => 'Rose Matafeo', 'image' => 'https://example.com/rose.jpg',
+                              'description' => 'NZ comedian', 'description_url' => nil)
     expect(json['gigs'].map { |gig| gig['id'] }).to eq [ sooner.id, later.id ]
     expect(json['gigs'].last['venue']).to eq('id' => venue.id, 'name' => 'San Fran', 'city' => 'Wellington',
                                              'timezone' => 'Pacific/Auckland', 'lat' => -41.29, 'lng' => 174.78)
@@ -27,7 +28,15 @@ RSpec.describe 'GET /api/acts/:act_id/gigs' do
     expect(json['gigs'].map { |gig| gig['id'] }).to eq [ sooner.id ]
   end
 
-  it 'has no banner without a photo' do
+  it 'falls back to the Wikipedia bio, with a link to credit it' do
+    act.update!(description: nil, bio: 'Rose Matafeo is a New Zealand comedian.', bio_url: 'https://en.wikipedia.org/wiki/Rose_Matafeo')
+    get "/api/acts/#{act.id}/gigs"
+
+    expect(json['act']).to include('description' => 'Rose Matafeo is a New Zealand comedian.',
+                                   'description_url' => 'https://en.wikipedia.org/wiki/Rose_Matafeo')
+  end
+
+    it 'has no banner without a photo' do
     get "/api/acts/#{other_act.id}/gigs"
     expect(json['act']['image']).to be_nil
   end

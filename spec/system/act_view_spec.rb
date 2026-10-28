@@ -51,6 +51,16 @@ RSpec.describe 'An act’s view', type: :system, js: true do
     expect(page).to have_selector('#venue-details h2', text: 'San Fran')
   end
 
+  it 'credits a bio from Wikipedia' do
+    guy.update!(description: nil, bio: 'Guy Montgomery is a New Zealand comedian.', bio_url: 'https://en.wikipedia.org/wiki/Guy_Montgomery')
+    visit root_path(comedian: guy.id)
+
+    within '#act-details' do
+      expect(page).to have_text('Guy Montgomery is a New Zealand comedian.')
+      expect(find_link('From Wikipedia (opens in a new tab)')[:href]).to eq 'https://en.wikipedia.org/wiki/Guy_Montgomery'
+    end
+  end
+
   it 'opens from a link, and closes with Escape' do
     visit root_path(comedian: guy.id)
     expect(page).to have_selector('#act-details h2', text: 'Guy Montgomery')

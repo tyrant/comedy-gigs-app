@@ -26,7 +26,9 @@ module Api
         id: act.id,
         name: act.name,
         image: banner == Act::IMAGE_PLACEHOLDER ? nil : banner,
-        description: act.description.presence
+        # Ticketmaster's description if it ever sends one, else Wikipedia's, credited
+        description: act.description.presence || act.bio,
+        description_url: (act.bio_url if act.description.blank? && act.bio.present?)
       }
     end
 

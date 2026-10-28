@@ -30,9 +30,16 @@ namespace :eventfinda do
   end
 end
 
+namespace :acts do
+  desc "Find Wikipedia bios for comedians with gigs coming up (a batch a night) and report to the monitor"
+  task bios: :environment do
+    ImportTask.call(source: "Wikipedia bios", script: "act_bios", allow_empty: true) { ActBios.call }
+  end
+end
+
 namespace :import do
-  desc "Run every source's import, then prune old gigs"
-  task all: %w[ticketmaster:daily_import eventfinda:daily_import] do
+  desc "Run every source's import, find bios, then prune old gigs"
+  task all: %w[ticketmaster:daily_import eventfinda:daily_import acts:bios] do
     stats = GigCleanup.call
     MonitorClient.report_run(script: "gig_cleanup", status: "success", processed: stats.values.sum)
   rescue StandardError => e

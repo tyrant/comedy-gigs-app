@@ -65,7 +65,18 @@ const ActGigs = ({ actId, query, gigId, backLabel, focusHeading, onSelectGig, on
           {act.name}
         </h2>
         {act.description && (
-          <p data-role="act-description" className="mt-1 px-1.5 text-sm whitespace-pre-line text-muted">{act.description}</p>
+          <p data-role="act-description" className="mt-1 px-1.5 text-sm whitespace-pre-line text-muted">
+            {act.description}
+            {act.description_url && (
+              <>
+                {' '}
+                <a href={act.description_url} target="_blank" rel="noopener noreferrer" data-role="act-description-source"
+                  className="whitespace-nowrap text-accent underline hover:text-accent-strong">
+                  From Wikipedia<span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </>
+            )}
+          </p>
         )}
         <p className="mt-2 px-1.5 text-xs font-medium text-muted">{pluralize(gigs.length, 'gig')} for these dates</p>
       </div>

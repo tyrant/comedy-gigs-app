@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_29_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -22,6 +22,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_010000) do
     t.datetime "updated_at", null: false
     t.jsonb "images", default: {}
     t.string "match_key"
+    t.text "bio"
+    t.string "bio_url"
+    t.datetime "bio_checked_at"
     t.index ["images"], name: "index_acts_on_images", using: :gin
     t.index ["match_key"], name: "index_acts_on_match_key"
     t.index ["name"], name: "index_acts_on_name"

@@ -2,7 +2,9 @@
 # the monitor. A fatal error, or a run that found nothing at all, reports as
 # crashed; individual events that failed are counted and sampled.
 class ImportTask
-  def self.call(source:, script:)
+  # allow_empty: a run with nothing to do is fine (a job that only works
+  # through what's due, rather than an import)
+  def self.call(source:, script:, allow_empty: false)
     Rails.logger.info "Starting #{source} import..."
     started = Time.current
     stats = yield
@@ -12,7 +14,7 @@ class ImportTask
 
     errors = []
     errors << "#{stats[:error][:class]}: #{stats[:error][:message]}" if stats[:error]
-    errors << "#{source} returned no events" if stats[:total_processed].zero?
+    errors << "#{source} returned no events" if stats[:total_processed].zero? && !allow_empty
 
     MonitorClient.report_run(
       script:,
