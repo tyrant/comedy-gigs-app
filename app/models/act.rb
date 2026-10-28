@@ -23,6 +23,37 @@ class Act < ApplicationRecord
       .distinct
   }
 
+  # The kinds of official link shown, in order, and the sites each must be on
+  # (a homepage can be anywhere). Ticketmaster gives Twitter as a URL or a
+  # bare "@handle".
+  OFFICIAL_LINK_KINDS = {
+    "homepage" => nil,
+    "instagram" => %w[instagram.com],
+    "tiktok" => %w[tiktok.com],
+    "youtube" => %w[youtube.com youtu.be],
+    "twitter" => %w[twitter.com x.com],
+    "facebook" => %w[facebook.com],
+    "spotify" => %w[open.spotify.com]
+  }.freeze
+
+  HANDLE_PROFILES = { "twitter" => "https://x.com/", "instagram" => "https://www.instagram.com/", "tiktok" => "https://www.tiktok.com/@" }.freeze
+
+  # [ { kind:, url: }, ... ]: links that go to a page of the act's own, on
+  # the site they claim to be. A bare "youtube.com/playlist" goes nowhere.
+  def official_links
+    OFFICIAL_LINK_KINDS.filter_map do |kind, hosts|
+      url = official_url(kind, social_links[kind].to_s.strip)
+      uri = URI.parse(url) if url
+      next unless uri.is_a?(URI::HTTP) && uri.host.present?
+      next if hosts && hosts.none? { |host| uri.host == host || uri.host.end_with?(".#{host}") }
+      next if hosts && (uri.path.delete("/").blank? || (uri.path == "/playlist" && uri.query.blank?))
+
+      { kind:, url: }
+    rescue URI::InvalidURIError
+      nil
+    end
+  end
+
   # Use a placeholder image that will definitely work
   # For production, you should use your own hosted image
   IMAGE_PLACEHOLDER = "/images/comedian_placeholder.png"
@@ -39,6 +70,15 @@ class Act < ApplicationRecord
       images.values.first
     else
       IMAGE_PLACEHOLDER
+    end
+  end
+
+  private
+
+  def official_url(kind, value)
+    if value.match?(%r{\Ahttps?://}i) then value
+    elsif value.match?(/\A(@[\w.]+|\w+)\z/) && HANDLE_PROFILES[kind] then HANDLE_PROFILES[kind] + value.delete_prefix("@")
+    elsif value.match?(/\A(www\.)?[\w-]+(\.[\w-]+)+(\/\S*)?\z/) then "https://#{value}"
     end
   end
 end

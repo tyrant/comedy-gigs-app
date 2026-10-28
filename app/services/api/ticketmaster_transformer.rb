@@ -153,14 +153,11 @@ module Api
       host ? "https://#{host}" : venue["url"].to_s[%r{\Ahttps?://\S+}i]
     end
 
+    # The act's own sites, as Ticketmaster gives them (Act#official_links tidies them)
     def self.extract_social_links(act)
-      return {} unless act["externalLinks"]
+      return {} unless act["externalLinks"].is_a?(Hash)
 
-      {
-        "twitter" => act.dig("externalLinks", "twitter", 0, "url"),
-        "instagram" => act.dig("externalLinks", "instagram", 0, "url"),
-        "facebook" => act.dig("externalLinks", "facebook", 0, "url")
-      }.compact
+      Act::OFFICIAL_LINK_KINDS.keys.to_h { |kind| [ kind, act.dig("externalLinks", kind, 0, "url") ] }.compact
     end
 
     def self.parse_datetime(datetime_str)

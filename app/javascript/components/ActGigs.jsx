@@ -3,6 +3,23 @@ import useJson from '../hooks/useJson';
 import { formatGigTime, gigHref, pluralize } from '../fiddly-bits';
 import { BackButton, PanelPlaceholder, StatusBadge, TicketLink } from './PanelBits';
 
+const LINK_LABELS = {
+  homepage: 'Website', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', twitter: 'X', facebook: 'Facebook', spotify: 'Spotify'
+};
+
+const OfficialLinks = ({ act }) => (
+  <ul aria-label={`${act.name} online`} className="mt-2 flex flex-wrap gap-1.5 px-1.5">
+    {act.links.map(({ kind, url }) => (
+      <li key={kind}>
+        <a href={url} target="_blank" rel="noopener noreferrer" data-link-kind={kind}
+          className="inline-block rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-accent hover:bg-surface-2">
+          {LINK_LABELS[kind] || kind}<span className="sr-only"> (opens in a new tab)</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+);
+
 const GigRow = ({ gig, selected, onSelectGig }) => (
   <li data-gig-id={gig.id} aria-current={selected ? 'true' : undefined}
     className="flex items-center gap-3 rounded-md px-2 py-1.5 aria-[current]:bg-accent-soft">
@@ -78,6 +95,7 @@ const ActGigs = ({ actId, query, gigId, backLabel, focusHeading, onSelectGig, on
             )}
           </p>
         )}
+        {act.links.length > 0 && <OfficialLinks act={act} />}
         <p className="mt-2 px-1.5 text-xs font-medium text-muted">{pluralize(gigs.length, 'gig')} for these dates</p>
       </div>
 

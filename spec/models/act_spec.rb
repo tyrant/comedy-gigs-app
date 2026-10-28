@@ -108,4 +108,28 @@ RSpec.describe Act, type: :model do
       it { expect(acts.where(name: act1_name).count).to eq(1) }
     end
   end
+
+  describe '#official_links' do
+    def links(social_links) = build(:act, social_links:).official_links
+
+    it 'lists them website first, making handles into profile links' do
+      expect(links('twitter' => '@KevinBridges86', 'instagram' => 'https://www.instagram.com/kevinbridges/',
+                   'homepage' => 'kevinbridges.co.uk')).to eq [
+        { kind: 'homepage', url: 'https://kevinbridges.co.uk' },
+        { kind: 'instagram', url: 'https://www.instagram.com/kevinbridges/' },
+        { kind: 'twitter', url: 'https://x.com/KevinBridges86' }
+      ]
+    end
+
+    it 'drops links to the wrong site, to no profile, or that aren’t links' do
+      expect(links(
+        'instagram' => 'https://www.charliebardey.com/about',
+        'facebook' => 'https://urldefense.com/v3/__https://www.facebook.com/p/Jen__',
+        'youtube' => 'https://www.youtube.com/playlist',
+        'tiktok' => 'https://www.tiktok.com/',
+        'twitter' => 'danielsloss.com',
+        'spotify' => 'not a link'
+      )).to be_empty
+    end
+  end
 end

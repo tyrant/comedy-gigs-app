@@ -61,6 +61,16 @@ RSpec.describe 'An act’s view', type: :system, js: true do
     end
   end
 
+  it 'links to the act’s own sites' do
+    guy.update!(social_links: { 'homepage' => 'https://guymontgomery.com/', 'instagram' => 'https://www.instagram.com/guymontgomery/' })
+    visit root_path(comedian: guy.id)
+
+    within '#act-details' do
+      expect(all('[data-link-kind]').map { |link| link.text.squish }).to eq [ 'Website (opens in a new tab)', 'Instagram (opens in a new tab)' ]
+      expect(find_link('Website (opens in a new tab)')[:href]).to eq 'https://guymontgomery.com/'
+    end
+  end
+
   it 'opens from a link, and closes with Escape' do
     visit root_path(comedian: guy.id)
     expect(page).to have_selector('#act-details h2', text: 'Guy Montgomery')

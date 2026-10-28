@@ -1,7 +1,10 @@
 require 'rails_helper'
 
 RSpec.describe 'GET /api/acts/:act_id/gigs' do
-  let(:act) { create :act, name: 'Rose Matafeo', description: 'NZ comedian', images: { 'large' => 'https://example.com/rose.jpg' } }
+  let(:act) do
+    create :act, name: 'Rose Matafeo', description: 'NZ comedian', images: { 'large' => 'https://example.com/rose.jpg' },
+                 social_links: { 'twitter' => '@rosematafeo' }
+  end
   let(:other_act) { create :act }
   let(:venue) { create :venue, name: 'San Fran', city: 'Wellington', latitude: -41.29, longitude: 174.78, timezone: 'Pacific/Auckland' }
 
@@ -17,7 +20,8 @@ RSpec.describe 'GET /api/acts/:act_id/gigs' do
     get "/api/acts/#{act.id}/gigs"
 
     expect(json['act']).to eq('id' => act.id, 'name' => 'Rose Matafeo', 'image' => 'https://example.com/rose.jpg',
-                              'description' => 'NZ comedian', 'description_url' => nil)
+                              'description' => 'NZ comedian', 'description_url' => nil,
+                              'links' => [ { 'kind' => 'twitter', 'url' => 'https://x.com/rosematafeo' } ])
     expect(json['gigs'].map { |gig| gig['id'] }).to eq [ sooner.id, later.id ]
     expect(json['gigs'].last['venue']).to eq('id' => venue.id, 'name' => 'San Fran', 'city' => 'Wellington',
                                              'timezone' => 'Pacific/Auckland', 'lat' => -41.29, 'lng' => 174.78)

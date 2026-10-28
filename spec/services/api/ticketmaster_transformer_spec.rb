@@ -218,7 +218,10 @@ RSpec.describe Api::TicketmasterTransformer do
         'id' => 'a123',
         'description' => 'Very funny comedian',
         'externalLinks' => {
-          'twitter' => [ { 'url' => 'https://twitter.com/funnyperson' } ]
+          'twitter' => [ { 'url' => '@funnyperson' } ],
+          'homepage' => [ { 'url' => 'https://funnyperson.com/' } ],
+          'youtube' => [ { 'url' => 'https://www.youtube.com/@funnyperson' }, { 'url' => 'https://www.youtube.com/@other' } ],
+          'musicbrainz' => [ { 'id' => 'x', 'url' => 'https://musicbrainz.org/artist/x' } ]
         },
         'images' => [
           {
@@ -236,6 +239,12 @@ RSpec.describe Api::TicketmasterTransformer do
       it { expect(result.first).to include(:images) }
       it { expect(result.first[:images]).to be_a(Hash) }
       it { expect(result.first[:images]['square']).to eq('https://example.com/comedian.jpg') }
+    end
+
+    it 'keeps the first of each kind of official link, as given' do
+      expect(described_class.build_acts(act_data).first[:social_links]).to eq(
+        'homepage' => 'https://funnyperson.com/', 'youtube' => 'https://www.youtube.com/@funnyperson', 'twitter' => '@funnyperson'
+      )
     end
   end
 
