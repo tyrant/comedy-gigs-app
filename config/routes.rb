@@ -10,7 +10,9 @@ Rails.application.routes.draw do
     resources :venues, only: [ :index ] do
       resources :gigs, only: [ :index ]
     end
-    resources :acts, only: [ :index ]
+    resources :acts, only: [ :index ] do
+      resources :gigs, only: [ :index ], controller: "act_gigs"
+    end
   end
 
   # Defines the root path route ("/")

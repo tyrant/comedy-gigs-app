@@ -69,7 +69,11 @@ const motion = () => ({ duration: reduceMotion() ? 0 : 600 });
 
 // bottomInset is how much of the map's bottom edge something covers (the
 // bottom sheet on phones), so a selected venue is kept clear of it.
-const MapView = ({ mapStyle, venues, selectedVenueId, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange }) => {
+// extraVenue ({ id, lat, lng }) can be selected though the filters leave it
+// off the map; each new revealCount brings the selected venue back into view.
+const MapView = ({
+  mapStyle, venues, selectedVenueId, extraVenue, revealCount = 0, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange
+}) => {
   const containerRef = useRef(null);
   const [ map, setMap ] = useState(null);
   const [ failed, setFailed ] = useState(false);
@@ -242,17 +246,19 @@ const MapView = ({ mapStyle, venues, selectedVenueId, hoveredVenueId, bottomInse
 
   // Bring the selected venue into view, clear of the edges and the bottom sheet,
   // zooming in as far as it takes to split it out of any cluster
-  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
+  const selectedVenue = venues.find(venue => venue.id === selectedVenueId) ||
+    (extraVenue?.id === selectedVenueId ? extraVenue : undefined);
   const markersReady = syncedVenues === venues;
-  const revealed = useRef({ id: null, inset: 0 }); // once per selection (or sheet resize), not per filter change
+  const revealed = useRef({ id: null, inset: 0, count: 0 }); // once per selection (or sheet resize), not per filter change
 
   useEffect(() => {
     if (!selectedVenue) revealed.current.id = null;
     if (!map || !selectedVenue || !markersReady) return;
 
     const { id, lng, lat } = selectedVenue;
-    if (revealed.current.id === id && revealed.current.inset === bottomInset) return;
-    revealed.current = { id, inset: bottomInset };
+    if (revealed.current.id === id && revealed.current.inset === bottomInset && revealed.current.count === revealCount) return;
+    const asked = revealed.current.count !== revealCount; // centre it, even if it's in view already
+    revealed.current = { id, inset: bottomInset, count: revealCount };
     let cancelled = false;
 
     const isClear = () => {
@@ -289,14 +295,14 @@ const MapView = ({ mapStyle, venues, selectedVenueId, hoveredVenueId, bottomInse
         if (cancelled) return;
         map.once('idle', () => reveal(attempt + 1));
         map.easeTo({ center: [ lng, lat ], zoom, offset: [ 0, -bottomInset / 2 ], ...motion() });
-      } else if (!isClear()) {
+      } else if (asked || !isClear()) {
         map.easeTo({ center: [ lng, lat ], offset: [ 0, -bottomInset / 2 ], ...motion() });
       }
     };
 
     reveal();
     return () => { cancelled = true; };
-  }, [ map, selectedVenue?.id, markersReady, bottomInset ]);
+  }, [ map, selectedVenue?.id, markersReady, bottomInset, revealCount ]);
 
   if (failed) {
     return (

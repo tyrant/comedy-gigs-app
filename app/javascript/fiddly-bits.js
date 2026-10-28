@@ -108,12 +108,22 @@ export const filtersToParams = ({ actIds, startDate, endDate }) => ({
   end: endDate || null
 });
 
+// The open venue, the gig picked out in it, and the act whose view is open
+// over them, if any
 export const readSelection = () => {
   const params = urlParams();
-  return { venueId: positiveInt(params.get('venue')), gigId: positiveInt(params.get('gig')) };
+  return {
+    venueId: positiveInt(params.get('venue')),
+    gigId: positiveInt(params.get('gig')),
+    actId: positiveInt(params.get('comedian'))
+  };
 };
 
-export const selectionToParams = ({ venueId, gigId }) => ({ venue: venueId, gig: venueId ? gigId : null });
+export const selectionToParams = ({ venueId, gigId, actId }) => ({
+  venue: venueId,
+  gig: venueId ? gigId : null,
+  comedian: actId || null
+});
 
 export const readMapView = () => {
   const params = urlParams();
@@ -163,6 +173,13 @@ export const gigHref = (venueId, gigId) => {
   const params = urlParams();
   params.set('venue', venueId);
   params.set('gig', gigId);
+  return `${window.location.pathname}?${params}`;
+};
+
+// Deep link to an act's view
+export const actHref = (actId) => {
+  const params = urlParams();
+  params.set('comedian', actId);
   return `${window.location.pathname}?${params}`;
 };
 

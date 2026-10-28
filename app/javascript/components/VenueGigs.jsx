@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useJson from '../hooks/useJson';
 import { reduceMotion } from '../hooks/useMediaQuery';
-import { formatGigTime, gigHref, pluralize } from '../fiddly-bits';
-
-const STATUS_LABELS = { sold_out: 'Sold out', postponed: 'Postponed' };
+import { actHref, formatGigTime, gigHref, pluralize } from '../fiddly-bits';
+import { BackButton, PanelPlaceholder, StatusBadge, TicketLink } from './PanelBits';
 const PLACEHOLDER_IMAGE = /venue_placeholder/;
 
 // Gigs with the same lineup share one row of act chips:
@@ -106,12 +105,15 @@ const NameWithLink = ({ name, url }) => {
   );
 };
 
-const ActChip = ({ act }) => (
-  <li data-act-id={act.id} title={act.name}
-    className="flex min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-accent-soft py-0.5 pr-2.5 pl-0.5 text-accent-ink">
-    <img src={act.image} alt={act.name} width="28" height="28" loading="lazy" decoding="async"
-      className="size-7 shrink-0 rounded-full object-cover" />
-    <span className="max-w-40 truncate text-xs font-medium">{act.name}</span>
+const ActChip = ({ act, onSelectAct }) => (
+  <li data-act-id={act.id} className="shrink-0">
+    <a href={actHref(act.id)} title={act.name} data-role="act-link"
+      onClick={(e) => { e.preventDefault(); onSelectAct(act.id); }}
+      className="flex min-w-0 items-center gap-1.5 rounded-full bg-accent-soft py-0.5 pr-2.5 pl-0.5 text-accent-ink hover:underline">
+      <img src={act.image} alt="" width="28" height="28" loading="lazy" decoding="async"
+        className="size-7 shrink-0 rounded-full object-cover" />
+      <span className="max-w-40 truncate text-xs font-medium">{act.name}</span>
+    </a>
   </li>
 );
 
@@ -127,19 +129,11 @@ const GigRow = ({ gig, venue, onSelectGig }) => (
       </h4>
       <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
         <time dateTime={gig.start_time}>{formatGigTime(gig.start_time, venue.timezone)}</time>
-        {STATUS_LABELS[gig.status] && (
-          <span className="rounded bg-warn-soft px-1.5 text-[11px] font-medium text-warn-ink">{STATUS_LABELS[gig.status]}</span>
-        )}
+        <StatusBadge status={gig.status} />
       </p>
     </div>
 
-    {gig.ticket_url && (
-      <a href={gig.ticket_url} data-role="ticket-url" target="_blank" rel="noopener noreferrer"
-        aria-label={`Tickets for ${gig.name} (opens in a new tab)`} title="Tickets"
-        className="shrink-0 rounded-md bg-accent-soft px-2 py-1 text-base leading-none hover:bg-surface-2">
-        <span aria-hidden="true">🎟️</span>
-      </a>
-    )}
+    <TicketLink gig={gig} />
   </li>
 );
 
@@ -149,17 +143,12 @@ const placeLine = ({ address, city }) => {
   return !city || address.toLowerCase().includes(city.toLowerCase()) ? address : `${address}, ${city}`;
 };
 
-const BackButton = ({ onBack }) => (
-  <button type="button" onClick={onBack} data-action="close-venue"
-    className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-sm font-medium text-accent hover:bg-surface-2">
-    <span aria-hidden="true">←</span> All venues
-  </button>
-);
+const VenueBackButton = ({ onBack }) => <BackButton label="All venues" action="close-venue" onBack={onBack} />;
 
 // A venue's gigs for the current filters, fetched when it's selected.
 // focusHeading moves focus to the venue's name once it loads, for keyboard and
 // screen reader users who chose it from the list or the map.
-const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onBack }) => {
+const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onSelectAct, onBack }) => {
   const { data, error, loading, retry } = useJson(`/api/venues/${venueId}/gigs?${query}`);
   const headingRef = useRef(null);
   const highlighted = useRef(null);
@@ -188,22 +177,10 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onBack })
 
   if (!current) {
     return (
-      <div className="venue-gigs p-3">
-        <BackButton onBack={onBack} />
-        {error && !loading
-          ? (
-            <p className="mt-3 px-1.5 text-sm text-muted">
-              Couldn’t load this venue’s gigs.{' '}
-              <button type="button" onClick={retry} className="cursor-pointer font-medium text-accent underline">Try again</button>
-            </p>
-          )
-          : (
-            <div className="mt-3 space-y-3 px-1.5" aria-label="Loading gigs">
-              <div className="h-6 w-2/3 animate-pulse rounded bg-surface-2" />
-              <div className="h-4 w-1/2 animate-pulse rounded bg-surface-2" />
-              <div className="h-24 animate-pulse rounded bg-surface-2" />
-            </div>
-          )}
+      <div className="venue-gigs">
+        <PanelPlaceholder error={error} loading={loading} retry={retry} what="this venue’s gigs">
+          <VenueBackButton onBack={onBack} />
+        </PanelPlaceholder>
       </div>
     );
   }
@@ -214,7 +191,7 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onBack })
   return (
     <div className="venue-gigs" aria-busy={loading}>
       <div className="px-3 pt-3 pb-2">
-        <BackButton onBack={onBack} />
+        <VenueBackButton onBack={onBack} />
       </div>
 
       {hasImage && (
@@ -242,7 +219,7 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onBack })
           <section key={group.key} className="border-b border-line py-2 last:border-b-0">
             {group.acts.length > 0 && (
               <ul className="no-scrollbar flex gap-1 overflow-x-auto px-2 pb-1" aria-label="Lineup">
-                {group.acts.map(act => <ActChip key={act.id} act={act} />)}
+                {group.acts.map(act => <ActChip key={act.id} act={act} onSelectAct={onSelectAct} />)}
               </ul>
             )}
             <ul>

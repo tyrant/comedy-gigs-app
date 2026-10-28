@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapView from './MapView';
 import ActFilter from './ActFilter';
 import DateRange from './DateRange';
+import ActGigs from './ActGigs';
 import VenueGigs from './VenueGigs';
 import VenueList from './VenueList';
 import useJson from '../hooks/useJson';
@@ -41,8 +42,8 @@ const Status = ({ loading, error, retry, gigs, venues }) => {
 };
 
 const App = ({ mapStyles }) => {
-  // Filters and the selected venue/gig live in the URL; the map position is
-  // written there by the map itself.
+  // Filters and the selected venue/gig/act live in the URL; the map position
+  // is written there by the map itself.
   const [ filters, setFilters ] = useUrlState(readFilters, filtersToParams);
   const [ selection, setSelection ] = useUrlState(readSelection, selectionToParams);
   const [ bounds, setBounds ] = useState(null);
@@ -50,13 +51,19 @@ const App = ({ mapStyles }) => {
 
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const isDark = useMediaQuery('(prefers-color-scheme: dark)');
-  const [ sheetOpen, setSheetOpen ] = useState(() => Boolean(readSelection().venueId));
+  const [ sheetOpen, setSheetOpen ] = useState(() => Boolean(readSelection().venueId || readSelection().actId));
   const [ sheetHeight, setSheetHeight ] = useState(0);
   const panelRef = useRef(null);
 
-  // Focus follows a venue chosen by hand: to its name, and back to the list after
+  // Focus follows a venue or act chosen by hand: to its name, and back after
   const focusVenue = useRef(false);
+  const focusAct = useRef(false);
   const lastVenueId = useRef(null);
+
+  // A gig chosen in an act's view is shown on the map even when the filters
+  // leave its venue off it, and again each time it's chosen
+  const [ actGigVenue, setActGigVenue ] = useState(null);
+  const [ revealCount, setRevealCount ] = useState(0);
 
   const query = filterQuery(filters);
   const { data, error, loading, retry } = useJson(`/api/venues?${query}`);
@@ -68,33 +75,52 @@ const App = ({ mapStyles }) => {
   );
   const gigsInView = venuesInView.reduce((sum, venue) => sum + venue.gigs, 0);
 
-  // Deselect a venue the filters have just ruled out
+  // Deselect a venue the filters have just ruled out, unless an act's view
+  // put it there
   useEffect(() => {
-    if (!data || loading || !selection.venueId) return;
-    if (!data.some(venue => venue.id === selection.venueId)) setSelection({ venueId: null, gigId: null });
+    if (!data || loading || !selection.venueId || selection.actId) return;
+    if (!data.some(venue => venue.id === selection.venueId)) setSelection(prev => ({ ...prev, venueId: null, gigId: null }));
   }, [ data, loading ]);
 
+  // Choosing a venue (from the list or the map) closes any act's view
   const selectVenue = useCallback((venueId) => {
     focusVenue.current = Boolean(venueId);
     if (venueId) setSheetOpen(true);
     setSelection(prev => {
       if (prev.venueId) lastVenueId.current = prev.venueId;
-      return prev.venueId === venueId ? prev : { venueId, gigId: null };
+      return prev.venueId === venueId && !prev.actId ? prev : { venueId, gigId: null, actId: null };
     });
   }, []);
   const selectGig = useCallback((gigId) => setSelection(prev => ({ ...prev, gigId })), []);
   const closeVenue = useCallback(() => selectVenue(null), [ selectVenue ]);
 
-  // Escape closes the venue, unless something else (the act menu) wants it
+  const selectAct = useCallback((actId) => {
+    focusAct.current = true;
+    setSheetOpen(true);
+    setSelection(prev => ({ ...prev, actId }));
+  }, []);
+  // Back to the venue it was opened from (or last showed on the map), else the list
+  const closeAct = useCallback(() => {
+    focusVenue.current = true;
+    setSelection(prev => ({ ...prev, actId: null }));
+  }, []);
+  const selectActGig = useCallback((gig) => {
+    setActGigVenue(gig.venue);
+    setRevealCount(count => count + 1);
+    setSelection(prev => ({ ...prev, venueId: gig.venue.id, gigId: gig.id }));
+  }, []);
+
+  // Escape closes the act's view or the venue, unless something else (the act menu) wants it
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || !selection.venueId) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || !(selection.venueId || selection.actId)) return;
       if (e.target.closest?.('input, select, textarea, .react-select__control')) return;
-      closeVenue();
+      if (selection.actId) closeAct();
+      else closeVenue();
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [ selection.venueId, closeVenue ]);
+  }, [ selection.venueId, selection.actId, closeAct, closeVenue ]);
 
   // On phones the panel is a sheet over the bottom of the map; the map keeps
   // the selected venue above it
@@ -111,7 +137,7 @@ const App = ({ mapStyles }) => {
   const setFilter = (changes) => setFilters(prev => ({ ...prev, ...changes }));
   const clearFilters = () => setFilters({ actIds: [], ...defaultDates() });
 
-  const { venueId, gigId } = selection;
+  const { venueId, gigId, actId } = selection;
 
   return (
     <div className="flex h-dvh w-screen flex-col overflow-hidden">
@@ -136,22 +162,29 @@ const App = ({ mapStyles }) => {
             </div>
             <button type="button" onClick={() => setSheetOpen(open => !open)} aria-expanded={sheetOpen} aria-controls="panel-body"
               className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-sm font-medium text-accent hover:bg-surface-2 md:hidden">
-              {sheetOpen ? 'Hide' : 'Show'} {venueId ? 'venue' : 'list'}
+              {sheetOpen ? 'Hide' : 'Show'} {actId ? 'act' : venueId ? 'venue' : 'list'}
             </button>
           </div>
 
           <div id="panel-body" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${sheetOpen ? '' : 'max-md:hidden'}`}>
-            {venueId
+            {actId && (
+              <section id="act-details" aria-label="Act">
+                <ActGigs key={actId} actId={actId} query={query} gigId={gigId}
+                  backLabel={venueId ? 'Back to venue' : 'All venues'} focusHeading={focusAct.current}
+                  onSelectGig={selectActGig} onBack={closeAct} />
+              </section>
+            )}
+            {!actId && (venueId
               ? (
                 <section id="venue-details" aria-label="Venue">
                   <VenueGigs key={venueId} venueId={venueId} query={query} gigId={gigId}
-                    focusHeading={focusVenue.current} onSelectGig={selectGig} onBack={closeVenue} />
+                    focusHeading={focusVenue.current} onSelectGig={selectGig} onSelectAct={selectAct} onBack={closeVenue} />
                 </section>
               )
               : (
                 <VenueList key={lastVenueId.current} venues={venuesInView} focusVenueId={lastVenueId.current}
                   onSelectVenue={selectVenue} onHoverVenue={setHoveredVenueId} />
-              )}
+              ))}
           </div>
 
           <footer className={`border-t border-line px-3 py-2 text-xs text-muted ${sheetOpen ? '' : 'max-md:hidden'}`}>
@@ -165,6 +198,8 @@ const App = ({ mapStyles }) => {
             mapStyle={isDark ? mapStyles.dark : mapStyles.light}
             venues={venues}
             selectedVenueId={venueId}
+            extraVenue={actGigVenue}
+            revealCount={revealCount}
             hoveredVenueId={hoveredVenueId}
             bottomInset={sheetHeight}
             onSelectVenue={selectVenue}
