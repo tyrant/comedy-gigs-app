@@ -132,6 +132,35 @@ RSpec.describe Gig, type: :model do
         it { expect(Gig.starting_before('invalid-date')).to eq Gig.all }
       end
     end
+
+    describe 'dates at the venue' do
+      # 10am on 28 October in Auckland (NZDT, UTC+13) is still the 27th in UTC
+      let(:auckland) { create :venue, timezone: 'Pacific/Auckland' }
+      let!(:morning_in_auckland) { create :gig, venue: auckland, start_time: Time.utc(2026, 10, 27, 21), end_time: nil }
+
+      # 11pm on 27 October in Los Angeles (PDT, UTC-7) is already the 28th in UTC
+      let(:los_angeles) { create :venue, timezone: 'America/Los_Angeles' }
+      let!(:late_in_la) { create :gig, venue: los_angeles, start_time: Time.utc(2026, 10, 28, 6), end_time: nil }
+
+      # Without a time zone, dates are UTC's
+      let(:unzoned) { create :venue, timezone: nil }
+      let!(:midnight_utc) { create :gig, venue: unzoned, start_time: Time.utc(2026, 10, 28), end_time: nil }
+
+      let(:these) { Gig.where(id: [ morning_in_auckland, late_in_la, midnight_utc ]) }
+
+      it 'starts each venue\'s day at its own midnight' do
+        expect(these.starting_after('2026-10-28')).to contain_exactly(morning_in_auckland, midnight_utc)
+      end
+
+      it 'ends each venue\'s day at its own midnight' do
+        expect(these.starting_before('2026-10-27')).to contain_exactly(late_in_la)
+      end
+
+      it 'picks out one local date across time zones' do
+        expect(these.starting_after('2026-10-28').starting_before('2026-10-28')).to contain_exactly(morning_in_auckland, midnight_utc)
+        expect(these.starting_after('2026-10-27').starting_before('2026-10-27')).to contain_exactly(late_in_la)
+      end
+    end
   end
 
   # Test class methods

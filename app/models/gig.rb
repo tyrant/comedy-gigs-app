@@ -22,22 +22,30 @@ class Gig < ApplicationRecord
     where("EXISTS (SELECT 1 FROM acts_gigs WHERE acts_gigs.gig_id = gigs.id AND acts_gigs.act_id IN (?))", act_ids)
   }
 
-  scope :starting_after, ->(start_date) {
-    return all if start_date.blank?
+  # Dates are the venue's own calendar dates: "today" in Auckland starts 13
+  # hours before it does in London. Venues with no time zone count as UTC.
+  VENUE_TIME_ZONE = "COALESCE(NULLIF((SELECT venues.timezone FROM venues WHERE venues.id = gigs.venue_id), ''), 'UTC')".freeze
 
+  # Midnight at the start of the date, at the venue, as a UTC timestamp to match start_time
+  VENUE_MIDNIGHT = "(CAST(? AS timestamp) AT TIME ZONE #{VENUE_TIME_ZONE}) AT TIME ZONE 'UTC'".freeze
+
+  # Every zone's offset is within UTC-12..UTC+14, which gives a plain range the
+  # start_time index can narrow things down with first
+  scope :starting_after, ->(start_date) {
     parsed_date = Gig.send(:parse_date, start_date)
     return all unless parsed_date
 
-    where(start_time: parsed_date.beginning_of_day..)
+    where(start_time: (parsed_date.beginning_of_day - 14.hours)..)
+      .where("gigs.start_time >= #{VENUE_MIDNIGHT}", parsed_date)
   }
 
   scope :starting_before, ->(end_date) {
-    return all if end_date.blank?
-
     parsed_date = Gig.send(:parse_date, end_date)
     return all unless parsed_date
 
-    where(start_time: ..parsed_date.end_of_day)
+    next_day = parsed_date + 1
+    where(start_time: ...(next_day.beginning_of_day + 12.hours))
+      .where("gigs.start_time < #{VENUE_MIDNIGHT}", next_day)
   }
 
   # The filters the map's API endpoints share: start_date, end_date and act_ids
@@ -74,7 +82,7 @@ class Gig < ApplicationRecord
     private
 
     def parse_date(date_string)
-      return nil if date_string.nil?
+      return nil if date_string.blank?
       Date.parse(date_string)
     rescue ArgumentError
       nil
