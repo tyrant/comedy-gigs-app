@@ -14,7 +14,7 @@ RSpec.describe 'import:all' do
       allow(klass).to receive(:new).and_return(importer)
       allow(importer).to receive(:import_events) { order << name; stats }
     end
-    allow(GigCleanup).to receive(:call) { order << :cleanup }
+    allow(GigCleanup).to receive(:call) { order << :cleanup; { old_gigs_removed: 40, cancelled_gigs_removed: 2 } }
     allow(MonitorClient).to receive(:report_run)
   end
 
@@ -32,6 +32,11 @@ RSpec.describe 'import:all' do
     run_task
     expect(order).to eq %i[eventfinda cleanup]
     expect(MonitorClient).to have_received(:report_run).with(hash_including(script: 'ticketmaster_import', status: 'crashed'))
+  end
+
+  it 'reports how many gigs the cleanup removed' do
+    run_task
+    expect(MonitorClient).to have_received(:report_run).with(script: 'gig_cleanup', status: 'success', processed: 42)
   end
 
   it 'reports a failed cleanup' do
