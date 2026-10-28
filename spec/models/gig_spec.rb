@@ -156,6 +156,17 @@ RSpec.describe Gig, type: :model do
         expect(these.starting_before('2026-10-27')).to contain_exactly(late_in_la)
       end
 
+      it 'records each gig\'s date at its venue when saved' do
+        expect(morning_in_auckland.local_date).to eq Date.new(2026, 10, 28)
+        expect(late_in_la.local_date).to eq Date.new(2026, 10, 27)
+        expect(midnight_utc.local_date).to eq Date.new(2026, 10, 28)
+      end
+
+      it 'redates a venue\'s gigs when its time zone changes' do
+        unzoned.update!(timezone: 'America/New_York')
+        expect(midnight_utc.reload.local_date).to eq Date.new(2026, 10, 27)
+      end
+
       it 'picks out one local date across time zones' do
         expect(these.starting_after('2026-10-28').starting_before('2026-10-28')).to contain_exactly(morning_in_auckland, midnight_utc)
         expect(these.starting_after('2026-10-27').starting_before('2026-10-27')).to contain_exactly(late_in_la)

@@ -10,6 +10,8 @@ class Gig < ApplicationRecord
 
   attribute :external_ids, :jsonb, default: -> { {} }
 
+  before_save :set_local_date, if: -> { local_date.nil? || start_time_changed? || venue_id_changed? }
+
   scope :between,        ->(start_date, end_date) { where(start_time: start_date..end_date) }
   scope :by_status,      ->(status)               { where(status: status) }
   scope :by_external_id, ->(source, id)           { where("external_ids @> ?", { source => id.to_s }.to_json) }
@@ -23,29 +25,15 @@ class Gig < ApplicationRecord
   }
 
   # Dates are the venue's own calendar dates: "today" in Auckland starts 13
-  # hours before it does in London. Venues with no time zone count as UTC.
-  VENUE_TIME_ZONE = "COALESCE(NULLIF((SELECT venues.timezone FROM venues WHERE venues.id = gigs.venue_id), ''), 'UTC')".freeze
-
-  # Midnight at the start of the date, at the venue, as a UTC timestamp to match start_time
-  VENUE_MIDNIGHT = "(CAST(? AS timestamp) AT TIME ZONE #{VENUE_TIME_ZONE}) AT TIME ZONE 'UTC'".freeze
-
-  # Every zone's offset is within UTC-12..UTC+14, which gives a plain range the
-  # start_time index can narrow things down with first
+  # hours before it does in London. local_date holds each gig's.
   scope :starting_after, ->(start_date) {
     parsed_date = Gig.send(:parse_date, start_date)
-    return all unless parsed_date
-
-    where(start_time: (parsed_date.beginning_of_day - 14.hours)..)
-      .where("gigs.start_time >= #{VENUE_MIDNIGHT}", parsed_date)
+    parsed_date ? where(local_date: parsed_date..) : all
   }
 
   scope :starting_before, ->(end_date) {
     parsed_date = Gig.send(:parse_date, end_date)
-    return all unless parsed_date
-
-    next_day = parsed_date + 1
-    where(start_time: ...(next_day.beginning_of_day + 12.hours))
-      .where("gigs.start_time < #{VENUE_MIDNIGHT}", next_day)
+    parsed_date ? where(local_date: ..parsed_date) : all
   }
 
   # The filters the map's API endpoints share: start_date, end_date and act_ids
@@ -68,6 +56,12 @@ class Gig < ApplicationRecord
              data[:start_time] - 1.hour,
              data[:start_time] + 1.hour)
       .first
+  end
+
+  # The start's date where the gig happens; venues with no (known) time zone count as UTC
+  def set_local_date
+    zone = ActiveSupport::TimeZone[venue&.timezone.to_s] || ActiveSupport::TimeZone["UTC"]
+    self.local_date = start_time&.in_time_zone(zone)&.to_date
   end
 
   private

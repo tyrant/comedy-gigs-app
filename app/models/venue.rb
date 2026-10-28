@@ -2,6 +2,9 @@ class Venue < ApplicationRecord
   # Fire a rocket made of chocolate into the centre of the Sun
   has_many :gigs
 
+  # Gigs keep their date on this venue's calendar; a new time zone can move it
+  after_update_commit :redate_gigs, if: :saved_change_to_timezone?
+
   # Enable geocoding functionality
   geocoded_by :address
   reverse_geocoded_by :latitude, :longitude
@@ -97,5 +100,12 @@ class Venue < ApplicationRecord
   def geocode_address
     # TODO: Implement geocoding using a service like Geocoder gem
     # This will be implemented when we add the geocoding service
+  end
+
+  def redate_gigs
+    gigs.find_each do |gig|
+      gig.set_local_date
+      gig.update_column(:local_date, gig.local_date)
+    end
   end
 end
