@@ -7,12 +7,6 @@
 # Up Comedy" that would match any number of titles. Descriptions mention
 # people in passing ("in the vein of Greg Davies"), so they're left alone.
 class ActMatcher
-  GENERIC_WORDS = %w[
-    cabaret club comedian comedians comedic comedy comic comics fest festival funny gala improv improvised
-    joke jokes laugh laughs live mic night nights open podcast presents roast series show shows showcase
-    sketch special stand standup tour
-  ].to_set.freeze
-
   MAX_NAME_WORDS = 5
 
   def initialize
@@ -21,7 +15,7 @@ class ActMatcher
 
   # The acts named in the title, in the order they appear
   def acts_in(title)
-    words = normalize(title).split
+    words = MatchKey.normalize(title).split
     found = []
 
     words.each_index do |start|
@@ -43,16 +37,9 @@ class ActMatcher
   def index_acts
     Act.left_joins(:gigs).group(:id).order(Arel.sql("COUNT(gigs.id) ASC"), id: :desc).pluck(:id, :name)
       .each_with_object({}) do |(id, name), index|
-        key = normalize(name)
-        words = key.split
-        next if words.size < 2 || words.size > MAX_NAME_WORDS || words.any? { |word| GENERIC_WORDS.include?(word) }
+        next unless MatchKey.person_name?(name, max_words: MAX_NAME_WORDS)
 
-        index[key] = id # later rows (more gigs) win
+        index[MatchKey.act(name)] = id # later rows (more gigs) win
       end
-  end
-
-  # "Dara Ó Briain: Re-Creation" -> "dara o briain re creation"
-  def normalize(text)
-    I18n.transliterate(text.to_s).downcase.gsub(/[^a-z0-9]+/, " ").squish
   end
 end

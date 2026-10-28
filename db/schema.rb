@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_28_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_29_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -18,12 +18,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_100000) do
     t.string "name", null: false
     t.text "description"
     t.jsonb "social_links", default: {}
-    t.jsonb "external_ids", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "images", default: {}
-    t.index ["external_ids"], name: "index_acts_on_external_ids", using: :gin
+    t.string "match_key"
     t.index ["images"], name: "index_acts_on_images", using: :gin
+    t.index ["match_key"], name: "index_acts_on_match_key"
     t.index ["name"], name: "index_acts_on_name"
   end
 
@@ -45,17 +45,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_100000) do
     t.string "ticket_url"
     t.string "status", default: "scheduled"
     t.bigint "venue_id", null: false
-    t.jsonb "external_ids", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "local_date"
-    t.index ["external_ids"], name: "index_gigs_on_external_ids", using: :gin
     t.index ["local_date"], name: "index_gigs_on_local_date_live", where: "((status)::text <> 'cancelled'::text)"
     t.index ["name"], name: "index_gigs_on_name"
     t.index ["start_time"], name: "index_gigs_on_start_time"
     t.index ["status"], name: "index_gigs_on_status"
     t.index ["venue_id", "start_time"], name: "index_gigs_on_venue_id_and_start_time_live", where: "((status)::text <> 'cancelled'::text)"
     t.index ["venue_id"], name: "index_gigs_on_venue_id"
+  end
+
+  create_table "source_links", force: :cascade do |t|
+    t.string "source", null: false
+    t.string "external_id", null: false
+    t.string "linkable_type", null: false
+    t.bigint "linkable_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["linkable_type", "linkable_id"], name: "index_source_links_on_linkable_type_and_linkable_id"
+    t.index ["linkable_type", "source", "external_id"], name: "index_source_links_on_external_id", unique: true
   end
 
   create_table "venues", force: :cascade do |t|
@@ -67,16 +76,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_100000) do
     t.decimal "longitude", precision: 10, scale: 6
     t.text "description"
     t.integer "capacity"
-    t.jsonb "external_ids", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "images", default: {}
     t.string "timezone"
+    t.string "match_key"
     t.index ["city"], name: "index_venues_on_city"
     t.index ["country"], name: "index_venues_on_country"
-    t.index ["external_ids"], name: "index_venues_on_external_ids", using: :gin
     t.index ["images"], name: "index_venues_on_images", using: :gin
     t.index ["latitude", "longitude"], name: "index_venues_on_latitude_and_longitude"
+    t.index ["match_key"], name: "index_venues_on_match_key"
     t.index ["name"], name: "index_venues_on_name"
     t.index ["timezone"], name: "index_venues_on_timezone"
   end

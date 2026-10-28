@@ -1,4 +1,7 @@
 class Act < ApplicationRecord
+  include Sourced
+
+  before_save -> { self.match_key = MatchKey.act(name) }, if: -> { name_changed? || match_key.nil? }
   # Remove the ActionView helper as it won't work properly in API contexts
 
   # Relationships
@@ -7,9 +10,8 @@ class Act < ApplicationRecord
   # Validations
   validates :name, presence: true
 
-  # Ensure social_links, external_ids, and images are always hashes
+  # Ensure social_links and images are always hashes
   attribute :social_links, :jsonb, default: -> { {} }
-  attribute :external_ids, :jsonb, default: -> { {} }
   attribute :images, :jsonb, default: -> { {} }
 
   # Scopes
@@ -20,20 +22,6 @@ class Act < ApplicationRecord
              end_date.end_of_day)
       .distinct
   }
-
-  # Containment (@>) rather than ->> so the GIN index on external_ids is used
-  scope :by_external_id, ->(source, id) {
-    where("external_ids @> ?", { source => id.to_s }.to_json)
-  }
-
-  def self.from_existing(data, source)
-    act = Act.by_external_id(source, data[:external_ids][source]).first
-    return act if act
-
-    return nil unless data[:name].present?
-
-    Act.where("LOWER(name) = ?", data[:name].downcase).first
-  end
 
   # Use a placeholder image that will definitely work
   # For production, you should use your own hosted image

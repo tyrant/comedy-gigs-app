@@ -83,11 +83,11 @@ RSpec.describe Api::EventfindaImporter do
     let(:act) { create :act, name: 'Rhys Mathewson' }
     let!(:venue) do
       create :venue, name: 'The Fringe Bar', latitude: -41.2935, longitude: 174.7787,
-                     address: '26 Cuba St', external_ids: { 'ticketmaster' => 'KovZ1' }
+                     address: '26 Cuba St', sources: { 'ticketmaster' => 'KovZ1' }
     end
     let!(:gig) do
       create :gig, name: 'Late Night Laughs', venue:, acts: [ act ], start_time: Time.utc(2030, 3, 7, 6, 30), end_time: nil,
-                   ticket_url: 'https://www.ticketmaster.co.nz/event/1', external_ids: { 'ticketmaster' => 'G5v1' }
+                   ticket_url: 'https://www.ticketmaster.co.nz/event/1', sources: { 'ticketmaster' => 'G5v1' }
     end
 
     before { stub_pages(eventfinda_page([ weekly_show ])) }
@@ -98,16 +98,16 @@ RSpec.describe Api::EventfindaImporter do
       stub_pages(eventfinda_page([ weekly_show.merge('name' => 'Late Night Laughs with Urzila Carlson') ]))
       importer.import_events
 
-      expect(gig.reload.external_ids).to include('eventfinda' => '11') # the same gig...
+      expect(gig.reload.source_ids).to include('eventfinda' => [ '11' ]) # the same gig...
       expect(gig.acts).to eq [ act ]                                     # ...with Ticketmaster's lineup
     end
 
     it 'links to it without overwriting Ticketmaster’s details or lineup' do
       importer.import_events
 
-      expect(venue.reload).to have_attributes(address: '26 Cuba St', external_ids: { 'ticketmaster' => 'KovZ1', 'eventfinda' => '501' })
+      expect(venue.reload).to have_attributes(address: '26 Cuba St', source_ids: { 'ticketmaster' => [ 'KovZ1' ], 'eventfinda' => [ '501' ] })
       expect(gig.reload).to have_attributes(ticket_url: 'https://www.ticketmaster.co.nz/event/1', acts: [ act ],
-                                            external_ids: { 'ticketmaster' => 'G5v1', 'eventfinda' => '11' })
+                                            source_ids: { 'ticketmaster' => [ 'G5v1' ], 'eventfinda' => [ '11' ] })
       expect(gig.description).to eq 'Stand-up & sketches. R18' # blank before, so filled in
       expect(Gig.count).to eq 2 # the other session is new
     end
@@ -116,8 +116,8 @@ RSpec.describe Api::EventfindaImporter do
   describe 'trouble' do
     it 'counts an event that fails and carries on' do
       broken = weekly_show.merge('name' => 'Broken Show')
-      allow(Venue).to receive(:from_existing).and_call_original
-      allow(Venue).to receive(:from_existing).with(hash_including(name: 'The Fringe Bar'), 'eventfinda').and_raise(ActiveRecord::RecordInvalid)
+      allow_any_instance_of(RecordMatcher).to receive(:venue).and_call_original
+      allow_any_instance_of(RecordMatcher).to receive(:venue).with('eventfinda', '501', anything).and_raise(ActiveRecord::RecordInvalid)
       stub_pages(eventfinda_page([ broken, one_off ]))
 
       stats = importer.import_events

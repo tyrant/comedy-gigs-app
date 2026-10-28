@@ -54,16 +54,32 @@ module Api
       Rails.logger.error "#{@source.titleize} import failed: #{error.class}: #{error.message}"
     end
 
-    # A source with no lineup leaves a matched gig's acts alone
+    # Each upsert finds the record (RecordMatcher), saves the source's details
+    # and links the source's ID to it. A source with no lineup leaves a matched
+    # gig's acts alone.
     def upsert_gig(gig_data)
       gig_data = gig_data.except(:acts) if gig_data[:acts].blank?
-      save_merged(Gig.from_existing(gig_data, @source) || Gig.new, gig_data)
+      external_id, data = split_id(gig_data)
+      save_merged(matcher.gig(@source, external_id, data) || Gig.new, data, external_id)
     end
 
     def upsert_venue(venue_data)
-      venue = Venue.from_existing(venue_data, @source) || Venue.new
-      save_merged(venue, located(venue, venue_data))
+      external_id, data = split_id(venue_data)
+      venue = matcher.venue(@source, external_id, data) || Venue.new
+      save_merged(venue, located(venue, data), external_id)
     end
+
+    def upsert_act(act_data)
+      external_id, data = split_id(act_data)
+      act = matcher.act(@source, external_id, data) || Act.new
+      data = data.merge(images: act.images.merge(data[:images])) if data[:images].present? && act.images.present?
+      save_merged(act, data, external_id)
+    end
+
+    def matcher = @matcher ||= RecordMatcher.new
+
+    # Transformers give { external_ids: { source => id } }
+    def split_id(data) = [ data.dig(:external_ids, @source).to_s, data.except(:external_ids) ]
 
     # Keeps what's already known about a venue when the source leaves it out,
     # and looks up the rest: coordinates from the address, city from the coordinates
@@ -80,26 +96,46 @@ module Api
       end
     end
 
-    def upsert_act(act_data)
-      act = Act.from_existing(act_data, @source) || Act.new
-      act_data = act_data.merge(images: act.images.merge(act_data[:images])) if act_data[:images].present? && act.images.present?
-      save_merged(act, act_data)
-    end
-
-    # Records the source's ID on the record. When a source earlier in
-    # SOURCE_PRIORITY also lists it, this one only fills in what's blank
-    # (including a lineup), so the two don't overwrite each other's names and
-    # links on alternate nights. The venue is always set: it's how gigs match.
-    def save_merged(record, data)
-      data = data.merge(external_ids: record.external_ids.merge(data[:external_ids]))
-      data = data.select { |key, _value| key == :venue || key == :external_ids || record.public_send(key).blank? } if outranked?(record)
+    # Only the record's leading listing updates its details; any other just
+    # fills in what's blank (including a lineup), so listings don't overwrite
+    # each other on alternate nights. The venue is always set: it's how gigs match.
+    def save_merged(record, data, external_id)
+      listed = data
+      data = data.select { |key, _value| key == :venue || record.public_send(key).blank? } unless leads?(record, external_id)
+      data = show_over_package(record, listed, data) if record.is_a?(Gig) && record.persisted?
       record.update!(data)
+      record.link_to!(@source, external_id) if external_id.present?
       record
     end
 
-    def outranked?(record)
-      rank = SOURCE_PRIORITY.index(@source) || SOURCE_PRIORITY.size
-      record.external_ids.keys.any? { |source| (SOURCE_PRIORITY.index(source) || SOURCE_PRIORITY.size) < rank }
+    # The leading listing is the first one linked from the highest-priority
+    # source that lists the record: Ticketmaster over Eventfinda, and a show's
+    # original listing over its VIP package
+    def leads?(record, external_id)
+      return true if record.new_record?
+
+      listings = record.source_links.map { |link| [ rank(link.source), link.created_at, link.source, link.external_id ] }
+      unless listings.any? { |_, _, source, id| source == @source && id == external_id }
+        listings << [ rank(@source), Time.current, @source, external_id ]
+      end
+
+      _, _, source, id = listings.min_by { |rank, created_at, *| [ rank, created_at ] }
+      source == @source && id == external_id
+    end
+
+    def rank(source) = SOURCE_PRIORITY.index(source) || SOURCE_PRIORITY.size
+
+    # A show's own listing names the gig and gives its ticket link, whichever
+    # listing came first; a ticket package ("... | Official Ticket + Hotel
+    # Packages") never does
+    def show_over_package(gig, listed, data)
+      if MatchKey.package_listing?(gig.name) && !MatchKey.package_listing?(listed[:name])
+        data.merge(listed.slice(:name, :ticket_url))
+      elsif MatchKey.package_listing?(listed[:name]) && gig.name.present? && !MatchKey.package_listing?(gig.name)
+        data.except(:name, :ticket_url)
+      else
+        data
+      end
     end
 
     def record_event_error(error, event)

@@ -1,6 +1,10 @@
 class Venue < ApplicationRecord
+  include Sourced
+
   # Fire a rocket made of chocolate into the centre of the Sun
   has_many :gigs
+
+  before_save -> { self.match_key = MatchKey.venue(name, city) }, if: -> { name_changed? || city_changed? || match_key.nil? }
 
   # Gigs keep their date on this venue's calendar; a new time zone can move it
   after_update_commit :redate_gigs, if: :saved_change_to_timezone?
@@ -18,34 +22,12 @@ class Venue < ApplicationRecord
   validates :name, :address, :city, :country, presence: true
   validates :latitude, :longitude, presence: true, if: :address_changed?
 
-  # Ensure external_ids and images are always hashes
-  attribute :external_ids, :jsonb, default: -> { {} }
+  # Ensure images is always a hash
   attribute :images, :jsonb, default: -> { {} }
 
   # Scopes
   scope :in_city, ->(city) { where("lower(city) = ?", city.downcase) }
   scope :in_country, ->(country) { where("lower(country) = ?", country.downcase) }
-
-  # Containment (@>) rather than ->> so the GIN index on external_ids is used
-  scope :by_external_id, ->(source, id) {
-    where("external_ids @> ?", { source => id.to_s }.to_json)
-  }
-
-  def self.from_existing(data, source)
-    venue = Venue.by_external_id(source, data[:external_ids][source]).first
-    return venue if venue
-
-    return nil unless data[:name].present? && data[:latitude].present?
-
-    Venue.where("LOWER(name) = ?", data[:name].downcase)
-      .where("latitude BETWEEN ? AND ?",
-             data[:latitude] - 0.001,
-             data[:latitude] + 0.001)
-      .where("longitude BETWEEN ? AND ?",
-             data[:longitude] - 0.001,
-             data[:longitude] + 0.001)
-      .first
-  end
 
   IMAGE_PLACEHOLDER = "/images/venue_placeholder.webp"
 
