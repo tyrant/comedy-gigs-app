@@ -74,10 +74,21 @@ const hostOf = (url) => {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
 };
 
+// Without a venue's own website, it links to its page on a listings site
+const LISTING_SITES = [
+  [ /(^|\.)ticketmaster\./, 'Ticketmaster' ],
+  [ /(^|\.)ticketweb\./, 'TicketWeb' ],
+  [ /(^|\.)biletix\./, 'Biletix' ],
+  [ /(^|\.)eventfinda\./, 'Eventfinda' ]
+];
+
+const listingSite = (host) => LISTING_SITES.find(([ pattern ]) => pattern.test(host))?.[1];
+
 // The link icon stays on the line with the name's last word
 const NameWithLink = ({ name, url }) => {
   const split = name.lastIndexOf(' ') + 1;
   const host = hostOf(url);
+  const listing = listingSite(host);
 
   return (
     <>
@@ -85,7 +96,8 @@ const NameWithLink = ({ name, url }) => {
       <span className="whitespace-nowrap">
         {name.slice(split)}
         <a href={url} data-role="venue-website" target="_blank" rel="noopener noreferrer"
-          title={host} aria-label={`${name} on ${host} (opens in a new tab)`}
+          title={listing ? `on ${listing}` : host}
+          aria-label={`${name} ${listing ? `on ${listing}` : 'website'} (opens in a new tab)`}
           className="ml-1.5 inline-block align-[-0.1em] text-accent hover:text-accent-strong">
           <ExternalLinkIcon />
         </a>

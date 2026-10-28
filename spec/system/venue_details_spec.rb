@@ -27,8 +27,19 @@ RSpec.describe 'A venue’s details', type: :system, js: true do
     within '#venue-details' do
       back, photo = find('[data-action="close-venue"]'), find('.venue-gigs > img')
       expect(back.rect.y).to be < photo.rect.y
-      expect(find('[data-role="venue-website"]')[:href]).to eq 'https://laughshack.example/'
+      link = find('[data-role="venue-website"]')
+      expect(link[:href]).to eq 'https://laughshack.example/'
+      expect(link[:title]).to eq 'laughshack.example'
     end
+  end
+
+  it 'says when the link is to the venue’s page on a listings site' do
+    venue.update!(website: 'https://www.ticketmaster.co.nz/the-laugh-shack-tickets-wellington/venue/1')
+    open_venue
+
+    link = find('#venue-details [data-role="venue-website"]')
+    expect(link[:title]).to eq 'on Ticketmaster'
+    expect(link[:'aria-label']).to eq 'The Laugh Shack on Ticketmaster (opens in a new tab)'
   end
 
   it 'sorts by date, or by act with unlisted lineups last, and remembers the choice' do
