@@ -11,7 +11,7 @@ module EventfindaHelpers
   def eventfinda_location(id: 501, name: "The Fringe Bar", summary: "The Fringe Bar, Wellington", lat: -41.2935, lng: 174.7787, image_id: 77)
     images = image_id ? [ eventfinda_image(image_id, "locations") ] : [ eventfinda_stock_image ]
     {
-      "id" => id, "name" => name, "summary" => summary, "is_venue" => true,
+      "id" => id, "name" => name, "summary" => summary, "is_venue" => true, "url_slug" => name.parameterize,
       "point" => { "lat" => lat, "lng" => lng },
       "images" => { "@attributes" => { "count" => 1 }, "images" => images }
     }

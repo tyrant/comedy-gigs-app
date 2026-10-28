@@ -67,7 +67,9 @@ module Api
         longitude:,
         timezone: time_zone_name,
         external_ids: { SOURCE => location["id"].to_s },
-        images: venue_images
+        images: venue_images,
+        # Eventfinda doesn't give venues' own websites, so link to its page for the venue
+        website: location["url_slug"].present? ? "https://www.eventfinda.co.nz/venue/#{location['url_slug']}" : nil
       }
     end
 

@@ -17,7 +17,8 @@ RSpec.describe Api::EventfindaTransformer do
         latitude: -41.2935,
         longitude: 174.7787,
         timezone: 'Pacific/Auckland',
-        external_ids: { 'eventfinda' => '501' }
+        external_ids: { 'eventfinda' => '501' },
+        website: 'https://www.eventfinda.co.nz/venue/the-fringe-bar'
       )
     end
 

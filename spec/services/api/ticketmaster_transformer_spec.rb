@@ -160,6 +160,27 @@ RSpec.describe Api::TicketmasterTransformer do
     it { expect(described_class.build_venue(venue)[:name]).to eq 'Youngs gate 6' }
   end
 
+  describe '.build_venue website' do
+    let(:venue) { { 'id' => 'v3', 'name' => 'Punch Line', 'url' => 'https://www.ticketmaster.com/punch-line/venue/1' } }
+
+    def website(**notes) = described_class.build_venue(venue.merge(notes.stringify_keys))[:website]
+
+    it 'is the home page of the site the venue’s notes name' do
+      expect(website(generalInfo: { 'generalRule' => 'Parking at www.parkwhiz.com/punchline. FAQs: https://www.PunchLineSac.com/faq.' }))
+        .to eq 'https://www.punchlinesac.com'
+    end
+
+    it 'skips ticketing and link-scanner sites' do
+      expect(website(boxOfficeInfo: { 'phoneNumberDetail' => 'Buy at www.ticketmaster.com or https://ddec1-0-en-ctp.trendmicro.com:443/wis/clicktime?url=x' }))
+        .to eq 'https://www.ticketmaster.com/punch-line/venue/1'
+    end
+
+    it 'falls back to the Ticketmaster page, if it is a full URL' do
+      expect(website).to eq 'https://www.ticketmaster.com/punch-line/venue/1'
+      expect(described_class.build_venue(venue.merge('url' => 'the-cavern-club'))[:website]).to be_nil
+    end
+  end
+
   describe '.build_venue' do
     let(:venue_data) do
       {

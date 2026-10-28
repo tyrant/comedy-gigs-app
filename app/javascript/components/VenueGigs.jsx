@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useJson from '../hooks/useJson';
 import { reduceMotion } from '../hooks/useMediaQuery';
 import { formatGigTime, gigHref, pluralize } from '../fiddly-bits';
@@ -18,6 +18,80 @@ const groupByLineup = (gigs) => {
   });
 
   return [ ...groups.values() ];
+};
+
+// By date, lineups come in the order of their first gig (the API sends gigs
+// by date). By act, lineups go A–Z by their first act, and gigs without a
+// lineup go last.
+const sortGroups = (groups, sortBy) => {
+  if (sortBy !== 'act') return groups;
+
+  const leadAct = (group) => group.acts[0]?.name;
+  return [ ...groups ].sort((a, b) => {
+    if (!leadAct(a) || !leadAct(b)) return Boolean(leadAct(b)) - Boolean(leadAct(a));
+    return leadAct(a).localeCompare(leadAct(b), undefined, { sensitivity: 'base' });
+  });
+};
+
+const SORT_KEY = 'venueGigsSort';
+const SORTS = [ [ 'date', 'Date' ], [ 'act', 'Act' ] ];
+
+// The last choice, remembered between venues and visits where storage allows
+const useSortBy = () => {
+  const [ sortBy, setSortBy ] = useState(() => {
+    try { return localStorage.getItem(SORT_KEY) === 'act' ? 'act' : 'date'; } catch { return 'date'; }
+  });
+
+  const choose = (value) => {
+    setSortBy(value);
+    try { localStorage.setItem(SORT_KEY, value); } catch { /* not remembered */ }
+  };
+
+  return [ sortBy, choose ];
+};
+
+const SortToggle = ({ sortBy, onChange }) => (
+  <div role="group" aria-label="Sort gigs by" className="flex items-center gap-1 text-xs">
+    <span className="text-muted">Sort by</span>
+    {SORTS.map(([ value, label ]) => (
+      <button key={value} type="button" aria-pressed={sortBy === value} data-sort={value}
+        onClick={() => onChange(value)}
+        className="cursor-pointer rounded-full px-2 py-0.5 font-medium text-muted hover:bg-surface-2 aria-pressed:bg-accent-soft aria-pressed:text-accent-ink">
+        {label}
+      </button>
+    ))}
+  </div>
+);
+
+const ExternalLinkIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+    <path d="M11 3a1 1 0 1 0 0 2h2.59l-6.3 6.3a1 1 0 1 0 1.42 1.4L15 6.42V9a1 1 0 1 0 2 0V4a1 1 0 0 0-1-1h-5Z" />
+    <path d="M5 5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a1 1 0 1 0-2 0v3H5V7h3a1 1 0 0 0 0-2H5Z" />
+  </svg>
+);
+
+const hostOf = (url) => {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+};
+
+// The link icon stays on the line with the name's last word
+const NameWithLink = ({ name, url }) => {
+  const split = name.lastIndexOf(' ') + 1;
+  const host = hostOf(url);
+
+  return (
+    <>
+      {name.slice(0, split)}
+      <span className="whitespace-nowrap">
+        {name.slice(split)}
+        <a href={url} data-role="venue-website" target="_blank" rel="noopener noreferrer"
+          title={host} aria-label={`${name} on ${host} (opens in a new tab)`}
+          className="ml-1.5 inline-block align-[-0.1em] text-accent hover:text-accent-strong">
+          <ExternalLinkIcon />
+        </a>
+      </span>
+    </>
+  );
 };
 
 const ActChip = ({ act }) => (
@@ -49,9 +123,9 @@ const GigRow = ({ gig, venue, onSelectGig }) => (
 
     {gig.ticket_url && (
       <a href={gig.ticket_url} data-role="ticket-url" target="_blank" rel="noopener noreferrer"
-        aria-label={`Tickets for ${gig.name} (opens in a new tab)`}
-        className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:bg-accent-strong">
-        Tickets
+        aria-label={`Tickets for ${gig.name} (opens in a new tab)`} title="Tickets"
+        className="shrink-0 rounded-md bg-accent-soft px-2 py-1 text-base leading-none hover:bg-surface-2">
+        <span aria-hidden="true">🎟️</span>
       </a>
     )}
   </li>
@@ -77,6 +151,7 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onBack })
   const { data, error, loading, retry } = useJson(`/api/venues/${venueId}/gigs?${query}`);
   const headingRef = useRef(null);
   const highlighted = useRef(null);
+  const [ sortBy, setSortBy ] = useSortBy();
 
   // While switching venues, don't show the previous venue's gigs
   const current = data?.venue?.id === venueId ? data : null;
@@ -126,26 +201,32 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onBack })
 
   return (
     <div className="venue-gigs" aria-busy={loading}>
+      <div className="px-3 pt-3 pb-2">
+        <BackButton onBack={onBack} />
+      </div>
+
       {hasImage && (
         <img src={venue.image} alt="" width="352" height="128" decoding="async"
           className="h-32 w-full bg-surface-2 object-cover" />
       )}
 
-      <div className="border-b border-line p-3">
-        <BackButton onBack={onBack} />
-        <h2 ref={headingRef} tabIndex={-1} className="mt-2 px-1.5 text-lg leading-6 font-bold focus:outline-none">
-          {venue.name}
+      <div className={`border-b border-line px-3 pb-3 ${hasImage ? 'pt-3' : 'pt-0'}`}>
+        <h2 ref={headingRef} tabIndex={-1} className="px-1.5 text-lg leading-6 font-bold focus:outline-none">
+          {venue.website ? <NameWithLink name={venue.name} url={venue.website} /> : venue.name}
         </h2>
         <p className="px-1.5 text-sm text-muted">
           {placeLine(venue)}
         </p>
-        <p className="mt-1 px-1.5 text-xs font-medium text-muted">{pluralize(gigs.length, 'gig')} for these dates</p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 px-1.5">
+          <p className="text-xs font-medium text-muted">{pluralize(gigs.length, 'gig')} for these dates</p>
+          {gigs.length > 1 && <SortToggle sortBy={sortBy} onChange={setSortBy} />}
+        </div>
       </div>
 
       <div id="venue-gigs-scroll" className="p-2">
         {gigs.length === 0 && <p className="p-2 text-sm text-muted">No gigs here for these dates and acts.</p>}
 
-        {groupByLineup(gigs).map(group => (
+        {sortGroups(groupByLineup(gigs), sortBy).map(group => (
           <section key={group.key} className="border-b border-line py-2 last:border-b-0">
             {group.acts.length > 0 && (
               <ul className="no-scrollbar flex gap-1 overflow-x-auto px-2 pb-1" aria-label="Lineup">

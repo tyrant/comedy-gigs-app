@@ -90,6 +90,7 @@ module Api
           "ticketmaster" => venue["id"]
         },
         images: extract_images(venue["images"]),
+        website: extract_website(venue),
         # Hints for VenueLocator when the coordinates are missing; not stored
         postcode: venue["postalCode"],
         country_code: venue.dig("country", "countryCode")
@@ -131,6 +132,25 @@ module Api
       end.tap do
         Rails.logger.debug "=== END TICKETMASTER ACTS DATA DEBUGGING ==="
       end
+    end
+
+    # Ticketmaster has no field for a venue's own website, but its notes
+    # often name one ("Visit www.punchlinesac.com"), alongside parking and
+    # ticketing sites and link-scanner wrappers. The first other site's home
+    # page is the venue's; failing that, its Ticketmaster page.
+    NOT_VENUE_SITES = /ticket|livenation|biletix|trendmicro|parking|parkwhiz|parkmobile|q-park|(\A|\.)park[a-z]*\./i
+
+    def self.extract_website(venue)
+      notes = venue.values_at("generalInfo", "boxOfficeInfo", "parkingDetail", "accessibleSeatingDetail")
+        .flat_map { |info| info.is_a?(Hash) ? info.values : [ info ] }.grep(String).join(" ")
+      hosts = notes.scan(%r{\b(?:https?://|www\.)[^\s<>"'),]+}i).filter_map do |url|
+        URI.parse(url.match?(%r{\Ahttps?://}i) ? url : "https://#{url}").host&.downcase&.delete_suffix(".")
+      rescue URI::InvalidURIError
+        nil
+      end
+
+      host = hosts.find { |name| name.include?(".") && !name.match?(NOT_VENUE_SITES) }
+      host ? "https://#{host}" : venue["url"].to_s[%r{\Ahttps?://\S+}i]
     end
 
     def self.extract_social_links(act)

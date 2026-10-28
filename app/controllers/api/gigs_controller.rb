@@ -24,7 +24,8 @@ module Api
         address: venue.address,
         city: venue.city,
         timezone: venue.timezone,
-        image: venue.primary_image_url
+        image: venue.primary_image_url,
+        website: venue.website
       }
     end
 

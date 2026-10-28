@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe 'GET /api/venues/:venue_id/gigs' do
-  let(:venue) { create :venue, timezone: 'Pacific/Auckland', images: { 'medium' => 'https://example.com/venue.jpg' } }
+  let(:venue) { create :venue, timezone: 'Pacific/Auckland', images: { 'medium' => 'https://example.com/venue.jpg' }, website: 'https://example.com' }
   let(:act_a) { create :act, name: 'Aardvark', images: { 'thumb' => 'https://example.com/a.jpg' } }
   let(:act_b) { create :act, name: 'Badger' }
 
@@ -16,7 +16,7 @@ RSpec.describe 'GET /api/venues/:venue_id/gigs' do
     get "/api/venues/#{venue.id}/gigs"
 
     expect(json['venue']).to include('id' => venue.id, 'name' => venue.name, 'timezone' => 'Pacific/Auckland',
-                                     'image' => 'https://example.com/venue.jpg')
+                                     'image' => 'https://example.com/venue.jpg', 'website' => 'https://example.com')
     expect(json['gigs'].map { |gig| gig['id'] }).to eq [ sooner.id, later.id ]
     expect(json['gigs'].first).to include('status' => 'sold_out', 'ticket_url' => sooner.ticket_url)
   end
