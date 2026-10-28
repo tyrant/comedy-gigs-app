@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncSelect from 'react-select/async';
 import { components } from 'react-select';
-import { debounce } from '../fiddly-bits';
+import { debounce, pluralize } from '../fiddly-bits';
 
 // Avatars are 32px plus margins; the rest of the control (clear, dropdown
 // arrow, "+N more") takes about 110px.
@@ -35,7 +35,7 @@ const ValueContainer = ({ children, ...props }) => {
     <components.ValueContainer {...props}>
       {children}
       {hidden > 0 && (
-        <span className="ml-1 shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">+{hidden} more</span>
+        <span className="ml-1 shrink-0 rounded-full bg-surface-2 px-2 py-1 text-xs text-muted">+{hidden} more</span>
       )}
     </components.ValueContainer>
   );
@@ -46,21 +46,21 @@ const formatOptionLabel = (option, { context }) => context === 'menu' && (
     <img src={option.image} alt="" width={AVATAR_WIDTH} height={AVATAR_WIDTH} loading="lazy" decoding="async"
       className="size-8 shrink-0 rounded-full object-cover" />
     <span className="truncate text-sm">{option.label}</span>
-    {option.upcomingGigs > 0 && <span className="ml-auto shrink-0 text-xs text-gray-500">{option.upcomingGigs}</span>}
+    {option.upcomingGigs > 0 && <span className="ml-auto shrink-0 text-xs text-muted">{pluralize(option.upcomingGigs, 'gig')}</span>}
   </div>
 );
 
 const selectComponents = { MultiValue, MultiValueLabel, ValueContainer };
 
+// Layout only: colours come from the .react-select__* rules in the stylesheet
 const selectStyles = {
-  control: (base) => ({ ...base, minHeight: 40, flexWrap: 'nowrap' }),
-  valueContainer: (base) => ({ ...base, flexWrap: 'nowrap', padding: '2px 8px' }),
-  multiValue: (base) => ({ ...base, position: 'relative', margin: '0 -4px 0 0', backgroundColor: 'transparent', borderRadius: '9999px', flexShrink: 0 }),
-  multiValueLabel: (base) => ({ ...base, padding: 0, paddingLeft: 0 }),
+  control: (base) => ({ ...base, flexWrap: 'nowrap' }),
+  valueContainer: (base) => ({ ...base, flexWrap: 'nowrap', padding: '2px 8px', gap: 0 }),
+  multiValue: (base) => ({ ...base, position: 'relative', margin: '0 -4px 0 0', borderRadius: '9999px', flexShrink: 0 }),
+  multiValueLabel: (base) => ({ ...base, padding: 0 }),
   multiValueRemove: (base) => ({
     ...base, position: 'absolute', top: -4, right: -4, width: 16, height: 16, padding: 0,
-    justifyContent: 'center', borderRadius: '9999px', backgroundColor: '#9ca3af', color: 'white',
-    '&:hover': { backgroundColor: '#dc2626', color: 'white' }
+    justifyContent: 'center', borderRadius: '9999px'
   }),
   menu: (base) => ({ ...base, zIndex: 1000 })
 };
@@ -108,7 +108,7 @@ const ActFilter = ({ actIds, onChange }) => {
   const value = actIds.map(id => known.get(id)).filter(Boolean);
 
   return (
-    <div id="acts" ref={containerRef} className="relative min-w-0 flex-1 basis-full md:basis-auto">
+    <div id="acts" ref={containerRef} className="relative min-w-0 flex-1 basis-40">
       <AsyncSelect
         inputId="act_search"
         aria-label="Filter by act"
@@ -120,10 +120,11 @@ const ActFilter = ({ actIds, onChange }) => {
         loadOptions={loadOptions}
         value={value}
         onChange={handleChange}
-        placeholder="Show gigs performed by ..."
+        placeholder="Search comedians…"
         noOptionsMessage={({ inputValue }) => inputValue ? `No acts matching “${inputValue}”` : 'Type to search acts'}
         loadingMessage={() => 'Searching…'}
         classNamePrefix="react-select"
+        unstyled
         components={selectComponents}
         styles={selectStyles}
         formatOptionLabel={formatOptionLabel}

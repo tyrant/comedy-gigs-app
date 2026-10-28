@@ -29,19 +29,19 @@ module SystemTestHelper
       wait_for_api_completion
     end
 
-    def click_venue_marker_and_wait_for_popup(venue_name, timeout: 10)
+    def click_venue_marker_and_wait_for_details(venue_name, timeout: 10)
       find("#{VENUE_MARKER}[title*=\"#{venue_name}\"]", wait: timeout).click
-      wait_for_popup_to_appear(timeout:)
+      wait_for_venue_details(timeout:)
     end
 
-    # For popups opened by the URL, or by clicking a marker
-    def wait_for_popup_to_appear(timeout: 10)
-      expect(page).to have_selector('.maplibregl-popup .venue-popup', wait: timeout)
+    # For venue details opened by the URL, or by clicking a marker
+    def wait_for_venue_details(timeout: 10)
+      expect(page).to have_selector('#venue-details .venue-gigs', wait: timeout)
     end
 
-    def close_popup_and_wait(timeout: 10)
-      find('.maplibregl-popup-close-button', wait: timeout).click
-      expect(page).not_to have_selector('.maplibregl-popup', wait: timeout)
+    def close_venue_and_wait(timeout: 10)
+      find('[data-action="close-venue"]', wait: timeout).click
+      expect(page).not_to have_selector('#venue-details', wait: timeout)
     end
 
     # The marker's title carries the count for people and specs; its text is the count itself

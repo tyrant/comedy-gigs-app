@@ -1,15 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Map as MapLibreMap, Marker, NavigationControl, Popup, ScaleControl } from 'maplibre-gl';
-import VenueGigs from './VenueGigs';
+import { Map as MapLibreMap, Marker, NavigationControl, ScaleControl } from 'maplibre-gl';
 import { inBounds, mapViewToParams, pluralize, readMapView, writeUrlParams } from '../fiddly-bits';
+import { reduceMotion } from '../hooks/useMediaQuery';
 
 // MapLibre clusters the venues on the GPU side; the markers themselves are
 // HTML buttons, so they can be focused, tabbed through and clicked in specs.
 
 const SOURCE = 'venues';
-const MARKER_HEIGHT = 36; // pin plus its point, for the popup's offset
-const POPUP_MARGIN = 12;
+const EDGE_MARGIN = 48; // how close to the edge a selected venue may sit before the map recentres
 
 const toGeoJSON = (venues) => ({
   type: 'FeatureCollection',
@@ -47,7 +45,7 @@ const markerButton = (className, onClick) => {
   el.type = 'button';
   el.className = className;
   el.addEventListener('click', (e) => {
-    e.stopPropagation(); // keep the map's own click (which closes the popup) out of it
+    e.stopPropagation(); // the map has no click handling of its own to trigger
     onClick();
   });
   return el;
@@ -65,9 +63,13 @@ const updateMarker = (entry, label, count) => {
 
 const clusterSize = (count) => count < 10 ? 'size-9' : count < 100 ? 'size-11' : 'size-13';
 
+const motion = () => ({ duration: reduceMotion() ? 0 : 600 });
+
 // --- The map -------------------------------------------------------------------
 
-const MapView = ({ mapStyle, venues, query, selection, onSelectVenue, onSelectGig, onViewChange }) => {
+// bottomInset is how much of the map's bottom edge something covers (the
+// bottom sheet on phones), so a selected venue is kept clear of it.
+const MapView = ({ mapStyle, venues, selectedVenueId, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange }) => {
   const containerRef = useRef(null);
   const [ map, setMap ] = useState(null);
   const [ failed, setFailed ] = useState(false);
@@ -76,17 +78,14 @@ const MapView = ({ mapStyle, venues, query, selection, onSelectVenue, onSelectGi
   const dataRef = useRef(toGeoJSON([])); // what the source holds, for restyling
   const sentVenuesRef = useRef(null); // the venues last handed to the source
   const [ syncedVenues, setSyncedVenues ] = useState(null); // ...and once the markers show them
-
-  const popupRef = useRef(null);
-  const rootRef = useRef(null);
+  const styleRef = useRef(mapStyle);
 
   const callbacks = useRef({});
-  callbacks.current = { onSelectVenue, onSelectGig, onViewChange };
-  const { venueId, gigId } = selection;
-  const selectedRef = useRef(venueId);
-  selectedRef.current = venueId;
+  callbacks.current = { onSelectVenue, onViewChange };
+  const highlightRef = useRef({});
+  highlightRef.current = { selected: selectedVenueId, hovered: hoveredVenueId };
 
-  // Create the map, its controls and the venue popup, once
+  // Create the map and its controls, once
   useEffect(() => {
     const { center: [ lat, lng ], zoom } = readMapView();
     let instance;
@@ -119,23 +118,21 @@ const MapView = ({ mapStyle, venues, query, selection, onSelectVenue, onSelectGi
       setMap(instance);
     });
 
-    const container = document.createElement('div');
-    rootRef.current = createRoot(container);
-    popupRef.current = new Popup({
-      className: 'venue-popup-container', maxWidth: 'none', offset: MARKER_HEIGHT, focusAfterOpen: false
-    }).setDOMContent(container);
-    popupRef.current.on('close', () => callbacks.current.onSelectVenue(null));
-
     window.mapInstance = instance; // for system specs
 
     return () => {
       window.mapInstance = null;
-      popupRef.current.off('close');
-      const root = rootRef.current;
-      setTimeout(() => root.unmount());
       instance.remove();
     };
   }, []);
+
+  // Follow the light/dark switch. A full reload, rather than a diff, so
+  // style.load fires and the venue source goes back in.
+  useEffect(() => {
+    if (!map || styleRef.current === mapStyle) return;
+    styleRef.current = mapStyle;
+    map.setStyle(mapStyle, { diff: false });
+  }, [ map, mapStyle ]);
 
   // Mirror the view into the URL and report the visible bounds. Panning never
   // fetches anything: every matching venue is already in the source.
@@ -174,14 +171,16 @@ const MapView = ({ mapStyle, venues, query, selection, onSelectVenue, onSelectGi
 
     const createVenueMarker = (props) => {
       const el = markerButton('venue-marker', () => callbacks.current.onSelectVenue(props.id));
-      el.classList.toggle('is-selected', props.id === selectedRef.current);
+      el.dataset.venueId = props.id;
+      el.classList.toggle('is-selected', props.id === highlightRef.current.selected);
+      el.classList.toggle('is-hovered', props.id === highlightRef.current.hovered);
       return new Marker({ element: el, anchor: 'bottom' });
     };
 
     const createClusterMarker = (props, lngLat) => {
       const el = markerButton(`cluster-marker ${clusterSize(props.point_count)}`, async () => {
         const zoom = await map.getSource(SOURCE).getClusterExpansionZoom(props.cluster_id);
-        map.easeTo({ center: lngLat, zoom });
+        map.easeTo({ center: lngLat, zoom, ...motion() });
       });
       return new Marker({ element: el });
     };
@@ -231,69 +230,86 @@ const MapView = ({ mapStyle, venues, query, selection, onSelectVenue, onSelectGi
     };
   }, [ map ]);
 
-  // Highlight the selected venue's marker
+  // Highlight the selected venue's marker, and the one hovered in the list
   useEffect(() => {
     markersRef.current.forEach((entry, key) => {
-      if (key.startsWith('v')) entry.marker.getElement().classList.toggle('is-selected', key === `v${venueId}`);
+      if (!key.startsWith('v')) return;
+      const el = entry.marker.getElement();
+      el.classList.toggle('is-selected', key === `v${selectedVenueId}`);
+      el.classList.toggle('is-hovered', key === `v${hoveredVenueId}`);
     });
-  }, [ venueId, syncedVenues ]);
+  }, [ selectedVenueId, hoveredVenueId, syncedVenues ]);
 
-  // Open the popup on the selected venue, bringing it into view if need be
+  // Bring the selected venue into view, clear of the edges and the bottom sheet,
+  // zooming in as far as it takes to split it out of any cluster
+  const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
+  const markersReady = syncedVenues === venues;
+  const revealed = useRef({ id: null, inset: 0 }); // once per selection (or sheet resize), not per filter change
+
   useEffect(() => {
-    const popup = popupRef.current;
-    if (!map || !popup) return;
+    if (!selectedVenue) revealed.current.id = null;
+    if (!map || !selectedVenue || !markersReady) return;
 
-    if (!venueId) {
-      popup.remove();
-      return;
-    }
+    const { id, lng, lat } = selectedVenue;
+    if (revealed.current.id === id && revealed.current.inset === bottomInset) return;
+    revealed.current = { id, inset: bottomInset };
+    let cancelled = false;
 
-    const venue = venues.find(v => v.id === venueId);
-    if (!venue) return; // not loaded yet; App deselects venues the filters rule out
-
-    popup.setLngLat([ venue.lng, venue.lat ]);
-    if (!popup.isOpen()) popup.addTo(map);
-    if (!inBounds(map.getBounds(), venue.lat, venue.lng)) map.easeTo({ center: [ venue.lng, venue.lat ] });
-  }, [ map, venueId, venues ]);
-
-  // Render the selected venue's gigs into the popup
-  useEffect(() => {
-    if (!map || !venueId) return;
-
-    // Once the gigs arrive, pan just enough to fit the popup on screen
-    const keepPopupInView = () => {
-      const el = popupRef.current.isOpen() && popupRef.current.getElement();
-      if (!el) return;
-
-      const box = el.getBoundingClientRect();
-      const frame = map.getContainer().getBoundingClientRect();
-      // How far the popup must move; when it can't fit, keep its top left corner in view
-      const dx = Math.max(0, frame.left + POPUP_MARGIN - box.left) || Math.min(0, frame.right - POPUP_MARGIN - box.right);
-      const dy = Math.max(0, frame.top + POPUP_MARGIN - box.top) || Math.min(0, frame.bottom - POPUP_MARGIN - box.bottom);
-      if (dx || dy) map.panBy([ -dx, -dy ]);
+    const isClear = () => {
+      const { clientWidth: width, clientHeight: height } = map.getContainer();
+      const point = map.project([ lng, lat ]);
+      return inBounds(map.getBounds(), lat, lng) &&
+        point.x > EDGE_MARGIN && point.x < width - EDGE_MARGIN &&
+        point.y > EDGE_MARGIN && point.y < height - bottomInset - EDGE_MARGIN;
     };
 
-    rootRef.current.render(
-      <VenueGigs
-        key={venueId}
-        venueId={venueId}
-        query={query}
-        gigId={gigId}
-        onSelectGig={(id) => callbacks.current.onSelectGig(id)}
-        onRendered={keepPopupInView}
-      />
-    );
-  }, [ map, venueId, gigId, query ]);
+    // The cluster holding the venue, if it's in one: check the nearest first
+    const clusterHolding = async () => {
+      const source = map.getSource(SOURCE);
+      const target = map.project([ lng, lat ]);
+      const clusters = map.querySourceFeatures(SOURCE, { filter: [ 'has', 'point_count' ] })
+        .map(feature => ({ feature, distance: map.project(feature.geometry.coordinates).dist(target) }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 5);
+
+      for (const { feature } of clusters) {
+        const leaves = await source.getClusterLeaves(feature.properties.cluster_id, Infinity, 0);
+        if (leaves.some(leaf => leaf.properties.id === id)) return feature.properties.cluster_id;
+      }
+      return null;
+    };
+
+    const reveal = async (attempt = 0) => {
+      if (cancelled) return;
+      const clustered = !markersRef.current.has(`v${id}`) && await clusterHolding();
+      if (cancelled) return;
+
+      if (clustered !== null && clustered !== false && attempt < 4) {
+        const zoom = await map.getSource(SOURCE).getClusterExpansionZoom(clustered);
+        if (cancelled) return;
+        map.once('idle', () => reveal(attempt + 1));
+        map.easeTo({ center: [ lng, lat ], zoom, offset: [ 0, -bottomInset / 2 ], ...motion() });
+      } else if (!isClear()) {
+        map.easeTo({ center: [ lng, lat ], offset: [ 0, -bottomInset / 2 ], ...motion() });
+      }
+    };
+
+    reveal();
+    return () => { cancelled = true; };
+  }, [ map, selectedVenue?.id, markersReady, bottomInset ]);
 
   if (failed) {
     return (
-      <div className="flex size-full items-center justify-center p-6 text-center text-gray-600">
+      <div className="flex size-full items-center justify-center p-6 text-center text-muted">
         This browser can’t draw the map (it needs WebGL).
       </div>
     );
   }
 
-  return <div ref={containerRef} className="size-full" aria-busy={!map || syncedVenues !== venues} />;
+  return (
+    <div ref={containerRef} className="size-full" role="region" aria-label="Map of venues"
+      aria-busy={!map || syncedVenues !== venues} />
+  );
 };
 
 export default MapView;

@@ -110,16 +110,16 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
     end
   end
 
-  describe 'venue popup content' do
-    it 'displays correct venue information in popup' do
+  describe 'venue panel content' do
+    it 'displays correct venue information in venue panel' do
       set_map_bounds_and_wait(51.5074, -0.1278, 11)
 
       first(".venue-marker").click
 
-      expect(page).to have_selector(".maplibregl-popup", wait: 3)
+      expect(page).to have_selector("#venue-details", wait: 3)
 
-      within ".maplibregl-popup" do
-        expect(page).to have_selector(".venue-popup")
+      within "#venue-details" do
+        expect(page).to have_selector(".venue-gigs")
         expect(page).to have_text(venue_london_name) # Should show venue name
         expect(page).to have_text(act1_name) # Should show act name
       end

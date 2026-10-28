@@ -45,5 +45,9 @@ RSpec.configure do |config|
 
   config.before(:each, type: :system) do
     driven_by :selenium_chrome_headless
+
+    # The page works in the browser's local dates; keep them the same as the
+    # specs' and the server's (UTC), wherever the specs run
+    page.driver.browser.execute_cdp('Emulation.setTimezoneOverride', timezoneId: 'UTC')
   end
 end

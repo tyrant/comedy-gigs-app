@@ -20,9 +20,9 @@ This directory contains modularized helper modules for system tests, organized b
    - `wait_for_map_ready` - Waits for initial map and markers to load
    - `wait_for_marker_count` - Waits for a specific number of markers to appear
    - `set_map_bounds_and_wait` - Changes map view and waits for API completion
-   - `click_venue_marker_and_wait_for_popup` - Clicks venue markers and waits for popups
-   - `wait_for_popup_to_appear` - Waits for URL-triggered popups to appear
-   - `close_popup_and_wait` - Closes the venue popup and waits for it to disappear
+   - `click_venue_marker_and_wait_for_details` - Clicks a venue marker and waits for its details in the panel
+   - `wait_for_venue_details` - Waits for the selected venue’s details in the panel
+   - `close_venue_and_wait` - Goes back from the venue to the list
    - `verify_marker_gig_count` - Checks a marker's title and the count it shows
 
 ## Usage

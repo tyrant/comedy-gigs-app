@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe 'GET /api/venues' do
-  let!(:tokyo) { create :venue, name: 'Tokyo Club', latitude: 35.6762, longitude: 139.6503 }
-  let!(:fiji) { create :venue, name: 'Fiji Club', latitude: -17.713371, longitude: 178.065032 }
+  let!(:tokyo) { create :venue, name: 'Tokyo Club', city: 'Tokyo', latitude: 35.6762, longitude: 139.6503 }
+  let!(:fiji) { create :venue, name: 'Fiji Club', city: 'Nadi', latitude: -17.713371, longitude: 178.065032 }
   let!(:act) { create :act }
 
   before do
@@ -13,12 +13,12 @@ RSpec.describe 'GET /api/venues' do
 
   let(:json) { response.parsed_body }
 
-  it 'lists every venue with matching gigs, worldwide, with its gig count' do
+  it 'lists every venue with matching gigs, worldwide, with its city and gig count' do
     get '/api/venues'
 
     expect(json).to contain_exactly(
-      { 'id' => tokyo.id, 'name' => 'Tokyo Club', 'lat' => 35.6762, 'lng' => 139.6503, 'gigs' => 2 },
-      { 'id' => fiji.id, 'name' => 'Fiji Club', 'lat' => -17.713371, 'lng' => 178.065032, 'gigs' => 1 }
+      { 'id' => tokyo.id, 'name' => 'Tokyo Club', 'city' => 'Tokyo', 'lat' => 35.6762, 'lng' => 139.6503, 'gigs' => 2 },
+      { 'id' => fiji.id, 'name' => 'Fiji Club', 'city' => 'Nadi', 'lat' => -17.713371, 'lng' => 178.065032, 'gigs' => 1 }
     )
   end
 

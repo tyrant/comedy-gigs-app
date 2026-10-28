@@ -10,10 +10,10 @@ module Api
           .where.not(latitude: nil).where.not(longitude: nil)
           .group(:id)
           .order(:id)
-          .pluck(:id, :name, :latitude, :longitude, Arel.sql("COUNT(gigs.id)"))
+          .pluck(:id, :name, :city, :latitude, :longitude, Arel.sql("COUNT(gigs.id)"))
 
-        render json: rows.map { |id, name, lat, lng, count|
-          { id:, name:, lat: lat.to_f, lng: lng.to_f, gigs: count }
+        render json: rows.map { |id, name, city, lat, lng, count|
+          { id:, name:, city:, lat: lat.to_f, lng: lng.to_f, gigs: count }
         }
       end
     end

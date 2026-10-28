@@ -65,8 +65,8 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       find(".venue-marker[title=\"#{venue1_name} (1 gig)\"]").click
 
       # Venue1's gigs: future_gig2 (hosted by act3) but not past_gig (hosted by act1).
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         expect(page).to have_text(venue1_name)
 
         within "[data-act-id='#{act3.id}']" do
@@ -118,8 +118,8 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       find(".venue-marker[title=\"#{venue2_name} (1 gig)\"]").click
 
       # Venue2 shows current_gig (hosted by act2) but not far_future_gig (hosted by act2).
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         expect(page).to have_text(venue2_name)
 
         within "[data-act-id='#{act2.id}']" do
@@ -170,11 +170,11 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       expect(page).to have_selector(".venue-marker[title=\"#{venue1_name} (1 gig)\"]", wait: 15)
       expect(page).to have_selector(".venue-marker[title=\"#{venue3_name} (1 gig)\"]", wait: 15)
 
-      # Click on venue1 to verify popup shows only gigs in range
+      # Click on venue1 to verify venue panel shows only gigs in range
       find(".venue-marker[title=\"#{venue1_name} (1 gig)\"]").click
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         within "[data-act-id='#{act3.id}']" do
           expect(page).to have_text(act3_name)
         end
@@ -215,8 +215,8 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       find(".venue-marker[title*=\"#{venue1_name} (1 gig)\"]").click
 
       # Shows Venue1, gigged by Act3 but not Act1.
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         expect(page).to have_selector("[data-act-id=\"#{act3.id}\"]")
         expect(page).not_to have_selector("[data-act-id=\"#{act1.id}\"]")
       end
@@ -299,11 +299,11 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
         venue3_name => 1
       })
 
-      # Click on venue1 to verify popup shows both gigs
-      click_venue_marker_and_wait_for_popup(venue1_name)
+      # Click on venue1 to verify venue panel shows both gigs
+      click_venue_marker_and_wait_for_details(venue1_name)
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         # Should show both gigs for venue1
         expect(page).to have_content(past_gig_name)
         expect(page).to have_content(future_gig2_name)
@@ -311,19 +311,19 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
     end
   end
 
-  describe 'Venue popup content updates with filter changes' do
-    it 'updates open popup content when Acts filter is changed' do
+  describe 'Venue venue panel content updates with filter changes' do
+    it 'updates open venue panel content when Acts filter is changed' do
       # Expand date range to show all gigs
       set_date_via_picker('start_date', 1.month.ago)
       set_date_via_picker('end_date', 3.months.from_now)
 
       wait_for_api_completion
 
-      # Click on venue1 to open popup (has past_gig with act1 and future_gig2 with act3)
-      click_venue_marker_and_wait_for_popup(venue1_name)
+      # Click on venue1 to open venue panel (has past_gig with act1 and future_gig2 with act3)
+      click_venue_marker_and_wait_for_details(venue1_name)
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         # Should initially show both gigs
         expect(page).to have_content(past_gig_name)
         expect(page).to have_content(future_gig2_name)
@@ -332,13 +332,13 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
         expect(page).to have_selector("[data-act-id=\"#{act3.id}\"]")
       end
 
-      # Now filter by act1 only - popup should update to show only past_gig
+      # Now filter by act1 only - venue panel should update to show only past_gig
       select_act_via_dropdown(act1.name)
       wait_for_api_completion
 
       # Popup should still be open but with updated content
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         # Should now only show past_gig (with act1)
         expect(page).to have_content(past_gig_name)
         expect(page).not_to have_content(future_gig2_name)
@@ -348,15 +348,15 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       end
     end
 
-    it 'updates open popup content when date filter is changed' do
+    it 'updates open venue panel content when date filter is changed' do
       # Start with default date range
       wait_for_api_completion
 
-      # Click on venue2 to open popup (has current_gig and far_future_gig)
-      click_venue_marker_and_wait_for_popup(venue2_name)
+      # Click on venue2 to open venue panel (has current_gig and far_future_gig)
+      click_venue_marker_and_wait_for_details(venue2_name)
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         # Should initially show both current and far future gigs
         expect(page).to have_content(current_gig_name)
         expect(page).to have_content(far_future_gig_name)
@@ -367,24 +367,24 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       wait_for_api_completion
 
       # Popup should still be open but with updated content
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         # Should now only show current_gig
         expect(page).to have_content(current_gig_name)
         expect(page).not_to have_content(far_future_gig_name)
       end
     end
 
-    it 'maintains popup state when filtering results in no change for that venue' do
+    it 'maintains venue panel state when filtering results in no change for that venue' do
       # Filter by act2 first
       select_act_via_dropdown(act2.name)
       wait_for_api_completion
 
-      # Click on venue2 to open popup (has current_gig and far_future_gig, both with act2)
-      click_venue_marker_and_wait_for_popup(venue2_name)
+      # Click on venue2 to open venue panel (has current_gig and far_future_gig, both with act2)
+      click_venue_marker_and_wait_for_details(venue2_name)
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         expect(page).to have_content(current_gig_name)
         expect(page).to have_content(far_future_gig_name)
       end
@@ -394,23 +394,23 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       wait_for_api_completion
 
       # Popup should still be open with same content (no change for this venue)
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         expect(page).to have_content(current_gig_name)
         expect(page).to have_content(far_future_gig_name)
       end
     end
 
-    it 'closes popup when venue no longer matches filter criteria' do
+    it 'closes venue panel when venue no longer matches filter criteria' do
       # Expand date range to show past gigs
       set_date_via_picker('start_date', 1.month.ago)
       wait_for_api_completion
 
-      # Click on venue1 to open popup
-      click_venue_marker_and_wait_for_popup(venue1_name)
+      # Click on venue1 to open venue panel
+      click_venue_marker_and_wait_for_details(venue1_name)
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         expect(page).to have_content(venue1_name)
       end
 
@@ -419,7 +419,7 @@ RSpec.describe 'Search Form Filtering', type: :system, js: true do
       wait_for_api_completion
 
       # Popup should be closed since venue1 no longer matches filter
-      expect(page).not_to have_selector('.maplibregl-popup')
+      expect(page).not_to have_selector('#venue-details')
       # Venue1 marker should also be gone
       expect(page).not_to have_selector(".venue-marker[title*=\"#{venue1_name}\"]")
     end

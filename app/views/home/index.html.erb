@@ -1,1 +1,7 @@
-<%= tag.div id: "root", data: { map_style: Rails.configuration.x.map_style, map_worker: asset_path("maplibre-gl-worker.js") } %>
+<%= tag.div id: "root",
+      data: {
+        map_style_light: Rails.configuration.x.map_styles[:light],
+        map_style_dark: Rails.configuration.x.map_styles[:dark],
+        map_worker: asset_path("maplibre-gl-worker.js")
+      } %>
+<noscript><p style="padding: 1rem">Comedy Gigs needs JavaScript to show its map.</p></noscript>

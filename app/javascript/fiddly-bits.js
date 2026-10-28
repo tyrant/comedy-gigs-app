@@ -32,15 +32,53 @@ export const inBounds = (bounds, lat, lng) => {
   return shifted <= east;
 };
 
-const isoDate = (date) => date.toISOString().split('T')[0];
+// YYYY-MM-DD in the viewer's own time zone (toISOString would give UTC's date)
+const isoDate = (date) => [
+  date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')
+].join('-');
+
+const addDays = (date, days) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const addMonths = (date, months) => {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+};
+
+// Friday to Sunday: this one if it's already under way, otherwise the next
+const weekend = (today) => {
+  const day = today.getDay(); // Sunday is 0
+  if (day === 0) return [ today, today ];
+  return [ day >= 5 ? today : addDays(today, 5 - day), addDays(today, 7 - day) ];
+};
+
+// Date ranges offered in the dates menu, in order; the first is the default
+export const DATE_PRESETS = [
+  { id: 'year', label: 'Next 12 months', range: (today) => [ today, addMonths(today, 12) ] },
+  { id: 'today', label: 'Today', range: (today) => [ today, today ] },
+  { id: 'weekend', label: 'This weekend', range: weekend },
+  { id: 'week', label: 'Next 7 days', range: (today) => [ today, addDays(today, 6) ] },
+  { id: 'month', label: 'Next 30 days', range: (today) => [ today, addDays(today, 29) ] },
+  { id: 'quarter', label: 'Next 3 months', range: (today) => [ today, addMonths(today, 3) ] }
+];
+
+export const presetDates = (id, today = new Date()) => {
+  const [ start, end ] = DATE_PRESETS.find(preset => preset.id === id).range(today);
+  return { startDate: isoDate(start), endDate: isoDate(end) };
+};
+
+// Which preset a date range matches, if any
+export const matchingPreset = ({ startDate, endDate }, today = new Date()) => DATE_PRESETS.find(preset => {
+  const dates = presetDates(preset.id, today);
+  return dates.startDate === startDate && dates.endDate === endDate;
+})?.id ?? null;
 
 // Default date range: today to a year from today
-export const defaultDates = () => {
-  const today = new Date();
-  const nextYear = new Date(today);
-  nextYear.setFullYear(today.getFullYear() + 1);
-  return { startDate: isoDate(today), endDate: isoDate(nextYear) };
-};
+export const defaultDates = () => presetDates(DATE_PRESETS[0].id);
 
 // --- URL state ---------------------------------------------------------------
 // The URL is the source of truth on load; after that the app writes to it with

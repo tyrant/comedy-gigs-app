@@ -40,12 +40,12 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     wait_for_map_ready
   end
 
-  describe 'clicking gig titles in venue popup' do
+  describe 'clicking gig titles in venue panel' do
     it 'adds gig ID to URL when clicking a gig title' do
-      click_venue_marker_and_wait_for_popup(venue1_name)
+      click_venue_marker_and_wait_for_details(venue1_name)
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup')
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs')
         expect(page).to have_text(venue1_name)
 
         within "[data-gig-id='#{gig1.id}']" do
@@ -59,9 +59,9 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
     end
 
     it 'updates gig ID in URL when clicking different gig titles in same venue' do
-      click_venue_marker_and_wait_for_popup(venue1_name)
+      click_venue_marker_and_wait_for_details(venue1_name)
 
-      within '.maplibregl-popup' do
+      within '#venue-details' do
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -70,7 +70,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
-      within '.maplibregl-popup' do
+      within '#venue-details' do
         within "[data-gig-id='#{gig2.id}']" do
           find('a', text: gig2_name).click
         end
@@ -81,10 +81,10 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).not_to include "gig=#{gig1.id}"
     end
 
-    it 'removes gig ID from URL when closing venue popup' do
-      click_venue_marker_and_wait_for_popup(venue1_name)
+    it 'removes gig ID from URL when closing venue panel' do
+      click_venue_marker_and_wait_for_details(venue1_name)
 
-      within '.maplibregl-popup' do
+      within '#venue-details' do
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -93,7 +93,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
-      close_popup_and_wait
+      close_venue_and_wait
 
       expect(current_url).not_to include "venue=#{venue1.id}"
       expect(current_url).not_to include "gig=#{gig1.id}"
@@ -115,26 +115,23 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "gig=#{gig1.id}"
     end
 
-    it 'opens venue popup and scrolls to specific gig when both venue and gig IDs are in URL' do
+    it 'opens venue panel and scrolls to specific gig when both venue and gig IDs are in URL' do
       visit "#{root_path}?venue=#{venue1.id}&gig=#{gig2.id}"
 
       expect(page).to have_selector('.maplibregl-map', wait: 10)
 
-      wait_for_popup_to_appear
+      wait_for_venue_details
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup')
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs')
         expect(page).to have_text(venue1_name)
 
         within "[data-gig-id='#{gig2.id}']" do
           expect(page).to have_text(gig2_name)
         end
 
-        # The selector is being added to [data-gig-id=ID] itself; it's not *within*
-        # it. Testing `within` fails. So let's fall back to the #popup-container.
-        within '#venue-popup-scroll-container' do
-          expect(page).to have_selector('.bg-blue-100', wait: 3) || true # May be temporary
-        end
+        # The deep-linked gig flashes briefly
+        expect(page).to have_selector("[data-gig-id='#{gig2.id}'][data-flash]", wait: 3)
       end
     end
 
@@ -144,10 +141,10 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
       expect(page).to have_selector('.maplibregl-map', wait: 10)
 
-      wait_for_popup_to_appear
+      wait_for_venue_details
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup')
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs')
         expect(page).to have_text(venue1_name)
 
         # Should show the venue's gigs normally, no error
@@ -162,8 +159,8 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
       expect(page).to have_selector('.maplibregl-map', wait: 10)
 
-      # Should load normally without opening any popup
-      expect(page).not_to have_selector('.maplibregl-popup')
+      # Should load normally without opening any venue panel
+      expect(page).not_to have_selector('#venue-details')
 
       # Map should show all venue markers
       expect(page).to have_selector('.venue-marker', wait: 5)
@@ -182,9 +179,9 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "venue=#{venue1.id}"
       expect(current_url).to include "gig=#{gig1.id}"
 
-      wait_for_popup_to_appear
+      wait_for_venue_details
 
-      within '.maplibregl-popup' do
+      within '#venue-details' do
         expect(page).to have_text(venue1_name)
         within "[data-gig-id='#{gig1.id}']" do
           expect(page).to have_text(gig1_name)
@@ -206,7 +203,7 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
       find(".venue-marker[title=\"#{venue1_name} (1 gig)\"]").click
 
-      within '.maplibregl-popup' do
+      within '#venue-details' do
         within "[data-gig-id='#{gig1.id}']" do
           find('a', text: gig1_name).click
         end
@@ -245,9 +242,9 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       expect(current_url).to include "venue=#{venue2.id}"
       expect(current_url).to include "gig=#{gig3.id}"
 
-      wait_for_popup_to_appear
+      wait_for_venue_details
 
-      within '.maplibregl-popup' do
+      within '#venue-details' do
         expect(page).to have_text(venue2_name)
         within "[data-gig-id='#{gig3.id}']" do
           expect(page).to have_text(gig3_name)
@@ -262,10 +259,10 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
 
       expect(page).to have_selector('.maplibregl-map', wait: 10)
 
-      wait_for_popup_to_appear
+      wait_for_venue_details
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup')
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs')
 
         # Wait for scroll and highlight effect
         sleep 1.5 # Allow time for setTimeout and scrolling
@@ -296,9 +293,9 @@ RSpec.describe 'Gig Deep-Linking', type: :system, js: true do
       visit "#{root_path}?venue=#{venue1.id}&gig=#{target_gig.id}"
       expect(page).to have_selector('.maplibregl-map', wait: 10)
 
-      wait_for_popup_to_appear
+      wait_for_venue_details
 
-      within '.maplibregl-popup' do
+      within '#venue-details' do
         # Wait for scrolling to complete
         sleep 1.5
 

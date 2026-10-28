@@ -170,11 +170,11 @@ RSpec.describe 'Search Form Persistence', type: :system, js: true do
       reloaded_combined_markers_count = all('.venue-marker').count
       expect(reloaded_combined_markers_count).to eq(combined_filter_markers_count)
 
-      # Click on venue to verify popup shows correct filtered gig
+      # Click on venue to verify venue panel shows correct filtered gig
       first('.venue-marker').click
 
-      within '.maplibregl-popup' do
-        expect(page).to have_selector('.venue-popup', wait: 10)
+      within '#venue-details' do
+        expect(page).to have_selector('.venue-gigs', wait: 10)
         expect(page).to have_selector("[data-act-id='#{act3.id}']")
       end
     end

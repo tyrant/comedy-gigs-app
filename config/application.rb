@@ -29,7 +29,10 @@ module ComedyGigsApp
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
 
-    # The basemap: a MapLibre style URL, or a style document as JSON
-    config.x.map_style = "https://tiles.openfreemap.org/styles/positron"
+    # The basemaps for light and dark mode: MapLibre style URLs, or style documents as JSON
+    config.x.map_styles = {
+      light: "https://tiles.openfreemap.org/styles/positron",
+      dark: "https://tiles.openfreemap.org/styles/dark"
+    }
   end
 end

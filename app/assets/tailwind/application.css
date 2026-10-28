@@ -1,139 +1,215 @@
 @import "tailwindcss";
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
-@theme {
+/* --- Design tokens ------------------------------------------------------------
+   Colours are CSS variables that flip with the system colour scheme, so the
+   utilities (bg-surface, text-muted, bg-accent...) need no dark: variants. */
+
+:root {
+  color-scheme: light dark;
+
+  --canvas: #f4f3f1;
+  --surface: #ffffff;
+  --surface-2: #f1efec;
+  --fg: #1d1b20;
+  --muted: #5e5b66;
+  --line: #e2dfda;
+
+  --accent: #6d28d9;
+  --accent-strong: #5b21b6;
+  --on-accent: #ffffff;
+  --accent-soft: #ede9fe;
+  --accent-ink: #4c1d95;
+
+  --warn-soft: #fef3c7;
+  --warn-ink: #92400e;
+  --danger: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #111114;
+    --surface: #1b1b20;
+    --surface-2: #26262d;
+    --fg: #ecebf0;
+    --muted: #a6a3b0;
+    --line: #34343c;
+
+    --accent: #a78bfa;
+    --accent-strong: #c4b5fd;
+    --on-accent: #1a0b38;
+    --accent-soft: #2e2552;
+    --accent-ink: #ddd6fe;
+
+    --warn-soft: #422c0a;
+    --warn-ink: #fcd34d;
+    --danger: #f87171;
+  }
+}
+
+@theme inline {
   --breakpoint-xs: 475px;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-ink: var(--warn-ink);
+  --color-danger: var(--danger);
 }
 
 @utility no-scrollbar {
   @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
 }
 
-/* React Select Custom Styles */
+@utility focus-ring {
+  @apply outline-2 outline-offset-2 outline-accent;
+}
+
+body {
+  @apply bg-canvas text-fg antialiased;
+}
+
+:focus-visible {
+  @apply focus-ring;
+}
+
+/* --- Act filter (react-select, unstyled, so it follows the tokens) ---------- */
+
 .react-select__control {
-  @apply shadow-sm border border-gray-300 rounded-md text-sm;
+  @apply min-h-10 cursor-text rounded-md border border-line bg-surface text-sm shadow-xs;
+}
+
+.react-select__control--is-focused {
+  @apply border-accent ring-2 ring-accent/30;
+}
+
+.react-select__placeholder {
+  @apply truncate text-muted;
+}
+
+.react-select__input-container {
+  @apply text-fg;
+}
+
+.react-select__indicator {
+  @apply cursor-pointer px-2 text-muted hover:text-fg;
+}
+
+.react-select__indicator-separator {
+  @apply my-2 w-px bg-line;
 }
 
 .react-select__menu {
-  @apply shadow-lg border border-gray-200 rounded-md;
-  z-index: 9999 !important; /* Ensure dropdown appears above the map */
+  @apply z-[1000] mt-1 overflow-hidden rounded-md border border-line bg-surface shadow-lg;
+}
+
+.react-select__menu-list {
+  @apply py-1;
 }
 
 .react-select__option {
-  @apply cursor-pointer hover:bg-purple-50;
+  @apply cursor-pointer px-3 py-1.5;
 }
 
-.react-select__option--is-selected {
-  @apply bg-purple-500 text-white;
+.react-select__option--is-focused {
+  @apply bg-surface-2;
 }
 
-.react-select__multi-value {
-  @apply bg-purple-100 rounded-md;
-}
-
-.react-select__multi-value__label {
-  @apply text-purple-800;
+.react-select__menu-notice {
+  @apply px-3 py-2 text-sm text-muted;
 }
 
 .react-select__multi-value__remove {
-  @apply text-purple-500 hover:bg-purple-200 hover:text-purple-800 rounded-md;
+  @apply bg-muted text-surface hover:bg-danger;
 }
 
-/* Custom Scrollbar Styles */
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-  }
-  
-  .scrollbar-thumb-gray-300::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .scrollbar-thumb-gray-300::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 3px;
-  }
-  
-  .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-    background-color: #d1d5db;
-    border-radius: 3px;
-  }
-  
-  .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb:hover {
-    background-color: #9ca3af;
-  }
-}
+/* --- Map markers --------------------------------------------------------------
+   HTML buttons that MapLibre positions with position: absolute and transform,
+   so leave both alone, and don't scale them either: the scale property applies
+   before transform and moves the marker. */
 
-/* Map markers: HTML buttons that MapLibre positions. It places them with
-   position: absolute and transform, so leave both alone, and don't scale them
-   either: the scale property applies before transform and moves the marker. */
 .venue-marker {
-  @apply flex h-7 min-w-7 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-purple-700 px-1.5 text-xs font-bold text-white shadow-md transition-colors duration-100;
+  @apply flex h-7 min-w-7 cursor-pointer items-center justify-center rounded-full border-2 border-surface bg-accent px-1.5 text-xs font-bold text-on-accent shadow-md transition-colors duration-100;
   margin-bottom: 7px; /* room for the point */
 
   &::after {
-    @apply absolute left-1/2 size-0 -translate-x-1/2 border-x-[6px] border-t-[8px] border-x-transparent border-t-purple-700 content-[''];
+    @apply absolute left-1/2 size-0 -translate-x-1/2 border-x-[6px] border-t-[8px] border-x-transparent border-t-accent content-[''];
     top: 100%;
   }
 
-  &:hover, &:focus-visible, &.is-selected {
-    @apply z-10 bg-purple-950 ring-4 ring-purple-400/50;
-    &::after { @apply border-t-purple-950; }
+  &:hover, &:focus-visible, &.is-hovered, &.is-selected {
+    @apply z-10 bg-accent-strong ring-4 ring-accent/40;
+    &::after { @apply border-t-accent-strong; }
   }
 
-  &:focus-visible {
-    @apply outline-2 outline-offset-2 outline-purple-900;
+  &.is-selected {
+    @apply ring-accent/60;
   }
 }
 
 .cluster-marker {
-  @apply flex cursor-pointer items-center justify-center rounded-full bg-purple-700/85 text-xs font-bold text-white shadow-md ring-4 ring-purple-700/25 transition-colors duration-100;
+  @apply flex cursor-pointer items-center justify-center rounded-full bg-accent/85 text-xs font-bold text-on-accent shadow-md ring-4 ring-accent/25 transition-colors duration-100;
 
   &:hover, &:focus-visible {
-    @apply bg-purple-900 ring-purple-700/40;
-  }
-
-  &:focus-visible {
-    @apply outline-2 outline-offset-2 outline-purple-900;
+    @apply bg-accent-strong ring-accent/40;
   }
 }
 
-/* Popup Styles */
-.venue-popup-container {
-  .maplibregl-popup-content {
-    @apply overflow-hidden rounded-md p-0 shadow-lg;
-  }
+/* MapLibre's controls, in the theme's colours */
+.maplibregl-ctrl-group {
+  @apply overflow-hidden rounded-md! border border-line bg-surface! shadow-sm!;
 
-  .maplibregl-popup-close-button {
-    @apply top-1 right-1 z-10 size-7 rounded-full bg-gray-900/60 text-lg leading-none text-white hover:bg-gray-900/80;
-  }
-
-  [data-role="ticket-url"] {
-    color: white;
-  }
-
-  [data-role="gig-link"] {
-    [data-role="gig-name"] {
-      @apply text-gray-900;
-    }
-
-    &:hover {
-      [data-role="gig-name"] {
-        @apply text-blue-600;
-      }
-
-      [data-role="gig-hash"] {
-        @apply visible;
-      }
-    }
+  button + button {
+    @apply border-line!;
   }
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+@media (prefers-color-scheme: dark) {
+  .maplibregl-ctrl-group button .maplibregl-ctrl-icon,
+  .maplibregl-ctrl-attrib-button {
+    filter: invert(1);
+  }
+
+  .maplibregl-ctrl.maplibregl-ctrl-attrib,
+  .maplibregl-ctrl-scale {
+    @apply border-line bg-surface/80 text-muted;
+
+    a { @apply text-muted; }
+  }
+}
+
+/* On phones the bottom sheet covers the map's bottom edge; keep the scale and
+   attribution above it */
+@media (max-width: 767px) {
+  .maplibregl-ctrl-bottom-left,
+  .maplibregl-ctrl-bottom-right {
+    bottom: var(--sheet-inset, 0px);
+  }
+}
+
+/* --- Gig list -------------------------------------------------------------- */
+
+[data-role="gig-link"]:hover {
+  [data-role="gig-name"] {
+    @apply text-accent underline;
+  }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
-/* Firefox */
-input[type="date"]::-moz-calendar-picker-indicator {
-  cursor: pointer;
+@media (prefers-color-scheme: dark) {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+  }
 }

@@ -40,8 +40,7 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
 
-  # A plain background instead of the tile server, so system specs never touch the network
-  config.x.map_style = {
-    version: 8, sources: {}, layers: [ { id: "background", type: "background", paint: { "background-color" => "#f4f4f2" } } ]
-  }.to_json
+  # Plain backgrounds instead of the tile server, so system specs never touch the network
+  blank_style = ->(colour) { { version: 8, sources: {}, layers: [ { id: "background", type: "background", paint: { "background-color" => colour } } ] }.to_json }
+  config.x.map_styles = { light: blank_style.("#f4f4f2"), dark: blank_style.("#1b1b20") }
 end
