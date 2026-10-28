@@ -2,6 +2,7 @@ module SystemTestHelper
   module DatePickerHelper
     # Helper method to set date using HTML5 date picker interaction
     def set_date_via_picker(field_id, target_date)
+      previous = find("##{field_id}").value
       find("##{field_id}").click
 
       # Set the date value and trigger React's onChange handler properly
@@ -51,7 +52,11 @@ module SystemTestHelper
         };
       JS
 
-      # Wait for debounced API call to complete and markers to stabilize
+      # Calling onChange from a script isn't a real event, so React renders it
+      # later rather than straight away. Once the URL has the new date, it has,
+      # and the page shows it's loading the results.
+      date = target_date.strftime('%Y-%m-%d')
+      expect(page).to have_current_path(/[?&]#{field_id.delete_suffix('_date')}=#{date}/, url: true) unless date == previous
       wait_for_api_completion
     end
   end

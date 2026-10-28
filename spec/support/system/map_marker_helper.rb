@@ -4,10 +4,10 @@ module SystemTestHelper
     MAP = ".maplibregl-map".freeze
     VENUE_MARKER = ".venue-marker".freeze
 
-    # Wait until the venues have loaded and the markers show them. The map is
-    # aria-busy from a filter change until its markers catch up.
+    # Wait until the venues have loaded and the markers show them. The page
+    # shows it's loading from the render that changes a filter, and the map
+    # is aria-busy until its markers catch up.
     def wait_for_api_completion
-      sleep 0.1 # let React start the fetch a filter change triggers
       expect(page).to have_no_selector('[role="status"][aria-label="Loading gigs"]')
       expect(page).to have_selector("#{MAP}[aria-busy='false']")
     end
