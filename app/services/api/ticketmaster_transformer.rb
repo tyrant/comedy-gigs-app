@@ -78,8 +78,9 @@ module Api
         name: venue["name"].presence || venue.dig("address", "line1"),
         # Some venues (often outside the US/UK) come without a street address
         address: venue.dig("address", "line1").presence || venue.dig("city", "name").presence || venue["name"],
-        city: venue.dig("city", "name"),
-        country: venue.dig("country", "name"),
+        # Some arrive without a city ("London " comes padded); the state is the next best
+        city: venue.dig("city", "name").to_s.strip.presence || venue.dig("state", "name"),
+        country: venue.dig("country", "name").presence || venue.dig("country", "countryCode"),
         latitude: venue.dig("location", "latitude")&.to_f,
         longitude: venue.dig("location", "longitude")&.to_f,
         description: venue["description"],
@@ -88,7 +89,10 @@ module Api
         external_ids: {
           "ticketmaster" => venue["id"]
         },
-        images: extract_images(venue["images"])
+        images: extract_images(venue["images"]),
+        # Hints for VenueLocator when the coordinates are missing; not stored
+        postcode: venue["postalCode"],
+        country_code: venue.dig("country", "countryCode")
       }
 
       Rails.logger.debug "Final venue images: #{result[:images].inspect}"

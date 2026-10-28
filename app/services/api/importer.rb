@@ -64,7 +64,23 @@ module Api
     end
 
     def upsert_venue(venue_data)
-      save_merged(Venue.from_existing(venue_data, @source) || Venue.new, venue_data)
+      venue = Venue.from_existing(venue_data, @source) || Venue.new
+      save_merged(venue, located(venue, venue_data))
+    end
+
+    # Keeps what's already known about a venue when the source leaves it out,
+    # and looks up the rest: coordinates from the address, city from the coordinates
+    LOCATION_FIELDS = %i[latitude longitude city country].freeze
+
+    def located(venue, data)
+      data = data.merge(LOCATION_FIELDS.filter_map { |field| [ field, venue[field] ] if data[field].blank? && venue[field].present? }.to_h)
+
+      if LOCATION_FIELDS.any? { |field| data[field].blank? }
+        @venue_locator ||= VenueLocator.new
+        @venue_locator.call(data)
+      else
+        data.except(:postcode, :country_code)
+      end
     end
 
     def upsert_act(act_data)
