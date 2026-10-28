@@ -12,10 +12,9 @@ module Api
     end
 
     def import_events(country_code: "", horizon: HORIZON)
-      @stats[:start_time] = Time.current
       @country_code = country_code
 
-      begin
+      run do
         window_start = @stats[:start_time]
         horizon_end  = window_start + horizon
 
@@ -24,19 +23,7 @@ module Api
           import_window(window_start, window_end)
           window_start = window_end
         end
-
-        @stats[:end_time] = Time.current
-
-      rescue Api::RateLimitError => e
-        @stats[:rate_limited] += 1
-        fail_import(e)
-
-      rescue StandardError => e
-        fail_import(e)
-
       end
-
-      Rails.logger.info generate_stats_message
 
       @stats
     end
@@ -71,27 +58,6 @@ module Api
 
     def too_many_results?(response)
       response.dig("page", "totalElements").to_i > TicketmasterClient::MAX_RESULTS
-    end
-
-    def import_and_count(event)
-      if import_event(event)
-        @stats[:successful] += 1
-      else
-        @stats[:skipped] += 1
-      end
-
-    rescue StandardError => e
-      @stats[:failed] += 1
-      record_event_error(e, event)
-
-    ensure
-      @stats[:total_processed] += 1
-    end
-
-    def fail_import(error)
-      @stats[:end_time] = Time.current
-      @stats[:error] = { class: error.class.name, message: error.message }
-      Rails.logger.error "Ticketmaster import failed: #{error.class}: #{error.message}"
     end
 
     def import_event(event_data)

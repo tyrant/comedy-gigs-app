@@ -10,10 +10,9 @@ set :output, { error: "/home/noob/comedy-gigs-app/shared/log/cron_error.log", st
 # Set job template to include the correct environment and path
 set :job_template, '/bin/bash -l -c ":job"'
 
-# Define the schedule for the Ticketmaster import task
+# Every source's import (Ticketmaster, then Eventfinda), then a prune of old gigs
 every 1.day, at: "2:00 am" do
-  # Run the Ticketmaster import task daily at 2 AM
-  rake "ticketmaster:daily_import"
+  rake "import:all"
 end
 
 # Uncomment and modify for additional scheduled tasks

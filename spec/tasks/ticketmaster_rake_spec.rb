@@ -11,7 +11,6 @@ RSpec.describe 'ticketmaster:daily_import' do
     Rake::Task['ticketmaster:daily_import'].reenable
     allow(Api::TicketmasterImporter).to receive(:new).and_return(importer)
     allow(importer).to receive(:import_events).and_return(stats)
-    allow(GigCleanup).to receive(:call)
     allow(MonitorClient).to receive(:report_run)
   end
 
@@ -21,11 +20,6 @@ RSpec.describe 'ticketmaster:daily_import' do
     run_task
     expect(MonitorClient).to have_received(:report_run)
       .with(hash_including(script: 'ticketmaster_import', status: 'success', processed: 100, errors: []))
-  end
-
-  it 'runs the cleanup' do
-    run_task
-    expect(GigCleanup).to have_received(:call)
   end
 
   context 'when the importer swallowed a fatal error' do
@@ -55,16 +49,6 @@ RSpec.describe 'ticketmaster:daily_import' do
       run_task
       expect(MonitorClient).to have_received(:report_run)
         .with(hash_including(status: 'success', failed: 2, errors: [ 'Show A: boom', 'Show B: bang' ]))
-    end
-  end
-
-  context 'when the cleanup fails' do
-    before { allow(GigCleanup).to receive(:call).and_raise(ActiveRecord::StatementInvalid, 'boom') }
-
-    it 'still reports the import, noting the cleanup failure' do
-      run_task
-      expect(MonitorClient).to have_received(:report_run)
-        .with(hash_including(status: 'success', errors: [ 'Cleanup failed: ActiveRecord::StatementInvalid: boom' ]))
     end
   end
 end

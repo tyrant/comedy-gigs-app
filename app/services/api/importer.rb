@@ -3,6 +3,12 @@ module Api
     # How many per-event failures to keep for the monitor; the rest are counted
     MAX_ERROR_SAMPLES = 10
 
+    # Whose details win when sources describe the same venue, act or gig
+    SOURCE_PRIORITY = %w[ticketmaster eventfinda].freeze
+
+    # Assigned whatever the priority, since they link records rather than describe them
+    ASSOCIATIONS = %i[venue acts].freeze
+
     def initialize
       @stats = {
         total_processed: 0,
@@ -16,30 +22,70 @@ module Api
 
     private
 
-    def upsert_gig(gig_data)
-      gig = Gig.from_existing(gig_data, @source) || Gig.new
+    # Runs the import, recording a fatal error in the stats rather than
+    # raising, so the rake task can report how far it got
+    def run
+      @stats[:start_time] = Time.current
+      yield
+    rescue RateLimitError => e
+      @stats[:rate_limited] += 1
+      record_failure(e)
+    rescue StandardError => e
+      record_failure(e)
+    ensure
+      @stats[:end_time] ||= Time.current
+      Rails.logger.info generate_stats_message
+    end
 
-      gig_data[:external_ids] = gig.external_ids.merge(gig_data[:external_ids])
-      gig.update!(gig_data)
-      gig
+    # Imports one provider event; import_event returns false to skip it
+    def import_and_count(event)
+      if import_event(event)
+        @stats[:successful] += 1
+      else
+        @stats[:skipped] += 1
+      end
+    rescue StandardError => e
+      @stats[:failed] += 1
+      record_event_error(e, event)
+    ensure
+      @stats[:total_processed] += 1
+    end
+
+    def record_failure(error)
+      @stats[:end_time] = Time.current
+      @stats[:error] = { class: error.class.name, message: error.message }
+      Rails.logger.error "#{@source.titleize} import failed: #{error.class}: #{error.message}"
+    end
+
+    # A source with no lineup leaves a matched gig's acts alone
+    def upsert_gig(gig_data)
+      gig_data = gig_data.except(:acts) if gig_data[:acts].blank?
+      save_merged(Gig.from_existing(gig_data, @source) || Gig.new, gig_data)
     end
 
     def upsert_venue(venue_data)
-      venue = Venue.from_existing(venue_data, @source) || Venue.new
-
-      venue_data[:external_ids] = venue.external_ids.merge(venue_data[:external_ids])
-      venue.update!(venue_data)
-      venue
+      save_merged(Venue.from_existing(venue_data, @source) || Venue.new, venue_data)
     end
 
     def upsert_act(act_data)
       act = Act.from_existing(act_data, @source) || Act.new
+      act_data = act_data.merge(images: act.images.merge(act_data[:images])) if act_data[:images].present? && act.images.present?
+      save_merged(act, act_data)
+    end
 
-      act_data[:external_ids] = act.external_ids.merge(act_data[:external_ids])
-      act_data[:images] = act.images.merge(act_data[:images]) if act_data[:images].present? && act.images.present?
+    # Records the source's ID on the record. When a source earlier in
+    # SOURCE_PRIORITY also lists it, this one only fills in what's blank, so
+    # the two don't overwrite each other's names and links on alternate nights.
+    def save_merged(record, data)
+      data = data.merge(external_ids: record.external_ids.merge(data[:external_ids]))
+      data = data.select { |key, value| ASSOCIATIONS.include?(key) || key == :external_ids || record[key].blank? } if outranked?(record)
+      record.update!(data)
+      record
+    end
 
-      act.update!(act_data)
-      act
+    def outranked?(record)
+      rank = SOURCE_PRIORITY.index(@source) || SOURCE_PRIORITY.size
+      record.external_ids.keys.any? { |source| (SOURCE_PRIORITY.index(source) || SOURCE_PRIORITY.size) < rank }
     end
 
     def record_event_error(error, event)

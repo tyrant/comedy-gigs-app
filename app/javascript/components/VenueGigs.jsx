@@ -57,6 +57,12 @@ const GigRow = ({ gig, venue, onSelectGig }) => (
   </li>
 );
 
+// "60 Kent Terrace, Te Aro, Wellington" already names its city; others need it adding
+const placeLine = ({ address, city }) => {
+  if (!address) return city;
+  return !city || address.toLowerCase().includes(city.toLowerCase()) ? address : `${address}, ${city}`;
+};
+
 const BackButton = ({ onBack }) => (
   <button type="button" onClick={onBack} data-action="close-venue"
     className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-sm font-medium text-accent hover:bg-surface-2">
@@ -131,7 +137,7 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onBack })
           {venue.name}
         </h2>
         <p className="px-1.5 text-sm text-muted">
-          {[ venue.address, venue.city ].filter(Boolean).join(', ')}
+          {placeLine(venue)}
         </p>
         <p className="mt-1 px-1.5 text-xs font-medium text-muted">{pluralize(gigs.length, 'gig')} for these dates</p>
       </div>

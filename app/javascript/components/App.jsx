@@ -153,6 +153,11 @@ const App = ({ mapStyles }) => {
                   onSelectVenue={selectVenue} onHoverVenue={setHoveredVenueId} />
               )}
           </div>
+
+          <footer className={`border-t border-line px-3 py-2 text-xs text-muted ${sheetOpen ? '' : 'max-md:hidden'}`}>
+            Listings from Ticketmaster <span aria-hidden="true">·</span>{' '}
+            <a href="https://www.eventfinda.co.nz/" className="underline hover:text-accent">Powered by Eventfinda</a>
+          </footer>
         </aside>
 
         <main className="relative min-w-0 flex-1" style={{ '--sheet-inset': `${sheetHeight}px` }}>

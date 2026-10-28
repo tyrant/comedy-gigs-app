@@ -51,11 +51,12 @@ class Gig < ApplicationRecord
 
     return nil unless data[:name].present? && data[:start_time].present?
 
-    Gig.where("LOWER(name) = ?", data[:name].downcase)
-      .where("start_time BETWEEN ? AND ?",
-             data[:start_time] - 1.hour,
-             data[:start_time] + 1.hour)
-      .first
+    # The same show from another source: same name, about the same time, and
+    # (when known) the same venue, so two "Comedy Night"s in different towns stay apart
+    matches = Gig.where("LOWER(name) = ?", data[:name].downcase)
+      .where(start_time: (data[:start_time] - 1.hour)..(data[:start_time] + 1.hour))
+    matches = matches.where(venue: data[:venue]) if data[:venue]
+    matches.first
   end
 
   # The start's date where the gig happens; venues with no (known) time zone count as UTC

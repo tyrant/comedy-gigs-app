@@ -111,8 +111,4 @@ module Api
       end
     end
   end
-
-  class ApiError < StandardError; end
-  class RateLimitError < ApiError; end
-  class AuthenticationError < ApiError; end
 end

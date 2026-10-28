@@ -86,54 +86,8 @@ namespace :ticketmaster do
     end
   end
 
-  desc "Production Ticketmaster scheduled import, followed by cleanup of stale gigs"
+  desc "Import upcoming comedy from Ticketmaster and report to the monitor"
   task daily_import: :environment do
-    begin
-      Rails.logger.info "Starting daily Ticketmaster import..."
-
-      start_time = Time.current
-      importer = Api::TicketmasterImporter.new
-      stats = importer.import_events
-      duration = ((Time.current - start_time) / 60).round(2)
-
-      Rails.logger.info "Daily import completed in #{duration} minutes"
-      Rails.logger.info "Total processed: #{stats[:total_processed]}"
-      Rails.logger.info "Successful: #{stats[:successful]}"
-      Rails.logger.info "Failed: #{stats[:failed]}"
-      Rails.logger.info "Skipped: #{stats[:skipped]}"
-      Rails.logger.info "Rate limited: #{stats[:rate_limited]}"
-
-      # The importer swallows fatal errors into stats[:error] so it can record
-      # partial progress; surface them here, along with suspiciously empty runs,
-      # and a sample of the individual events that failed.
-      errors = []
-      errors << "#{stats[:error][:class]}: #{stats[:error][:message]}" if stats[:error]
-      errors << "Ticketmaster returned no events" if stats[:total_processed].zero?
-
-      begin
-        GigCleanup.call
-      rescue StandardError => e
-        errors << "Cleanup failed: #{e.class}: #{e.message}"
-      end
-
-      MonitorClient.report_run(
-        script: "ticketmaster_import",
-        status: (stats[:error] || stats[:total_processed].zero?) ? "crashed" : "success",
-        processed: stats[:successful],
-        failed: stats[:failed],
-        skipped: stats[:skipped],
-        errors: errors + stats[:error_samples]
-      )
-
-      Rails.logger.info "Daily Ticketmaster import finished"
-    rescue StandardError => e
-      Rails.logger.error "Daily Ticketmaster import failed: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-      MonitorClient.report_run(
-        script: "ticketmaster_import",
-        status: "crashed",
-        errors: [ e.message, *(e.backtrace&.first(10) || []) ]
-      )
-    end
+    ImportTask.call(source: "Ticketmaster", script: "ticketmaster_import") { Api::TicketmasterImporter.new.import_events }
   end
 end
