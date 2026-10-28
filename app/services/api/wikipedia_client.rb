@@ -2,7 +2,7 @@ module Api
   # Wikidata and English Wikipedia's public APIs. They need no key, but ask
   # callers to say who they are in the User-Agent.
   class WikipediaClient
-    USER_AGENT = "ComedyGigs/1.0 (https://sexyverse.email)".freeze
+    USER_AGENT = "ComedyGigs/1.0 (https://gigs.mikeyclarke.co.nz)".freeze
 
     MAX_RETRIES = 3
     RETRY_DELAY = 2 # seconds, multiplied by the attempt number

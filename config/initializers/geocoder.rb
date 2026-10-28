@@ -4,5 +4,5 @@
 Geocoder.configure(
   lookup: Rails.env.test? ? :test : :nominatim,
   timeout: 5,
-  http_headers: { "User-Agent" => "ComedyGigs/1.0 (+https://sexyverse.email)" }
+  http_headers: { "User-Agent" => "ComedyGigs/1.0 (+https://gigs.mikeyclarke.co.nz)" }
 )
