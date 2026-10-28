@@ -68,6 +68,17 @@ RSpec.describe Api::EventfindaImporter do
     expect(Gig.count).to eq 2
   end
 
+  describe 'comedians named in the title' do
+    let!(:urzila) { create :act, name: 'Urzila Carlson' }
+
+    it 'links them to every session' do
+      stub_pages(eventfinda_page([ weekly_show.merge('name' => 'Urzila Carlson - Fatty On a Yacht') ]))
+      importer.import_events
+
+      expect(Gig.all.map(&:acts)).to eq [ [ urzila ], [ urzila ] ]
+    end
+  end
+
   describe 'a show Ticketmaster already lists' do
     let(:act) { create :act, name: 'Rhys Mathewson' }
     let!(:venue) do
@@ -80,6 +91,16 @@ RSpec.describe Api::EventfindaImporter do
     end
 
     before { stub_pages(eventfinda_page([ weekly_show ])) }
+
+    it 'keeps Ticketmaster’s lineup over the comedians named in the title' do
+      create :act, name: 'Urzila Carlson'
+      gig.update!(name: 'Late Night Laughs with Urzila Carlson')
+      stub_pages(eventfinda_page([ weekly_show.merge('name' => 'Late Night Laughs with Urzila Carlson') ]))
+      importer.import_events
+
+      expect(gig.reload.external_ids).to include('eventfinda' => '11') # the same gig...
+      expect(gig.acts).to eq [ act ]                                     # ...with Ticketmaster's lineup
+    end
 
     it 'links to it without overwriting Ticketmaster’s details or lineup' do
       importer.import_events

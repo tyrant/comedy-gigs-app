@@ -6,9 +6,6 @@ module Api
     # Whose details win when sources describe the same venue, act or gig
     SOURCE_PRIORITY = %w[ticketmaster eventfinda].freeze
 
-    # Assigned whatever the priority, since they link records rather than describe them
-    ASSOCIATIONS = %i[venue acts].freeze
-
     def initialize
       @stats = {
         total_processed: 0,
@@ -90,11 +87,12 @@ module Api
     end
 
     # Records the source's ID on the record. When a source earlier in
-    # SOURCE_PRIORITY also lists it, this one only fills in what's blank, so
-    # the two don't overwrite each other's names and links on alternate nights.
+    # SOURCE_PRIORITY also lists it, this one only fills in what's blank
+    # (including a lineup), so the two don't overwrite each other's names and
+    # links on alternate nights. The venue is always set: it's how gigs match.
     def save_merged(record, data)
       data = data.merge(external_ids: record.external_ids.merge(data[:external_ids]))
-      data = data.select { |key, value| ASSOCIATIONS.include?(key) || key == :external_ids || record[key].blank? } if outranked?(record)
+      data = data.select { |key, _value| key == :venue || key == :external_ids || record.public_send(key).blank? } if outranked?(record)
       record.update!(data)
       record
     end
