@@ -96,6 +96,7 @@ class TourFinder
     by_key = Hash.new { |hash, key| hash[key] = [] }
     act.gigs.each do |gig|
       title = self.class.title(gig.name, act.name) or next
+      next if place_name?(title, gig.venue) # "The Comedy Store Maidstone": a club night, not a tour
       key = self.class.key(title)
       by_key[key] << [ title, gig ] if key.present?
     end
@@ -106,6 +107,13 @@ class TourFinder
 
       [ key, { name: self.class.display_name(entries.map(&:first)), gigs: } ]
     end.to_h
+  end
+
+  # Whether a title is no more than where the gig is
+  def place_name?(title, venue)
+    place = MatchKey.normalize(venue.city).split
+    words = MatchKey.normalize(title).split.reject { |word| GENERIC_WORDS.include?(word) }
+    place.any? && words.all? { |word| place.include?(word) }
   end
 
   def save(act, found)

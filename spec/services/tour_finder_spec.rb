@@ -94,6 +94,16 @@ RSpec.describe TourFinder do
       expect(legend.updated_at).to be > legend.created_at
     end
 
+    it 'takes a title that’s only the town for a club night, not a tour' do
+      store = create :act, name: 'The Comedy Store'
+      maidstone = create_list :venue, 2, city: 'Maidstone'
+      maidstone.each { |venue| gig('The Comedy Store Maidstone', venue, act: store) }
+      maidstone.each { |venue| gig('The Comedy Store: Live in Maidstone', venue, act: store) }
+
+      described_class.call
+      expect(store.tours).to be_empty
+    end
+
     it 'gives each act on a shared bill the tour' do
       rhod = create :act, name: 'Rhod Gilbert'
       2.times { |i| create :gig, name: 'Greg Davies and Rhod Gilbert: Two Big Lads', venue: venues[i], acts: [ greg, rhod ] }
