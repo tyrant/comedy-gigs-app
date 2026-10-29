@@ -16,5 +16,7 @@ Rails.application.routes.draw do
   end
 
   # Defines the root path route ("/")
+  get "gigs/:gig_id/calendar.ics" => "calendars#show", as: :gig_calendar, format: false
+
   root "home#index"
 end

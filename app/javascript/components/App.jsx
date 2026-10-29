@@ -201,6 +201,7 @@ const App = ({ mapStyles, terrainTiles }) => {
               )
               : (
                 <VenueList key={lastVenueId.current} venues={venuesInView} focusVenueId={lastVenueId.current}
+                  allVenues={loading ? [] : venues} center={view?.center}
                   onSelectVenue={selectVenue} onHoverVenue={setHoveredVenueId} />
               ))}
           </div>

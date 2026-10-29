@@ -35,10 +35,23 @@ class Gig < ApplicationRecord
     parsed_date ? where(local_date: ..parsed_date) : all
   }
 
-  # The filters the map's API endpoints share: start_date, end_date and act_ids
-  # (comma-separated). Cancelled gigs are never shown.
+  # How long a gig with no end time is taken to run
+  ASSUMED_LENGTH = 2.hours
+
+  # Gigs still to finish. One with no end time counts as over ASSUMED_LENGTH
+  # after it starts, plus an hour's grace for late starts and long sets.
+  scope :not_over, ->(now = Time.current) {
+    where("gigs.end_time >= :now OR (gigs.end_time IS NULL AND gigs.start_time >= :started)",
+          now:, started: now - ASSUMED_LENGTH - 1.hour)
+  }
+
+  # The filters the map's API endpoints share: start_date, end_date, act_ids
+  # (comma-separated) and upcoming (leave out gigs already over). Cancelled
+  # gigs are never shown. "Now" is rounded down to the quarter-hour, so the
+  # query, and so the API's cache keys, hold still in between.
   def self.filtered_for_api(params = {})
     scope = where.not(status: "cancelled")
+    scope = scope.not_over(Time.zone.at(Time.current.to_i / 15.minutes * 15.minutes)) if params[:upcoming].present?
     scope = scope.featuring_acts(params[:act_ids].to_s.split(",").map(&:to_i).select(&:positive?))
     scope = scope.starting_after(params[:start_date])
     scope.starting_before(params[:end_date])

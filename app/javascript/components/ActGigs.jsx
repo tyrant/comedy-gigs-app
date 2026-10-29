@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import useJson from '../hooks/useJson';
 import { formatGigTime, gigHref, pluralize } from '../fiddly-bits';
-import { BackButton, PanelPlaceholder, SkiddleCredit, StatusBadge, TicketLink } from './PanelBits';
+import { BackButton, GigActions, PanelPlaceholder, SkiddleCredit, StatusBadge } from './PanelBits';
 
 const LINK_LABELS = {
   homepage: 'Website', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', twitter: 'X', facebook: 'Facebook', spotify: 'Spotify'
@@ -40,7 +40,7 @@ const GigRow = ({ gig, selected, onSelectGig }) => (
       </p>
     </div>
 
-    <TicketLink gig={gig} />
+    <GigActions gig={gig} venueId={gig.venue.id} />
   </li>
 );
 

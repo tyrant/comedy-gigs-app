@@ -5,7 +5,7 @@ module Api
     private
 
     def filter_params
-      params.permit(:start_date, :end_date, :act_ids)
+      params.permit(:start_date, :end_date, :act_ids, :upcoming)
     end
 
     # Renders unless the client's copy is current. A relation's cache key

@@ -207,6 +207,23 @@ RSpec.describe Gig, type: :model do
         it { expect(Gig.filtered_for_api({})).not_to include cancelled_gig }
       end
 
+      context 'with gigs earlier today' do
+        let!(:ended) { create :gig, venue: venue1, start_time: 3.hours.ago, end_time: 1.hour.ago }
+        let!(:still_on) { create :gig, venue: venue1, start_time: 3.hours.ago, end_time: 1.hour.from_now }
+        let!(:long_ago_untimed) { create :gig, venue: venue1, start_time: 4.hours.ago, end_time: nil }
+        let!(:lately_untimed) { create :gig, venue: venue1, start_time: 2.hours.ago, end_time: nil }
+
+        it 'leaves out the ones already over when asked, taking untimed ones to run two hours plus an hour’s grace' do
+          result = Gig.filtered_for_api(upcoming: '1')
+          expect(result).to include still_on, lately_untimed
+          expect(result).not_to include ended, long_ago_untimed
+        end
+
+        it 'keeps them otherwise, for dates looking back' do
+          expect(Gig.filtered_for_api({})).to include ended, still_on, long_ago_untimed, lately_untimed
+        end
+      end
+
       context 'with act_ids parameter' do
         context 'with multiple act_ids' do
           let(:result) { Gig.filtered_for_api(act_ids: "#{act1.id},#{act2.id}") }

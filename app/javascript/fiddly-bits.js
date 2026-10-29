@@ -41,6 +41,21 @@ const facesViewer = (center, lat, lng) => {
   return Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(dLng) > 0; // cos of the angle between
 };
 
+// Great-circle distance in km between { lat, lng } points
+export const distanceKm = (a, b) => {
+  const dLat = (b.lat - a.lat) * RADIANS;
+  const dLng = (b.lng - a.lng) * RADIANS;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * RADIANS) * Math.cos(b.lat * RADIANS) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+};
+
+// "12 km" or "7 mi", by the viewer's locale; the US and UK use miles
+const MILES = /^en-(US|GB)$/i;
+export const formatDistance = (km, locale = navigator.language) => {
+  const [ value, unit ] = MILES.test(locale) ? [ km / 1.609344, 'mi' ] : [ km, 'km' ];
+  return `${value < 10 ? value.toFixed(1).replace(/\.0$/, '') : Math.round(value).toLocaleString()} ${unit}`;
+};
+
 // Can the viewer see a point? view is the map's { bounds, center }.
 export const inView = (view, lat, lng) =>
   Boolean(view) && inBounds(view.bounds, lat, lng) && facesViewer(view.center, lat, lng);
@@ -72,7 +87,7 @@ const weekend = (today) => {
 // Date ranges offered in the dates menu, in order; the first is the default
 export const DATE_PRESETS = [
   { id: 'year', label: 'Next 12 months', range: (today) => [ today, addMonths(today, 12) ] },
-  { id: 'today', label: 'Today', range: (today) => [ today, today ] },
+  { id: 'tonight', label: 'Tonight', range: (today) => [ today, today ] }, // gigs already over are left out
   { id: 'weekend', label: 'This weekend', range: weekend },
   { id: 'week', label: 'Next 7 days', range: (today) => [ today, addDays(today, 6) ] },
   { id: 'month', label: 'Next 30 days', range: (today) => [ today, addDays(today, 29) ] },
@@ -173,8 +188,11 @@ export const writeUrlParams = (updates) => {
 };
 
 // Query string for the API endpoints that take the map's filters
-export const filterQuery = ({ actIds, startDate, endDate }) => {
+// upcoming=1 leaves out gigs already over, unless the dates look back on
+// purpose: the viewer's today, not the server's, decides
+export const filterQuery = ({ actIds, startDate, endDate }, today = new Date()) => {
   const params = new URLSearchParams();
+  if (!startDate || startDate >= isoDate(today)) params.set('upcoming', '1');
   if (startDate) params.set('start_date', startDate);
   if (endDate) params.set('end_date', endDate);
   if (actIds.length) params.set('act_ids', actIds.join(','));

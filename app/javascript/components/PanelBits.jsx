@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 // Pieces the venue and act views share
 
@@ -22,6 +22,76 @@ export const TicketLink = ({ gig }) => gig.ticket_url
     </a>
   )
   : null;
+
+const ICON_BUTTON = 'flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg';
+
+const Icon = ({ children }) => (
+  <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </svg>
+);
+
+// An .ics file for the viewer's calendar app
+const CalendarLink = ({ gig }) => (
+  <a href={`/gigs/${gig.id}/calendar.ics`} download data-role="add-to-calendar"
+    aria-label={`Add ${gig.name} to your calendar`} title="Add to calendar" className={ICON_BUTTON}>
+    <Icon>
+      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4" />
+    </Icon>
+  </a>
+);
+
+// The gig's own link, through the device's share sheet where there is one,
+// else copied
+const ShareButton = ({ gig, venueId }) => {
+  const [ copied, setCopied ] = useState(false);
+  const url = `${window.location.origin}/?venue=${venueId}&gig=${gig.id}`;
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [ copied ]);
+
+  const share = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: gig.name, url });
+        return;
+      } catch (error) {
+        if (error.name === 'AbortError') return; // the viewer closed the sheet
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      window.prompt('Copy this link:', url); // no clipboard access
+    }
+  };
+
+  return (
+    <button type="button" onClick={share} data-role="share-gig" data-copied={copied || undefined}
+      aria-label={copied ? 'Link copied' : `Share ${gig.name}`} title={copied ? 'Link copied' : 'Share'}
+      className={`${ICON_BUTTON} data-copied:text-accent`}>
+      <Icon>
+        {copied
+          ? <path d="M20 6 9 17l-5-5" />
+          : <><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="m16 6-4-4-4 4M12 2v13" /></>}
+      </Icon>
+      <span className="sr-only" aria-live="polite">{copied ? 'Link copied' : ''}</span>
+    </button>
+  );
+};
+
+// A gig row's buttons: calendar, share and tickets
+export const GigActions = ({ gig, venueId }) => (
+  <div className="flex shrink-0 items-center gap-0.5">
+    <CalendarLink gig={gig} />
+    <ShareButton gig={gig} venueId={venueId} />
+    <TicketLink gig={gig} />
+  </div>
+);
 
 // Skiddle's logo is white, so it sits on a dark chip in either theme. Rows
 // show just its wordmark, cropped from the full logo, which is too small to

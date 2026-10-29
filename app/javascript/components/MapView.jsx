@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GeolocateControl, Map as MapLibreMap, Marker, NavigationControl, ScaleControl } from 'maplibre-gl';
 import { inBounds, mapViewToParams, pluralize, readMapView, writeUrlParams } from '../fiddly-bits';
 import { reduceMotion } from '../hooks/useMediaQuery';
+import PlaceSearch from './PlaceSearch';
 
 // MapLibre clusters the venues on the GPU side; the markers themselves are
 // HTML buttons, so they can be focused, tabbed through and clicked in specs.
@@ -11,6 +12,7 @@ const HEAT = 'venue-heat'; // the heatmap's own unclustered copy of the venues, 
 const TERRAIN = 'terrain'; // elevation tiles, and the hill shading drawn from them
 const EDGE_MARGIN = 48; // how close to the edge a selected venue may sit before the map recentres
 const NEAR_ME_ZOOM = 12; // about a city's worth of venues around you
+const PLACE_ZOOM = 11; // the most a searched-for place zooms in, so a small town still shows its neighbours
 
 const toGeoJSON = (venues) => ({
   type: 'FeatureCollection',
@@ -402,9 +404,22 @@ const MapView = ({
     );
   }
 
+  // A place from the search: its whole extent where it has one, kept clear of the bottom sheet
+  const goToPlace = ({ center, bounds }) => {
+    if (!map) return;
+    const padding = { top: 64, right: 48, bottom: 48 + bottomInset, left: 48 };
+    if (bounds) map.fitBounds(bounds, { padding, maxZoom: PLACE_ZOOM, ...motion() });
+    else map.easeTo({ center, zoom: PLACE_ZOOM, offset: [ 0, -bottomInset / 2 ], ...motion() });
+  };
+
   return (
-    <div ref={containerRef} className="size-full" role="region" aria-label="Map of venues"
-      aria-busy={!map || syncedVenues !== venues} />
+    <div className="relative size-full">
+      <div ref={containerRef} className="size-full" role="region" aria-label="Map of venues"
+        aria-busy={!map || syncedVenues !== venues} />
+      <div className="absolute top-2.5 left-2.5 z-10 w-[calc(100%-4.5rem)] max-w-72">
+        <PlaceSearch near={() => map && { ...map.getCenter(), zoom: map.getZoom() }} onChoose={goToPlace} />
+      </div>
+    </div>
   );
 };
 
