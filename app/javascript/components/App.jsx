@@ -3,6 +3,7 @@ import MapView from './MapView';
 import ActFilter from './ActFilter';
 import DateRange from './DateRange';
 import ActGigs from './ActGigs';
+import { SKIDDLE_CHIP, SKIDDLE_LOGO } from './PanelBits';
 import VenueGigs from './VenueGigs';
 import VenueList from './VenueList';
 import useJson from '../hooks/useJson';
@@ -189,7 +190,14 @@ const App = ({ mapStyles }) => {
 
           <footer className={`border-t border-line px-3 py-2 text-xs text-muted ${sheetOpen ? '' : 'max-md:hidden'}`}>
             Listings from Ticketmaster <span aria-hidden="true">·</span>{' '}
-            <a href="https://www.eventfinda.co.nz/" className="underline hover:text-accent">Powered by Eventfinda</a>
+            <a href="https://www.eventfinda.co.nz/" className="underline hover:text-accent">Powered by Eventfinda</a>{' '}
+            <span aria-hidden="true">·</span>{' '}
+            <a href="https://www.skiddle.com/" className="inline-flex items-center gap-1 align-middle underline hover:text-accent">
+              UK listings from
+              <span className={`${SKIDDLE_CHIP} p-1`}>
+                <img src={SKIDDLE_LOGO} alt="Skiddle" className="h-7 w-auto" />
+              </span>
+            </a>
           </footer>
         </aside>
 

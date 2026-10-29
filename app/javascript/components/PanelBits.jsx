@@ -8,12 +8,39 @@ export const StatusBadge = ({ status }) => STATUS_LABELS[status]
   ? <span className="rounded bg-warn-soft px-1.5 text-[11px] font-medium text-warn-ink">{STATUS_LABELS[status]}</span>
   : null;
 
+const onSkiddle = (url) => {
+  try { return /(^|\.)skiddle\.com$/.test(new URL(url).hostname); } catch { return false; }
+};
+
 export const TicketLink = ({ gig }) => gig.ticket_url
   ? (
     <a href={gig.ticket_url} data-role="ticket-url" target="_blank" rel="noopener noreferrer"
-      aria-label={`Tickets for ${gig.name} (opens in a new tab)`} title="Tickets"
+      aria-label={`Tickets for ${gig.name}${onSkiddle(gig.ticket_url) ? ' on Skiddle' : ''} (opens in a new tab)`}
+      title={onSkiddle(gig.ticket_url) ? 'Tickets on Skiddle' : 'Tickets'}
       className="shrink-0 rounded-md bg-accent-soft px-2 py-1 text-base leading-none hover:bg-surface-2">
       <span aria-hidden="true">🎟️</span>
+    </a>
+  )
+  : null;
+
+// Skiddle's logo is white, so it sits on a dark chip in either theme. Rows
+// show just its wordmark, cropped from the full logo, which is too small to
+// read at that size.
+export const SKIDDLE_LOGO = '/images/skiddle-logo.svg';
+const SKIDDLE_WORDMARK = '/images/skiddle-wordmark.svg';
+export const SKIDDLE_CHIP = 'inline-flex rounded bg-neutral-900 align-middle';
+
+// Skiddle's terms: credit it by name and logo wherever its listings show,
+// linking to the event's Skiddle page
+export const SkiddleCredit = ({ gig }) => gig.sources?.includes('skiddle')
+  ? (
+    <a href={onSkiddle(gig.ticket_url) ? gig.ticket_url : 'https://www.skiddle.com/'} data-role="skiddle-credit"
+      target="_blank" rel="noopener noreferrer" title="Listing from Skiddle"
+      className="inline-flex items-center gap-1 hover:underline">
+      via
+      <span className={`${SKIDDLE_CHIP} px-1 py-0.5`}>
+        <img src={SKIDDLE_WORDMARK} alt="Skiddle" className="h-2.5 w-auto" />
+      </span>
     </a>
   )
   : null;

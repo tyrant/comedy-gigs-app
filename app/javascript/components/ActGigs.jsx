@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import useJson from '../hooks/useJson';
 import { formatGigTime, gigHref, pluralize } from '../fiddly-bits';
-import { BackButton, PanelPlaceholder, StatusBadge, TicketLink } from './PanelBits';
+import { BackButton, PanelPlaceholder, SkiddleCredit, StatusBadge, TicketLink } from './PanelBits';
 
 const LINK_LABELS = {
   homepage: 'Website', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', twitter: 'X', facebook: 'Facebook', spotify: 'Spotify'
@@ -36,6 +36,7 @@ const GigRow = ({ gig, selected, onSelectGig }) => (
       <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
         <time dateTime={gig.start_time}>{formatGigTime(gig.start_time, gig.venue.timezone)}</time>
         <StatusBadge status={gig.status} />
+        <SkiddleCredit gig={gig} />
       </p>
     </div>
 

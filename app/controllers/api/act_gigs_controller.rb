@@ -10,7 +10,7 @@ module Api
       render_cached(act, gigs, Venue.maximum(:updated_at)) do
         render json: {
           act: act_json(act),
-          gigs: gigs.includes(:venue).order(:start_time, :id).map { |gig| gig_json(gig) }
+          gigs: gigs.includes(:venue, :source_links).order(:start_time, :id).map { |gig| gig_json(gig) }
         }
       end
     rescue ActiveRecord::RecordNotFound
@@ -42,6 +42,7 @@ module Api
         start_time: gig.start_time,
         status: gig.status,
         ticket_url: gig.ticket_url,
+        sources: gig.source_links.map(&:source).uniq.sort, # Skiddle's terms: credit it wherever its data shows
         venue: { id: venue.id, name: venue.name, city: venue.city, timezone: venue.timezone, lat: venue.latitude.to_f, lng: venue.longitude.to_f }
       }
     end

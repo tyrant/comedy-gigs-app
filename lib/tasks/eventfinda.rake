@@ -39,7 +39,7 @@ end
 
 namespace :import do
   desc "Run every source's import, find bios, then prune old gigs"
-  task all: %w[ticketmaster:daily_import eventfinda:daily_import acts:bios] do
+  task all: %w[ticketmaster:daily_import eventfinda:daily_import skiddle:daily_import acts:bios] do
     stats = GigCleanup.call
     MonitorClient.report_run(script: "gig_cleanup", status: "success", processed: stats.values.sum)
   rescue StandardError => e

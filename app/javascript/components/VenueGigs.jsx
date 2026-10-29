@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import useJson from '../hooks/useJson';
 import { reduceMotion } from '../hooks/useMediaQuery';
 import { actHref, formatGigTime, gigHref, pluralize } from '../fiddly-bits';
-import { BackButton, PanelPlaceholder, StatusBadge, TicketLink } from './PanelBits';
+import { BackButton, PanelPlaceholder, SkiddleCredit, StatusBadge, TicketLink } from './PanelBits';
 const PLACEHOLDER_IMAGE = /venue_placeholder/;
 
 // Gigs with the same lineup share one row of act chips:
@@ -130,6 +130,7 @@ const GigRow = ({ gig, venue, onSelectGig }) => (
       <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
         <time dateTime={gig.start_time}>{formatGigTime(gig.start_time, venue.timezone)}</time>
         <StatusBadge status={gig.status} />
+        <SkiddleCredit gig={gig} />
       </p>
     </div>
 

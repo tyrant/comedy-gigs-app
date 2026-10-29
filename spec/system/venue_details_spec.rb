@@ -42,6 +42,23 @@ RSpec.describe 'A venue’s details', type: :system, js: true do
     expect(link[:'aria-label']).to eq 'The Laugh Shack on Ticketmaster (opens in a new tab)'
   end
 
+  it 'credits Skiddle on its listings, linking to the event' do
+    skiddle_url = 'https://www.skiddle.com/whats-on/Wellington/The-Laugh-Shack/abe-live/42504161/'
+    latest.update!(ticket_url: skiddle_url)
+    latest.link_to!('skiddle', '42504161')
+    open_venue
+
+    within '#venue-details' do
+      within('[data-gig-id="%d"]' % latest.id) do
+        credit = find('[data-role="skiddle-credit"]')
+        expect(credit[:href]).to eq skiddle_url
+        expect(credit).to have_css('img[alt="Skiddle"]')
+        expect(find('[data-role="ticket-url"]')[:title]).to eq 'Tickets on Skiddle'
+      end
+      expect(page).to have_css('[data-role="skiddle-credit"]', count: 1)
+    end
+  end
+
   it 'sorts by date, or by act with unlisted lineups last, and remembers the choice' do
     open_venue
     expect(gig_order).to eq [ 'Zed Live', 'Open Mic', 'Abe Live' ]

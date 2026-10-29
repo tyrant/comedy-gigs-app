@@ -27,6 +27,13 @@ RSpec.describe 'GET /api/acts/:act_id/gigs' do
                                              'timezone' => 'Pacific/Auckland', 'lat' => -41.29, 'lng' => 174.78)
   end
 
+  it 'names each gig’s sources' do
+    sooner.link_to!('skiddle', '42504161')
+
+    get "/api/acts/#{act.id}/gigs"
+    expect(json['gigs'].map { |gig| gig['sources'] }).to eq [ [ 'skiddle' ], [] ]
+  end
+
   it 'applies the dates but not the act filter' do
     get "/api/acts/#{act.id}/gigs", params: { end_date: 2.weeks.from_now.to_date.iso8601, act_ids: other_act.id.to_s }
     expect(json['gigs'].map { |gig| gig['id'] }).to eq [ sooner.id ]

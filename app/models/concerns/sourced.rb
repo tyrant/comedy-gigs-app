@@ -12,8 +12,12 @@ module Sourced
     end
   end
 
+  # A new link touches the record, so cached API responses that list its
+  # sources go stale
   def link_to!(source, external_id)
-    source_links.find_or_create_by!(source:, external_id: external_id.to_s)
+    link = source_links.find_or_create_by!(source:, external_id: external_id.to_s)
+    touch if link.previously_new_record?
+    link
   end
 
   # { "ticketmaster" => ["KovZ1"], "eventfinda" => ["501"] }

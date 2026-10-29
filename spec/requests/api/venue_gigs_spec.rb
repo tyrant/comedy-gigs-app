@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe 'GET /api/venues/:venue_id/gigs' do
+  include ActiveSupport::Testing::TimeHelpers
+
   let(:venue) { create :venue, timezone: 'Pacific/Auckland', images: { 'medium' => 'https://example.com/venue.jpg' }, website: 'https://example.com' }
   let(:act_a) { create :act, name: 'Aardvark', images: { 'thumb' => 'https://example.com/a.jpg' } }
   let(:act_b) { create :act, name: 'Badger' }
@@ -29,6 +31,25 @@ RSpec.describe 'GET /api/venues/:venue_id/gigs' do
       { 'id' => act_a.id, 'name' => 'Aardvark', 'image' => 'https://example.com/a.jpg' },
       { 'id' => act_b.id, 'name' => 'Badger', 'image' => Act::IMAGE_PLACEHOLDER }
     ]
+  end
+
+  it 'names each gig’s sources, so Skiddle’s listings can be credited' do
+    later.link_to!('ticketmaster', 'G1')
+    later.link_to!('skiddle', '42504161')
+
+    get "/api/venues/#{venue.id}/gigs"
+    expect(json['gigs'].map { |gig| gig['sources'] }).to eq [ [], %w[skiddle ticketmaster] ]
+  end
+
+  it 'gives a new version once a source is linked to a gig' do
+    get "/api/venues/#{venue.id}/gigs"
+    etag = response.headers['ETag']
+
+    travel 1.minute do
+      later.link_to!('skiddle', '42504161')
+      get "/api/venues/#{venue.id}/gigs", headers: { 'If-None-Match' => etag }
+    end
+    expect(response).to have_http_status :ok
   end
 
   it 'applies the filters' do

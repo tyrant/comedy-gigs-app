@@ -4,7 +4,7 @@ module Api
     MAX_ERROR_SAMPLES = 10
 
     # Whose details win when sources describe the same venue, act or gig
-    SOURCE_PRIORITY = %w[ticketmaster eventfinda].freeze
+    SOURCE_PRIORITY = %w[ticketmaster eventfinda skiddle].freeze
 
     def initialize
       @stats = {
