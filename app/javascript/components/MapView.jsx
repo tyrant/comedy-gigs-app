@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Map as MapLibreMap, Marker, NavigationControl, ScaleControl } from 'maplibre-gl';
+import { GeolocateControl, Map as MapLibreMap, Marker, NavigationControl, ScaleControl } from 'maplibre-gl';
 import { inBounds, mapViewToParams, pluralize, readMapView, writeUrlParams } from '../fiddly-bits';
 import { reduceMotion } from '../hooks/useMediaQuery';
 
@@ -8,6 +8,7 @@ import { reduceMotion } from '../hooks/useMediaQuery';
 
 const SOURCE = 'venues';
 const EDGE_MARGIN = 48; // how close to the edge a selected venue may sit before the map recentres
+const NEAR_ME_ZOOM = 12; // about a city's worth of venues around you
 
 const toGeoJSON = (venues) => ({
   type: 'FeatureCollection',
@@ -123,6 +124,12 @@ const MapView = ({
     instance.touchZoomRotate.disableRotation();
     instance.keyboard.disableRotation();
     instance.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+    // "Near me": centres on you and shows where you are. It follows you until
+    // you pan away; MapLibre only draws your dot while following.
+    instance.addControl(new GeolocateControl({
+      trackUserLocation: true,
+      fitBoundsOptions: { maxZoom: NEAR_ME_ZOOM, ...motion() }
+    }), 'top-right');
     instance.addControl(new ScaleControl(), 'bottom-left');
 
     // A new style drops the source, so put it back each time one loads

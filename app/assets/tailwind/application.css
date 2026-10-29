@@ -186,9 +186,11 @@ body {
 }
 
 [data-theme="dark"] {
+  /* Light icons on the dark buttons; the hue turn keeps "near me"'s blue
+     (following) and red (no location) states their colour */
   .maplibregl-ctrl-group button .maplibregl-ctrl-icon,
   .maplibregl-ctrl-attrib-button {
-    filter: invert(1);
+    filter: invert(1) hue-rotate(180deg);
   }
 
   .maplibregl-ctrl.maplibregl-ctrl-attrib,
