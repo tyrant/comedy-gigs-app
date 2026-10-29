@@ -67,4 +67,19 @@ RSpec.describe 'GET /api/venues/:venue_id/gigs' do
     get '/api/venues/0/gigs'
     expect(response).to have_http_status :not_found
   end
+
+  it 'gives each gig’s price range and ticket types, and whether some are nearly gone' do
+    later.update!(price_min: 28, price_max: 160, currency: 'NZD', ticket_tiers: [
+      { 'name' => 'General Admission', 'price' => 28.0, 'sold_out' => false, 'few_left' => true },
+      { 'name' => 'Table for Four', 'price' => 160.0, 'sold_out' => true, 'few_left' => false }
+    ])
+    sooner.update!(ticket_tiers: [ { 'name' => 'Standard', 'price' => nil, 'sold_out' => false, 'few_left' => true } ])
+
+    get "/api/venues/#{venue.id}/gigs"
+    by_id = json['gigs'].index_by { |gig| gig['id'] }
+
+    expect(by_id[later.id]).to include('price' => { 'min' => 28.0, 'max' => 160.0, 'currency' => 'NZD' }, 'few_left' => true)
+    expect(by_id[later.id]['tiers'].map { |tier| tier['name'] }).to eq [ 'General Admission', 'Table for Four' ]
+    expect(by_id[sooner.id]).to include('price' => nil, 'few_left' => false) # sold out already
+  end
 end

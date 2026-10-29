@@ -243,6 +243,25 @@ export const tourHref = (actId, tourId) => {
 
 // --- Formatting --------------------------------------------------------------
 
+// "$28", "NZ$28" (to someone outside New Zealand), "£9.50"; whole amounts without pence
+export const formatMoney = (amount, currency, locale = undefined) => { // undefined: the browser's own locale
+  if (!currency) return amount.toFixed(Number.isInteger(amount) ? 0 : 2);
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency', currency, minimumFractionDigits: Number.isInteger(amount) ? 0 : 2
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount}`;
+  }
+};
+
+// A gig's price range: "Free", "$28", "£9.50–£14", "Free–$15"
+export const formatPriceRange = ({ min, max, currency }, locale) => {
+  if (max === 0) return 'Free';
+  const low = min === 0 ? 'Free' : formatMoney(min, currency, locale);
+  return min === max ? low : `${low}–${formatMoney(max, currency, locale)}`;
+};
+
 // A gig's start, in its venue's time zone when known
 export const formatGigTime = (startTime, timezone) => {
   const options = {

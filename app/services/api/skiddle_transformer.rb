@@ -74,7 +74,18 @@ module Api
         ticket_url: @event["link"], # Skiddle's terms: link to the event's page
         status: @event["cancelled"].to_s == "1" ? "cancelled" : "scheduled",
         external_ids: { SOURCE => @event["id"].to_s }
-      }
+      }.merge(build_prices)
+    end
+
+    # A range from ticketpricing, else read from entryprice ("£18.00 - £22.00",
+    # "10.00"); no price keys when there's neither
+    def build_prices
+      pricing = @event["ticketpricing"].is_a?(Hash) ? @event["ticketpricing"] : {}
+      prices = [ pricing["minPrice"], pricing["maxPrice"] ].filter_map { |price| Float(price.to_s, exception: false) } # numbers, or numeric strings
+      prices = @event["entryprice"].to_s.scan(/\d+(?:\.\d+)?/).map(&:to_f) if prices.empty?
+      return {} if prices.empty?
+
+      { price_min: prices.min, price_max: prices.max, currency: @event["currency"].presence || "GBP" }
     end
 
     def build_acts

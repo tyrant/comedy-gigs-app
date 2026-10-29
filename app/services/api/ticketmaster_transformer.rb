@@ -59,7 +59,16 @@ module Api
         external_ids: {
           "ticketmaster" => event["id"]
         }
-      }
+      }.merge(build_prices(event["priceRanges"]))
+    end
+
+    # Ticketmaster prices a minority of events (mostly in the US), as one range.
+    # Without one, no price keys at all, so a listing that has one isn't blanked.
+    def self.build_prices(ranges)
+      range = Array(ranges).find { |r| r["type"] == "standard" } || Array(ranges).first
+      return {} unless range && range["min"].is_a?(Numeric)
+
+      { price_min: range["min"], price_max: [ range["max"].to_f, range["min"] ].max, currency: range["currency"].presence }
     end
 
     def self.build_venue(venue)

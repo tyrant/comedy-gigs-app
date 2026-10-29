@@ -415,4 +415,17 @@ RSpec.describe Api::TicketmasterTransformer do
       end
     end
   end
+
+  describe '.build_prices' do
+    it 'takes the standard range' do
+      ranges = [ { 'type' => 'standard including fees', 'currency' => 'USD', 'min' => 40.5, 'max' => 90.0 },
+                 { 'type' => 'standard', 'currency' => 'USD', 'min' => 35.0, 'max' => 80.0 } ]
+      expect(described_class.build_prices(ranges)).to eq(price_min: 35.0, price_max: 80.0, currency: 'USD')
+    end
+
+    it 'gives nothing without one' do
+      expect(described_class.build_prices(nil)).to eq({})
+      expect(described_class.build_prices([ { 'type' => 'standard' } ])).to eq({})
+    end
+  end
 end

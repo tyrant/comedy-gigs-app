@@ -88,6 +88,15 @@ RSpec.describe Api::SkiddleImporter do
       expect(Gig.count).to eq 1
     end
 
+    it 'fills in a price Ticketmaster didn’t give, but keeps one it did' do
+      importer.import_events
+      expect(gig.reload).to have_attributes(price_min: 9.5, price_max: 14.0, currency: 'GBP')
+
+      gig.update!(price_min: 30, price_max: 30, currency: 'GBP')
+      importer.import_events
+      expect(gig.reload).to have_attributes(price_min: 30, price_max: 30)
+    end
+
     it 'touches it, so cached listings pick up the Skiddle credit' do
       travel 1.hour
       expect { importer.import_events }.to change { gig.reload.updated_at }

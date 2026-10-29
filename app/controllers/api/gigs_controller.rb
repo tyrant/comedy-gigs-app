@@ -1,6 +1,8 @@
 module Api
   # One venue's matching gigs and lineups, fetched when its popup opens
   class GigsController < BaseController
+    include GigPrices
+
     def index
       venue = Venue.find(params[:venue_id])
       gigs = Gig.filtered_for_api(filter_params).where(venue:)
@@ -37,6 +39,7 @@ module Api
         status: gig.status,
         ticket_url: gig.ticket_url,
         sources: gig.source_links.map(&:source).uniq.sort, # Skiddle's terms: credit it wherever its data shows
+        **prices_json(gig),
         acts: gig.acts.sort_by(&:name).map { |act| { id: act.id, name: act.name, image: act.primary_image_url } }
       }
     end

@@ -113,7 +113,28 @@ module Api
         ticket_url: @event["url"], # Eventfinda's terms: listings link to the event's page
         status: status(session),
         external_ids: { SOURCE => session["id"].to_s }
-      }
+      }.merge(build_prices(session))
+    end
+
+    CURRENCY = "NZD".freeze # eventfinda.co.nz's
+
+    # The session's ticket types (else the event's), each with its price and
+    # whether it's sold out or nearly; add-ons (parking, merch) left out. The
+    # range spans the priced ones; a free event is free.
+    def build_prices(session)
+      tickets = session.dig("session_tickets", "session_tickets").presence || @event.dig("ticket_types", "ticket_types") || []
+      tiers = tickets.reject { |ticket| ticket["is_addon"] }.filter_map do |ticket|
+        name = ticket["name"].to_s.squish
+        next if name.empty?
+
+        { "name" => name, "price" => ticket["price"].presence&.to_f,
+          "sold_out" => ticket["is_sold_out"] == true, "few_left" => ticket["is_limited_remaining"] == true }
+      end
+
+      prices = tiers.filter_map { |tier| tier["price"] }
+      prices = [ 0.0 ] if prices.empty? && @event["is_free"]
+      range = prices.any? ? { price_min: prices.min, price_max: prices.max, currency: CURRENCY } : {}
+      tiers.any? ? range.merge(ticket_tiers: tiers) : range
     end
 
     def status(session)

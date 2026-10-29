@@ -98,4 +98,23 @@ RSpec.describe Api::SkiddleTransformer do
       expect(described_class.transform_event(event, now: Time.utc(2030, 3, 7, 23))).to be_present
     end
   end
+
+  describe 'prices' do
+    it 'takes the range from ticketpricing' do
+      expect(result[:gig]).to include(price_min: 9.5, price_max: 14.0, currency: 'GBP')
+    end
+
+    it 'reads entryprice when there’s no ticketpricing' do
+      event.merge!('ticketpricing' => nil, 'entryprice' => '£18.00 - £22.00')
+      expect(result[:gig]).to include(price_min: 18.0, price_max: 22.0)
+
+      event['entryprice'] = '10.00'
+      expect(described_class.transform_event(event, now:)[:gig]).to include(price_min: 10.0, price_max: 10.0)
+    end
+
+    it 'gives no price keys without a price, so another source’s isn’t blanked' do
+      event.merge!('ticketpricing' => [], 'entryprice' => '')
+      expect(result[:gig].keys).not_to include(:price_min, :price_max, :currency)
+    end
+  end
 end

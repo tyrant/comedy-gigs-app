@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -51,6 +51,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "local_date"
+    t.decimal "price_min", precision: 10, scale: 2
+    t.decimal "price_max", precision: 10, scale: 2
+    t.string "currency", limit: 3
+    t.jsonb "ticket_tiers", default: [], null: false
     t.index ["local_date"], name: "index_gigs_on_local_date_live", where: "((status)::text <> 'cancelled'::text)"
     t.index ["name"], name: "index_gigs_on_name"
     t.index ["start_time"], name: "index_gigs_on_start_time"

@@ -4,6 +4,8 @@ module Api
   # act's own list. With tour_id, just that tour's gigs; the tours list stays
   # whole, with how many gigs each has for the dates.
   class ActGigsController < BaseController
+    include GigPrices
+
     def index
       act = Act.find(params[:act_id])
       all_gigs = Gig.filtered_for_api(filter_params.except(:act_ids, :tour_id)).joins(:acts).where(acts: { id: act.id })
@@ -55,6 +57,7 @@ module Api
         status: gig.status,
         ticket_url: gig.ticket_url,
         sources: gig.source_links.map(&:source).uniq.sort, # Skiddle's terms: credit it wherever its data shows
+        **prices_json(gig),
         venue: { id: venue.id, name: venue.name, city: venue.city, timezone: venue.timezone, lat: venue.latitude.to_f, lng: venue.longitude.to_f }
       }
     end

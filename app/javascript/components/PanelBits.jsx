@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatMoney, formatPriceRange } from '../fiddly-bits';
 
 // Pieces the venue and act views share
 
@@ -6,6 +7,39 @@ const STATUS_LABELS = { sold_out: 'Sold out', postponed: 'Postponed' };
 
 export const StatusBadge = ({ status }) => STATUS_LABELS[status]
   ? <span className="rounded bg-warn-soft px-1.5 text-[11px] font-medium text-warn-ink">{STATUS_LABELS[status]}</span>
+  : null;
+
+// What tickets cost, where a source says, and a warning when some are nearly gone
+export const GigPrice = ({ gig }) => (
+  <>
+    {gig.price && <span data-role="gig-price" className="font-medium text-fg">{formatPriceRange(gig.price)}</span>}
+    {gig.few_left && <span className="rounded bg-warn-soft px-1.5 text-[11px] font-medium text-warn-ink">Few left</span>}
+  </>
+);
+
+// A gig's ticket types, where there's a choice: folded away until asked for
+export const TicketTiers = ({ gig }) => gig.tiers?.length > 1
+  ? (
+    <details data-role="ticket-tiers" className="group mt-0.5 text-xs text-muted">
+      <summary className="w-fit cursor-pointer list-none text-accent hover:underline [&::-webkit-details-marker]:hidden">
+        {gig.tiers.length} ticket types <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-90">›</span>
+      </summary>
+      <ul className="mt-1 space-y-0.5 border-l-2 border-line pl-2">
+        {gig.tiers.map((tier, i) => (
+          <li key={i} className="flex gap-2">
+            <span className={`flex min-w-0 flex-1 gap-2 ${tier.sold_out ? 'line-through opacity-60' : ''}`}>
+              <span className="min-w-0 flex-1 truncate" title={tier.name}>{tier.name}</span>
+              <span className="shrink-0 text-fg">
+                {tier.price === null ? '' : tier.price === 0 ? 'Free' : formatMoney(tier.price, gig.price?.currency)}
+              </span>
+            </span>
+            {tier.sold_out && <span className="shrink-0">Sold out</span>}
+            {!tier.sold_out && tier.few_left && <span className="shrink-0 font-medium text-warn-ink">Few left</span>}
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
   : null;
 
 const onSkiddle = (url) => {

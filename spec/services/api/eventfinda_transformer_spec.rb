@@ -111,4 +111,41 @@ RSpec.describe Api::EventfindaTransformer do
       expect(described_class.transform_event(event, now:)).to be_nil
     end
   end
+
+  describe 'prices' do
+    def ticket(name, price, addon: false, sold_out: false, few_left: false)
+      { 'name' => name, 'price' => price, 'is_addon' => addon, 'is_sold_out' => sold_out, 'is_limited_remaining' => few_left }
+    end
+
+    def gig_for(session_tickets: nil, ticket_types: nil, **attrs)
+      session = eventfinda_session(id: 1, start: '2030-03-07 19:30:00')
+      session['session_tickets'] = { 'session_tickets' => session_tickets } if session_tickets
+      event = eventfinda_event(sessions: [ session ], **attrs)
+      event['ticket_types'] = { 'ticket_types' => ticket_types } if ticket_types
+      described_class.transform_event(event, now:)[:gigs].first
+    end
+
+    it 'lists the session’s ticket types, leaving out add-ons, with the range they span' do
+      gig = gig_for(session_tickets: [ ticket('General Admission', '28.00', few_left: true), ticket('Table for Four', '160.00', sold_out: true),
+                                       ticket('Parking', '10.00', addon: true) ])
+
+      expect(gig[:ticket_tiers]).to eq [
+        { 'name' => 'General Admission', 'price' => 28.0, 'sold_out' => false, 'few_left' => true },
+        { 'name' => 'Table for Four', 'price' => 160.0, 'sold_out' => true, 'few_left' => false }
+      ]
+      expect(gig).to include(price_min: 28.0, price_max: 160.0, currency: 'NZD')
+    end
+
+    it 'falls back on the event’s ticket types' do
+      expect(gig_for(ticket_types: [ ticket('Single Admit', '25.00') ])).to include(price_min: 25.0, price_max: 25.0)
+    end
+
+    it 'makes a free event free' do
+      expect(gig_for(is_free: true)).to include(price_min: 0.0, price_max: 0.0)
+    end
+
+    it 'gives no price keys without prices' do
+      expect(gig_for.keys).not_to include(:price_min, :ticket_tiers)
+    end
+  end
 end
