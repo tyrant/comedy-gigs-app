@@ -7,6 +7,7 @@ import { reduceMotion } from '../hooks/useMediaQuery';
 // HTML buttons, so they can be focused, tabbed through and clicked in specs.
 
 const SOURCE = 'venues';
+const HEAT = 'venue-heat'; // the heatmap's own unclustered copy of the venues, and its layer
 const EDGE_MARGIN = 48; // how close to the edge a selected venue may sit before the map recentres
 const NEAR_ME_ZOOM = 12; // about a city's worth of venues around you
 
@@ -34,6 +35,36 @@ const addVenueSource = (map, data) => {
   // MapLibre only tiles a source some layer uses. This one draws nothing; the
   // markers are read back from its tiles.
   map.addLayer({ id: SOURCE, type: 'circle', source: SOURCE, paint: { 'circle-radius': 0, 'circle-opacity': 0 } });
+
+  map.addSource(HEAT, { type: 'geojson', data });
+  map.addLayer(heatLayer, firstLabelLayer(map));
+};
+
+// Under the basemap's place names, so they stay readable
+const firstLabelLayer = (map) => map.getStyle().layers.find(layer => layer.type === 'symbol')?.id;
+
+// Where the gigs are, weighted by each venue's count, in the clusters' colours
+// (teal, violet, pink, orange). Strongest zoomed out, gone by city zoom, where
+// the markers say it better.
+const heatLayer = {
+  id: HEAT,
+  type: 'heatmap',
+  source: HEAT,
+  maxzoom: 12,
+  paint: {
+    'heatmap-weight': [ 'interpolate', [ 'linear' ], [ 'get', 'gigs' ], 0, 0, 1, 0.15, 50, 1 ],
+    'heatmap-intensity': [ 'interpolate', [ 'linear' ], [ 'zoom' ], 0, 0.6, 9, 2 ],
+    'heatmap-radius': [ 'interpolate', [ 'linear' ], [ 'zoom' ], 0, 12, 5, 24, 9, 40 ],
+    'heatmap-color': [
+      'interpolate', [ 'linear' ], [ 'heatmap-density' ],
+      0, 'rgba(13, 148, 136, 0)',
+      0.15, 'rgba(13, 148, 136, 0.45)',
+      0.4, 'rgba(124, 58, 237, 0.55)',
+      0.7, 'rgba(219, 39, 119, 0.65)',
+      1, 'rgba(234, 88, 12, 0.75)'
+    ],
+    'heatmap-opacity': [ 'interpolate', [ 'linear' ], [ 'zoom' ], 0, 0.85, 8, 0.7, 11.5, 0 ]
+  }
 };
 
 const compactCount = (n) => n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '')}k`;
@@ -182,6 +213,7 @@ const MapView = ({
     dataRef.current = toGeoJSON(venues);
     sentVenuesRef.current = venues;
     map.getSource(SOURCE)?.setData(dataRef.current);
+    map.getSource(HEAT)?.setData(dataRef.current);
   }, [ map, venues ]);
 
   // Keep one HTML marker per venue or cluster in view, in step with the source
