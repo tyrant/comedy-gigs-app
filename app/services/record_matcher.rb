@@ -8,8 +8,10 @@
 # ("Popovich Comedy Pet Theater" at 10:30pm and midnight), so a near miss is
 # left for a person to review (rake dedupe:candidates) rather than merged.
 class RecordMatcher
-  # The same venue as described by two sources can be a block apart
-  VENUE_RADIUS_KM = 0.25
+  # Venues match only by the same name, but sources can place the same venue
+  # several blocks apart (Hot Water Comedy Club, Liverpool: 650m between
+  # Ticketmaster and Skiddle)
+  VENUE_RADIUS_KM = 1.0
 
   # Sources disagree a little about start times (doors or show); early and
   # late shows are further apart than this

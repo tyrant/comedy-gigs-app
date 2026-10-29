@@ -15,6 +15,11 @@ RSpec.describe RecordMatcher do
       expect(found).to eq opera_house
     end
 
+    it 'finds it when a source places it several blocks out' do
+      found = matcher.venue('skiddle', '2213', name: 'The Opera House', city: 'Wellington', latitude: -41.2905, longitude: 174.7845)
+      expect(found).to eq opera_house # 650m east
+    end
+
     it 'leaves a namesake further away alone' do
       found = matcher.venue('eventfinda', '502', name: 'The Opera House', city: 'Wellington', latitude: -41.2800, longitude: 174.7768)
       expect(found).to be_nil
