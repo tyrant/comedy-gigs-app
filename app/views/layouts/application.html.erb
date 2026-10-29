@@ -5,8 +5,17 @@
     <title><%= content_for(:title) || "Gigs · Stand-up shows near you, on a map" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="description" content="Find stand-up comedy shows on a map. Filter by comedian and dates, then get tickets.">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#1b1b20" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff">
+    <%# The theme before first paint: the viewer's choice, else the system's. useTheme keeps it after. %>
+    <script>
+      (function () {
+        var theme;
+        try { theme = localStorage.getItem("theme"); } catch (e) {}
+        if (theme !== "light" && theme !== "dark") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+        if (theme === "dark") document.querySelector('meta[name="theme-color"]').content = "#1b1b20";
+      })();
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>

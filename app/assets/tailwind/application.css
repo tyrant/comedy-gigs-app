@@ -2,11 +2,13 @@
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
 /* --- Design tokens ------------------------------------------------------------
-   Colours are CSS variables that flip with the system colour scheme, so the
-   utilities (bg-surface, text-muted, bg-accent...) need no dark: variants. */
+   Colours are CSS variables that flip with the theme, so the utilities
+   (bg-surface, text-muted, bg-accent...) need no dark: variants. The theme is
+   <html data-theme="light|dark">, set before first paint by the layout's
+   script (the viewer's choice, else the system's) and by the theme button. */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   --canvas: #f4f3f1;
   --surface: #ffffff;
@@ -26,25 +28,25 @@
   --danger: #b91c1c;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #111114;
-    --surface: #1b1b20;
-    --surface-2: #26262d;
-    --fg: #ecebf0;
-    --muted: #a6a3b0;
-    --line: #34343c;
+[data-theme="dark"] {
+  color-scheme: dark;
 
-    --accent: #a78bfa;
-    --accent-strong: #c4b5fd;
-    --on-accent: #1a0b38;
-    --accent-soft: #2e2552;
-    --accent-ink: #ddd6fe;
+  --canvas: #111114;
+  --surface: #1b1b20;
+  --surface-2: #26262d;
+  --fg: #ecebf0;
+  --muted: #a6a3b0;
+  --line: #34343c;
 
-    --warn-soft: #422c0a;
-    --warn-ink: #fcd34d;
-    --danger: #f87171;
-  }
+  --accent: #a78bfa;
+  --accent-strong: #c4b5fd;
+  --on-accent: #1a0b38;
+  --accent-soft: #2e2552;
+  --accent-ink: #ddd6fe;
+
+  --warn-soft: #422c0a;
+  --warn-ink: #fcd34d;
+  --danger: #f87171;
 }
 
 @theme inline {
@@ -183,7 +185,7 @@ body {
   }
 }
 
-@media (prefers-color-scheme: dark) {
+[data-theme="dark"] {
   .maplibregl-ctrl-group button .maplibregl-ctrl-icon,
   .maplibregl-ctrl-attrib-button {
     filter: invert(1);
@@ -218,7 +220,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
-@media (prefers-color-scheme: dark) {
+[data-theme="dark"] {
   input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(0.8);
   }

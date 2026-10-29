@@ -8,6 +8,7 @@ import VenueGigs from './VenueGigs';
 import VenueList from './VenueList';
 import useJson from '../hooks/useJson';
 import useMediaQuery from '../hooks/useMediaQuery';
+import useTheme from '../hooks/useTheme';
 import useUrlState from '../hooks/useUrlState';
 import {
   defaultDates, filterQuery, filtersToParams, inBounds, pluralize, readFilters, readSelection, selectionToParams
@@ -23,6 +24,21 @@ const Brand = () => (
     <span className="hidden sm:inline">Gigs</span>
   </a>
 );
+
+// Shows what it switches to: a moon in light mode, a sun in dark
+const ThemeButton = ({ theme, onToggle }) => {
+  const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  return (
+    <button type="button" onClick={onToggle} aria-label={label} title={label} data-role="theme-toggle"
+      className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-surface text-muted shadow-xs hover:bg-surface-2 hover:text-fg">
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {theme === 'dark'
+          ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></>
+          : <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />}
+      </svg>
+    </button>
+  );
+};
 
 const Status = ({ loading, error, retry, gigs, venues }) => {
   if (loading) {
@@ -51,7 +67,7 @@ const App = ({ mapStyles }) => {
   const [ hoveredVenueId, setHoveredVenueId ] = useState(null);
 
   const isDesktop = useMediaQuery('(min-width: 768px)');
-  const isDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const [ theme, toggleTheme ] = useTheme();
   const [ sheetOpen, setSheetOpen ] = useState(() => Boolean(readSelection().venueId || readSelection().actId));
   const [ sheetHeight, setSheetHeight ] = useState(0);
   const panelRef = useRef(null);
@@ -145,6 +161,7 @@ const App = ({ mapStyles }) => {
       <header className="relative z-20 border-b border-line bg-surface">
         <div className="flex w-full flex-wrap items-center gap-2 p-2">
           <Brand />
+          <ThemeButton theme={theme} onToggle={toggleTheme} />
           <ActFilter actIds={filters.actIds} onChange={(actIds) => setFilter({ actIds })} onSelectAct={selectAct} />
           <DateRange startDate={filters.startDate} endDate={filters.endDate} onChange={setFilter} />
           <button type="button" onClick={clearFilters}
@@ -203,7 +220,7 @@ const App = ({ mapStyles }) => {
 
         <main className="relative min-w-0 flex-1" style={{ '--sheet-inset': `${sheetHeight}px` }}>
           <MapView
-            mapStyle={isDark ? mapStyles.dark : mapStyles.light}
+            mapStyle={theme === 'dark' ? mapStyles.dark : mapStyles.light}
             venues={venues}
             selectedVenueId={venueId}
             extraVenue={actGigVenue}

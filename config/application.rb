@@ -32,7 +32,7 @@ module ComedyGigsApp
     # The basemaps for light and dark mode: MapLibre style URLs, or style documents as JSON
     config.x.map_styles = {
       light: "https://tiles.openfreemap.org/styles/liberty",
-      dark: "https://tiles.openfreemap.org/styles/dark"
+      dark: "https://tiles.openfreemap.org/styles/fiord"
     }
   end
 end

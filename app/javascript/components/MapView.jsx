@@ -139,7 +139,7 @@ const MapView = ({
     };
   }, []);
 
-  // Follow the light/dark switch. A full reload, rather than a diff, so
+  // Follow the light/dark theme. A full reload, rather than a diff, so
   // style.load fires and the venue source goes back in.
   useEffect(() => {
     if (!map || styleRef.current === mapStyle) return;
