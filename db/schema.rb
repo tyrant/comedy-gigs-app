@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -59,6 +59,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_020000) do
     t.index ["venue_id"], name: "index_gigs_on_venue_id"
   end
 
+  create_table "gigs_tours", id: false, force: :cascade do |t|
+    t.bigint "gig_id", null: false
+    t.bigint "tour_id", null: false
+    t.index ["gig_id"], name: "index_gigs_tours_on_gig_id"
+    t.index ["tour_id", "gig_id"], name: "index_gigs_tours_on_tour_id_and_gig_id", unique: true
+  end
+
   create_table "source_links", force: :cascade do |t|
     t.string "source", null: false
     t.string "external_id", null: false
@@ -68,6 +75,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_020000) do
     t.datetime "updated_at", null: false
     t.index ["linkable_type", "linkable_id"], name: "index_source_links_on_linkable_type_and_linkable_id"
     t.index ["linkable_type", "source", "external_id"], name: "index_source_links_on_external_id", unique: true
+  end
+
+  create_table "tours", force: :cascade do |t|
+    t.bigint "act_id", null: false
+    t.string "name", null: false
+    t.string "key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["act_id", "key"], name: "index_tours_on_act_id_and_key", unique: true
+    t.index ["act_id"], name: "index_tours_on_act_id"
   end
 
   create_table "venues", force: :cascade do |t|
@@ -97,4 +114,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_020000) do
   add_foreign_key "acts_gigs", "acts"
   add_foreign_key "acts_gigs", "gigs"
   add_foreign_key "gigs", "venues"
+  add_foreign_key "gigs_tours", "gigs", on_delete: :cascade
+  add_foreign_key "gigs_tours", "tours", on_delete: :cascade
+  add_foreign_key "tours", "acts", on_delete: :cascade
 end

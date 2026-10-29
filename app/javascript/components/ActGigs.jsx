@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import useJson from '../hooks/useJson';
-import { formatGigTime, gigHref, pluralize } from '../fiddly-bits';
+import { formatGigTime, gigHref, pluralize, tourHref } from '../fiddly-bits';
 import { BackButton, GigActions, PanelPlaceholder, SkiddleCredit, StatusBadge } from './PanelBits';
 
 const LINK_LABELS = {
@@ -18,6 +18,31 @@ const OfficialLinks = ({ act }) => (
       </li>
     ))}
   </ul>
+);
+
+// The act's tours with gigs for these dates. Choosing one puts just its gigs
+// on the map and in the list; choosing it again, or Escape, shows them all.
+const Tours = ({ act, tours, tourId, onSelectTour }) => (
+  <div className="mt-3 px-1.5">
+    <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">{tours.length === 1 ? 'Tour' : 'Tours'}</h3>
+    <ul aria-label={`${act.name}’s tours`} className="mt-1.5 flex flex-wrap gap-1.5">
+      {tours.map(tour => {
+        const chosen = tour.id === tourId;
+        return (
+          <li key={tour.id} className="min-w-0">
+            <a href={tourHref(act.id, tour.id)} data-tour-id={tour.id} aria-current={chosen ? 'true' : undefined}
+              title={chosen ? 'Show all their gigs' : `Show the ${tour.name} gigs on the map`}
+              onClick={(e) => { e.preventDefault(); onSelectTour(chosen ? null : tour.id); }}
+              className="flex max-w-full items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-accent hover:bg-surface-2 aria-[current]:border-accent aria-[current]:bg-accent aria-[current]:text-on-accent">
+              <span className="truncate">{tour.name}</span>
+              <span className="shrink-0 opacity-75">{tour.gigs}</span>
+              {chosen && <span aria-hidden="true" className="shrink-0">✕</span>}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
 );
 
 const GigRow = ({ gig, selected, onSelectGig }) => (
@@ -46,7 +71,7 @@ const GigRow = ({ gig, selected, onSelectGig }) => (
 
 // An act's gigs for the current dates, wherever they are. Choosing one shows
 // it on the map; the act's view stays open.
-const ActGigs = ({ actId, query, gigId, backLabel, focusHeading, onSelectGig, onBack }) => {
+const ActGigs = ({ actId, query, gigId, tourId, backLabel, focusHeading, onSelectTour, onSelectGig, onBack }) => {
   const { data, error, loading, retry } = useJson(`/api/acts/${actId}/gigs?${query}`);
   const headingRef = useRef(null);
 
@@ -68,6 +93,8 @@ const ActGigs = ({ actId, query, gigId, backLabel, focusHeading, onSelectGig, on
   }
 
   const { act, gigs } = current;
+  const tours = current.tours || [];
+  const tour = tours.find(candidate => candidate.id === tourId);
 
   return (
     <div className="act-gigs" aria-busy={loading}>
@@ -97,7 +124,18 @@ const ActGigs = ({ actId, query, gigId, backLabel, focusHeading, onSelectGig, on
           </p>
         )}
         {act.links.length > 0 && <OfficialLinks act={act} />}
-        <p className="mt-2 px-1.5 text-xs font-medium text-muted">{pluralize(gigs.length, 'gig')} for these dates</p>
+        {tours.length > 0 && <Tours act={act} tours={tours} tourId={tourId} onSelectTour={onSelectTour} />}
+        <p className="mt-2 px-1.5 text-xs font-medium text-muted" aria-live="polite">
+          {pluralize(gigs.length, 'gig')}{tour ? <> on <span className="text-fg">{tour.name}</span></> : ''} for these dates
+          {tour && (
+            <>
+              {' · '}
+              <button type="button" onClick={() => onSelectTour(null)} className="cursor-pointer text-accent underline hover:text-accent-strong">
+                Show all
+              </button>
+            </>
+          )}
+        </p>
       </div>
 
       <ul className="p-2">

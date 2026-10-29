@@ -12,6 +12,7 @@ const HEAT = 'venue-heat'; // the heatmap's own unclustered copy of the venues, 
 const TERRAIN = 'terrain'; // elevation tiles, and the hill shading drawn from them
 const EDGE_MARGIN = 48; // how close to the edge a selected venue may sit before the map recentres
 const NEAR_ME_ZOOM = 12; // about a city's worth of venues around you
+const TOUR_ZOOM = 10; // the most a tour's venues zoom in, for a tour of one city
 const PLACE_ZOOM = 11; // the most a searched-for place zooms in, so a small town still shows its neighbours
 
 const toGeoJSON = (venues) => ({
@@ -141,11 +142,12 @@ const motion = () => ({ duration: reduceMotion() ? 0 : 600 });
 // --- The map -------------------------------------------------------------------
 
 // bottomInset is how much of the map's bottom edge something covers (the
-// bottom sheet on phones), so a selected venue is kept clear of it.
+// bottom sheet on phones), so a selected venue is kept clear of it. Each new
+// fitTo ({ bounds }) fits the map to them: a tour's venues.
 // extraVenue ({ id, lat, lng }) can be selected though the filters leave it
 // off the map; each new revealCount brings the selected venue back into view.
 const MapView = ({
-  mapStyle, theme = 'light', terrainTiles, venues, selectedVenueId, extraVenue, revealCount = 0, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange
+  mapStyle, theme = 'light', terrainTiles, fitTo, venues, selectedVenueId, extraVenue, revealCount = 0, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange
 }) => {
   const containerRef = useRef(null);
   const [ map, setMap ] = useState(null);
@@ -403,6 +405,12 @@ const MapView = ({
       </div>
     );
   }
+
+  // Fit to what's asked, each time it's asked, kept clear of the search box and the bottom sheet
+  useEffect(() => {
+    if (!map || !fitTo) return;
+    map.fitBounds(fitTo.bounds, { padding: { top: 72, right: 56, bottom: 56 + bottomInset, left: 56 }, maxZoom: TOUR_ZOOM, ...motion() });
+  }, [ map, fitTo ]);
 
   // A place from the search: its whole extent where it has one, kept clear of the bottom sheet
   const goToPlace = ({ center, bounds }) => {

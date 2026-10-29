@@ -4,6 +4,7 @@ class Gig < ApplicationRecord
   # Relationships
   belongs_to :venue
   has_and_belongs_to_many :acts
+  has_and_belongs_to_many :tours
 
   # Validations
   validates :name, :start_time, presence: true
@@ -45,14 +46,21 @@ class Gig < ApplicationRecord
           now:, started: now - ASSUMED_LENGTH - 1.hour)
   }
 
+  scope :on_tour, ->(tour_id) {
+    return all if tour_id.blank?
+
+    where("EXISTS (SELECT 1 FROM gigs_tours WHERE gigs_tours.gig_id = gigs.id AND gigs_tours.tour_id = ?)", tour_id.to_i)
+  }
+
   # The filters the map's API endpoints share: start_date, end_date, act_ids
-  # (comma-separated) and upcoming (leave out gigs already over). Cancelled
+  # (comma-separated), tour_id and upcoming (leave out gigs already over). Cancelled
   # gigs are never shown. "Now" is rounded down to the quarter-hour, so the
   # query, and so the API's cache keys, hold still in between.
   def self.filtered_for_api(params = {})
     scope = where.not(status: "cancelled")
     scope = scope.not_over(Time.zone.at(Time.current.to_i / 15.minutes * 15.minutes)) if params[:upcoming].present?
     scope = scope.featuring_acts(params[:act_ids].to_s.split(",").map(&:to_i).select(&:positive?))
+    scope = scope.on_tour(params[:tour_id])
     scope = scope.starting_after(params[:start_date])
     scope.starting_before(params[:end_date])
   end

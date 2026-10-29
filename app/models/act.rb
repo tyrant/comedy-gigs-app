@@ -6,6 +6,7 @@ class Act < ApplicationRecord
 
   # Relationships
   has_and_belongs_to_many :gigs
+  has_many :tours, dependent: :delete_all
 
   # Validations
   validates :name, presence: true

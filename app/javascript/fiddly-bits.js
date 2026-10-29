@@ -56,6 +56,20 @@ export const formatDistance = (km, locale = navigator.language) => {
   return `${value < 10 ? value.toFixed(1).replace(/\.0$/, '') : Math.round(value).toLocaleString()} ${unit}`;
 };
 
+// The bounds of where most of a set of venues' gigs are: those within
+// REGION_KM of the venue with the most gigs around it. A tour of the UK with
+// three nights in Sydney shows the UK, not the Indian Ocean between.
+const REGION_KM = 4000;
+export const mainRegionBounds = (venues) => {
+  const nearby = (venue) => venues.filter(other => distanceKm(venue, other) <= REGION_KM);
+  const gigsNear = (venue) => nearby(venue).reduce((sum, other) => sum + other.gigs, 0);
+  const anchor = venues.reduce((best, venue) => (gigsNear(venue) > gigsNear(best) ? venue : best));
+  const region = nearby(anchor);
+  const lngs = region.map(venue => venue.lng);
+  const lats = region.map(venue => venue.lat);
+  return [ [ Math.min(...lngs), Math.min(...lats) ], [ Math.max(...lngs), Math.max(...lats) ] ];
+};
+
 // Can the viewer see a point? view is the map's { bounds, center }.
 export const inView = (view, lat, lng) =>
   Boolean(view) && inBounds(view.bounds, lat, lng) && facesViewer(view.center, lat, lng);
@@ -136,21 +150,24 @@ export const filtersToParams = ({ actIds, startDate, endDate }) => ({
   end: endDate || null
 });
 
-// The open venue, the gig picked out in it, and the act whose view is open
-// over them, if any
+// The open venue, the gig picked out in it, the act whose view is open over
+// them, if any, and the act's tour on the map, if any
 export const readSelection = () => {
   const params = urlParams();
+  const actId = positiveInt(params.get('comedian'));
   return {
     venueId: positiveInt(params.get('venue')),
     gigId: positiveInt(params.get('gig')),
-    actId: positiveInt(params.get('comedian'))
+    actId,
+    tourId: actId ? positiveInt(params.get('tour')) : null
   };
 };
 
-export const selectionToParams = ({ venueId, gigId, actId }) => ({
+export const selectionToParams = ({ venueId, gigId, actId, tourId }) => ({
   venue: venueId,
   gig: venueId ? gigId : null,
-  comedian: actId || null
+  comedian: actId || null,
+  tour: (actId && tourId) || null
 });
 
 export const readMapView = () => {
@@ -190,8 +207,9 @@ export const writeUrlParams = (updates) => {
 // Query string for the API endpoints that take the map's filters
 // upcoming=1 leaves out gigs already over, unless the dates look back on
 // purpose: the viewer's today, not the server's, decides
-export const filterQuery = ({ actIds, startDate, endDate }, today = new Date()) => {
+export const filterQuery = ({ actIds, startDate, endDate, tourId }, today = new Date()) => {
   const params = new URLSearchParams();
+  if (tourId) params.set('tour_id', tourId);
   if (!startDate || startDate >= isoDate(today)) params.set('upcoming', '1');
   if (startDate) params.set('start_date', startDate);
   if (endDate) params.set('end_date', endDate);
@@ -211,6 +229,15 @@ export const gigHref = (venueId, gigId) => {
 export const actHref = (actId) => {
   const params = urlParams();
   params.set('comedian', actId);
+  params.delete('tour');
+  return `${window.location.pathname}?${params}`;
+};
+
+// Deep link to an act's tour on the map
+export const tourHref = (actId, tourId) => {
+  const params = urlParams();
+  params.set('comedian', actId);
+  params.set('tour', tourId);
   return `${window.location.pathname}?${params}`;
 };
 

@@ -11,7 +11,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import useTheme from '../hooks/useTheme';
 import useUrlState from '../hooks/useUrlState';
 import {
-  defaultDates, filterQuery, filtersToParams, inView, pluralize, readFilters, readSelection, selectionToParams
+  defaultDates, filterQuery, filtersToParams, inView, mainRegionBounds, pluralize, readFilters, readSelection, selectionToParams
 } from '../fiddly-bits';
 
 const NO_VENUES = [];
@@ -82,7 +82,8 @@ const App = ({ mapStyles, terrainTiles }) => {
   const [ actGigVenue, setActGigVenue ] = useState(null);
   const [ revealCount, setRevealCount ] = useState(0);
 
-  const query = filterQuery(filters);
+  // An act's tour narrows the map (and the act's list) to its gigs
+  const query = filterQuery({ ...filters, tourId: selection.actId ? selection.tourId : null });
   const { data, error, loading, retry } = useJson(`/api/venues?${query}`);
   const venues = data || NO_VENUES;
 
@@ -105,7 +106,7 @@ const App = ({ mapStyles, terrainTiles }) => {
     if (venueId) setSheetOpen(true);
     setSelection(prev => {
       if (prev.venueId) lastVenueId.current = prev.venueId;
-      return prev.venueId === venueId && !prev.actId ? prev : { venueId, gigId: null, actId: null };
+      return prev.venueId === venueId && !prev.actId ? prev : { venueId, gigId: null, actId: null, tourId: null };
     });
   }, []);
   const selectGig = useCallback((gigId) => setSelection(prev => ({ ...prev, gigId })), []);
@@ -114,12 +115,16 @@ const App = ({ mapStyles, terrainTiles }) => {
   const selectAct = useCallback((actId) => {
     focusAct.current = true;
     setSheetOpen(true);
-    setSelection(prev => ({ ...prev, actId }));
+    setSelection(prev => ({ ...prev, actId, tourId: null }));
   }, []);
   // Back to the venue it was opened from (or last showed on the map), else the list
   const closeAct = useCallback(() => {
     focusVenue.current = true;
-    setSelection(prev => ({ ...prev, actId: null }));
+    setSelection(prev => ({ ...prev, actId: null, tourId: null }));
+  }, []);
+  // A tour, or null for all the act's gigs. A gig picked out may not be on it.
+  const selectTour = useCallback((tourId) => {
+    setSelection(prev => ({ ...prev, tourId, gigId: null }));
   }, []);
   const selectActGig = useCallback((gig) => {
     setActGigVenue(gig.venue);
@@ -132,12 +137,26 @@ const App = ({ mapStyles, terrainTiles }) => {
     const handleKey = (e) => {
       if (e.key !== 'Escape' || e.defaultPrevented || !(selection.venueId || selection.actId)) return;
       if (e.target.closest?.('input, select, textarea, .react-select__control')) return;
-      if (selection.actId) closeAct();
+      if (selection.tourId) selectTour(null); // back to all the act's gigs first
+      else if (selection.actId) closeAct();
       else closeVenue();
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [ selection.venueId, selection.actId, closeAct, closeVenue ]);
+  }, [ selection.venueId, selection.actId, selection.tourId, closeAct, closeVenue, selectTour ]);
+
+  // Fit the map to a newly chosen tour's venues, once they've loaded: where
+  // most of its gigs are, if it spans the world
+  const [ fitTo, setFitTo ] = useState(null); // { bounds: [ [ west, south ], [ east, north ] ] }
+  const fittedTour = useRef(null);
+  useEffect(() => {
+    const tourId = selection.actId ? selection.tourId : null;
+    if (!tourId) fittedTour.current = null;
+    if (!tourId || loading || !data?.length || fittedTour.current === tourId) return;
+
+    fittedTour.current = tourId;
+    setFitTo({ bounds: mainRegionBounds(data) });
+  }, [ data, loading, selection.actId, selection.tourId ]);
 
   // On phones the panel is a sheet over the bottom of the map; the map keeps
   // the selected venue above it
@@ -189,6 +208,7 @@ const App = ({ mapStyles, terrainTiles }) => {
               <section id="act-details" aria-label="Act">
                 <ActGigs key={actId} actId={actId} query={query} gigId={gigId}
                   backLabel={venueId ? 'Back to venue' : 'All venues'} focusHeading={focusAct.current}
+                  tourId={selection.tourId} onSelectTour={selectTour}
                   onSelectGig={selectActGig} onBack={closeAct} />
               </section>
             )}
@@ -224,6 +244,7 @@ const App = ({ mapStyles, terrainTiles }) => {
             mapStyle={theme === 'dark' ? mapStyles.dark : mapStyles.light}
             theme={theme}
             terrainTiles={terrainTiles}
+            fitTo={fitTo}
             venues={venues}
             selectedVenueId={venueId}
             extraVenue={actGigVenue}
