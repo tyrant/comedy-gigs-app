@@ -43,4 +43,5 @@ Rails.application.configure do
   # Plain backgrounds instead of the tile server, so system specs never touch the network
   blank_style = ->(colour) { { version: 8, sources: {}, layers: [ { id: "background", type: "background", paint: { "background-color" => colour } } ] }.to_json }
   config.x.map_styles = { light: blank_style.("#f4f4f2"), dark: blank_style.("#1b1b20") }
+  config.x.map_terrain = nil
 end

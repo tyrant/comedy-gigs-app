@@ -34,5 +34,9 @@ module ComedyGigsApp
       light: "https://tiles.openfreemap.org/styles/liberty",
       dark: "https://tiles.openfreemap.org/styles/fiord"
     }
+
+    # Elevation tiles for hill shading (Terrarium-encoded PNGs; AWS Open Data,
+    # made by Mapzen), or nil for none
+    config.x.map_terrain = "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png"
   end
 end

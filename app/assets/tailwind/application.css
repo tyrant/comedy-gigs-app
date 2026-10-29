@@ -176,6 +176,12 @@ body {
   }
 }
 
+/* Markers round the back of the globe: MapLibre only fades them, which leaves
+   them clickable and seemingly floating over the near side */
+.maplibregl-marker-covered {
+  visibility: hidden;
+}
+
 /* MapLibre's controls, in the theme's colours */
 .maplibregl-ctrl-group {
   @apply overflow-hidden rounded-md! border border-line bg-surface! shadow-sm!;

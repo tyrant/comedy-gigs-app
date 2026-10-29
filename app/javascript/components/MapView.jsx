@@ -8,6 +8,7 @@ import { reduceMotion } from '../hooks/useMediaQuery';
 
 const SOURCE = 'venues';
 const HEAT = 'venue-heat'; // the heatmap's own unclustered copy of the venues, and its layer
+const TERRAIN = 'terrain'; // elevation tiles, and the hill shading drawn from them
 const EDGE_MARGIN = 48; // how close to the edge a selected venue may sit before the map recentres
 const NEAR_ME_ZOOM = 12; // about a city's worth of venues around you
 
@@ -42,6 +43,35 @@ const addVenueSource = (map, data) => {
 
 // Under the basemap's place names, so they stay readable
 const firstLabelLayer = (map) => map.getStyle().layers.find(layer => layer.type === 'symbol')?.id;
+
+// Under the roads too, so they stay crisp: the first OpenMapTiles road layer, else the first label
+const firstRoadLayer = (map) =>
+  map.getStyle().layers.find(layer => layer['source-layer'] === 'transportation')?.id || firstLabelLayer(map);
+
+// Hill shading, gentle enough to sit under everything else. Dark mode gets
+// darker shadows and fainter highlights, to suit Fiord's blue-grey.
+const HILLSHADE_COLOURS = {
+  light: { 'hillshade-shadow-color': 'rgba(60, 50, 40, 0.5)', 'hillshade-highlight-color': 'rgba(255, 255, 255, 0.35)' },
+  dark: { 'hillshade-shadow-color': 'rgba(0, 0, 0, 0.55)', 'hillshade-highlight-color': 'rgba(255, 255, 255, 0.08)' }
+};
+
+const addTerrain = (map, tiles, theme) => {
+  if (!tiles || map.getSource(TERRAIN)) return;
+  map.addSource(TERRAIN, {
+    type: 'raster-dem',
+    tiles: [ tiles ],
+    encoding: 'terrarium',
+    tileSize: 256,
+    maxzoom: 12, // finer than this barely shows at the strength it's drawn
+    attribution: '<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md">Terrain: Mapzen and others</a>'
+  });
+  map.addLayer({
+    id: TERRAIN,
+    type: 'hillshade',
+    source: TERRAIN,
+    paint: { 'hillshade-exaggeration': 0.35, ...HILLSHADE_COLOURS[theme] }
+  }, firstRoadLayer(map));
+};
 
 // Where the gigs are, weighted by each venue's count, in the clusters' colours
 // (teal, violet, pink, orange). Strongest zoomed out, gone by city zoom, where
@@ -113,7 +143,7 @@ const motion = () => ({ duration: reduceMotion() ? 0 : 600 });
 // extraVenue ({ id, lat, lng }) can be selected though the filters leave it
 // off the map; each new revealCount brings the selected venue back into view.
 const MapView = ({
-  mapStyle, venues, selectedVenueId, extraVenue, revealCount = 0, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange
+  mapStyle, theme = 'light', terrainTiles, venues, selectedVenueId, extraVenue, revealCount = 0, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange
 }) => {
   const containerRef = useRef(null);
   const [ map, setMap ] = useState(null);
@@ -124,6 +154,11 @@ const MapView = ({
   const sentVenuesRef = useRef(null); // the venues last handed to the source
   const [ syncedVenues, setSyncedVenues ] = useState(null); // ...and once the markers show them
   const styleRef = useRef(mapStyle);
+  const themeRef = useRef(theme); // for the hill shading, when a new style loads
+  themeRef.current = theme;
+  // The view to restore once a style loads: until the globe is back, the map
+  // is flat, and a flat map zoomed right out won't centre far from the equator
+  const pendingViewRef = useRef(null);
 
   const callbacks = useRef({});
   callbacks.current = { onSelectVenue, onViewChange };
@@ -133,6 +168,7 @@ const MapView = ({
   // Create the map and its controls, once
   useEffect(() => {
     const { center: [ lat, lng ], zoom } = readMapView();
+    pendingViewRef.current = { center: [ lng, lat ], zoom };
     let instance;
 
     try {
@@ -163,8 +199,13 @@ const MapView = ({
     }), 'top-right');
     instance.addControl(new ScaleControl(), 'bottom-left');
 
-    // A new style drops the source, so put it back each time one loads
+    // A new style drops the sources and projection, so put them back each
+    // time one loads. The globe flattens out as you zoom in.
     instance.on('style.load', () => {
+      instance.setProjection({ type: 'globe' });
+      if (pendingViewRef.current) instance.jumpTo(pendingViewRef.current);
+      pendingViewRef.current = null;
+      addTerrain(instance, terrainTiles, themeRef.current);
       addVenueSource(instance, dataRef.current);
       setMap(instance);
     });
@@ -182,10 +223,11 @@ const MapView = ({
   useEffect(() => {
     if (!map || styleRef.current === mapStyle) return;
     styleRef.current = mapStyle;
+    pendingViewRef.current = { center: map.getCenter(), zoom: map.getZoom() };
     map.setStyle(mapStyle, { diff: false });
   }, [ map, mapStyle ]);
 
-  // Mirror the view into the URL and report the visible bounds. Panning never
+  // Mirror the view into the URL and report what's visible. Panning never
   // fetches anything: every matching venue is already in the source.
   useEffect(() => {
     if (!map) return;
@@ -199,10 +241,10 @@ const MapView = ({
         written = JSON.stringify(params);
         writeUrlParams(params);
       }
-      callbacks.current.onViewChange(map.getBounds());
+      callbacks.current.onViewChange({ bounds: map.getBounds(), center: map.getCenter() });
     };
 
-    callbacks.current.onViewChange(map.getBounds());
+    callbacks.current.onViewChange({ bounds: map.getBounds(), center: map.getCenter() });
     map.on('moveend', handleMove);
     return () => map.off('moveend', handleMove);
   }, [ map ]);

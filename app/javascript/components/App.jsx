@@ -11,7 +11,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import useTheme from '../hooks/useTheme';
 import useUrlState from '../hooks/useUrlState';
 import {
-  defaultDates, filterQuery, filtersToParams, inBounds, pluralize, readFilters, readSelection, selectionToParams
+  defaultDates, filterQuery, filtersToParams, inView, pluralize, readFilters, readSelection, selectionToParams
 } from '../fiddly-bits';
 
 const NO_VENUES = [];
@@ -58,12 +58,12 @@ const Status = ({ loading, error, retry, gigs, venues }) => {
   );
 };
 
-const App = ({ mapStyles }) => {
+const App = ({ mapStyles, terrainTiles }) => {
   // Filters and the selected venue/gig/act live in the URL; the map position
   // is written there by the map itself.
   const [ filters, setFilters ] = useUrlState(readFilters, filtersToParams);
   const [ selection, setSelection ] = useUrlState(readSelection, selectionToParams);
-  const [ bounds, setBounds ] = useState(null);
+  const [ view, setView ] = useState(null); // the map's { bounds, center }
   const [ hoveredVenueId, setHoveredVenueId ] = useState(null);
 
   const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -87,8 +87,8 @@ const App = ({ mapStyles }) => {
   const venues = data || NO_VENUES;
 
   const venuesInView = useMemo(
-    () => venues.filter(venue => inBounds(bounds, venue.lat, venue.lng)).sort(byGigsThenName),
-    [ venues, bounds ]
+    () => venues.filter(venue => inView(view, venue.lat, venue.lng)).sort(byGigsThenName),
+    [ venues, view ]
   );
   const gigsInView = venuesInView.reduce((sum, venue) => sum + venue.gigs, 0);
 
@@ -221,6 +221,8 @@ const App = ({ mapStyles }) => {
         <main className="relative min-w-0 flex-1" style={{ '--sheet-inset': `${sheetHeight}px` }}>
           <MapView
             mapStyle={theme === 'dark' ? mapStyles.dark : mapStyles.light}
+            theme={theme}
+            terrainTiles={terrainTiles}
             venues={venues}
             selectedVenueId={venueId}
             extraVenue={actGigVenue}
@@ -228,7 +230,7 @@ const App = ({ mapStyles }) => {
             hoveredVenueId={hoveredVenueId}
             bottomInset={sheetHeight}
             onSelectVenue={selectVenue}
-            onViewChange={setBounds}
+            onViewChange={setView}
           />
         </main>
       </div>

@@ -32,6 +32,19 @@ export const inBounds = (bounds, lat, lng) => {
   return shifted <= east;
 };
 
+// Is a point on the side of the globe facing the viewer, i.e. within 90° of
+// the map's centre? Zoomed out, the bounds take in the whole world, the far
+// side included.
+const RADIANS = Math.PI / 180;
+const facesViewer = (center, lat, lng) => {
+  const [ lat1, lat2, dLng ] = [ center.lat * RADIANS, lat * RADIANS, (lng - center.lng) * RADIANS ];
+  return Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(dLng) > 0; // cos of the angle between
+};
+
+// Can the viewer see a point? view is the map's { bounds, center }.
+export const inView = (view, lat, lng) =>
+  Boolean(view) && inBounds(view.bounds, lat, lng) && facesViewer(view.center, lat, lng);
+
 // YYYY-MM-DD in the viewer's own time zone (toISOString would give UTC's date)
 const isoDate = (date) => [
   date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')
