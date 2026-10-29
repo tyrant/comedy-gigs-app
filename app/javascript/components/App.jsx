@@ -20,7 +20,7 @@ const byGigsThenName = (a, b) => b.gigs - a.gigs || a.name.localeCompare(b.name)
 const Brand = () => (
   <a href="/" className="flex shrink-0 items-center gap-2 rounded-md pr-1 font-bold tracking-tight">
     <img src="/icon.svg" alt="" width="32" height="32" className="size-8" />
-    <span className="hidden sm:inline">Comedy Gigs</span>
+    <span className="hidden sm:inline">Gigs</span>
   </a>
 );
 
@@ -145,7 +145,7 @@ const App = ({ mapStyles }) => {
       <header className="relative z-20 border-b border-line bg-surface">
         <div className="flex w-full flex-wrap items-center gap-2 p-2">
           <Brand />
-          <ActFilter actIds={filters.actIds} onChange={(actIds) => setFilter({ actIds })} />
+          <ActFilter actIds={filters.actIds} onChange={(actIds) => setFilter({ actIds })} onSelectAct={selectAct} />
           <DateRange startDate={filters.startDate} endDate={filters.endDate} onChange={setFilter} />
           <button type="button" onClick={clearFilters}
             className="h-10 shrink-0 cursor-pointer rounded-md border border-line bg-surface px-3 text-sm shadow-xs hover:bg-surface-2 max-md:order-1">

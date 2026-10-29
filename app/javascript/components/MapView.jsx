@@ -51,17 +51,23 @@ const markerButton = (className, onClick) => {
   return el;
 };
 
-// Sets the marker's label and count, touching the DOM only when they change
-const updateMarker = (entry, label, count) => {
+// Sets the marker's label and count (and a cluster's look), touching the DOM
+// only when they change
+const updateMarker = (entry, label, count, className) => {
   if (entry.label === label) return;
   entry.label = label;
   const el = entry.marker.getElement();
   el.title = label;
   el.setAttribute('aria-label', label);
   el.textContent = count;
+  if (className) el.className = className;
 };
 
-const clusterSize = (count) => count < 10 ? 'size-9' : count < 100 ? 'size-11' : 'size-13';
+// A cluster's size says how many venues it holds, its colour how many gigs:
+// cool for a few, hot for lots
+const clusterSize = (venues) => venues < 10 ? 'size-9' : venues < 100 ? 'size-11' : 'size-13';
+const clusterHeat = (gigs) => gigs < 25 ? 'is-few' : gigs < 100 ? 'is-some' : gigs < 500 ? 'is-many' : 'is-lots';
+const clusterClass = ({ point_count, gigs }) => `cluster-marker ${clusterSize(point_count)} ${clusterHeat(gigs)}`;
 
 const motion = () => ({ duration: reduceMotion() ? 0 : 600 });
 
@@ -182,7 +188,7 @@ const MapView = ({
     };
 
     const createClusterMarker = (props, lngLat) => {
-      const el = markerButton(`cluster-marker ${clusterSize(props.point_count)}`, async () => {
+      const el = markerButton(clusterClass(props), async () => {
         const zoom = await map.getSource(SOURCE).getClusterExpansionZoom(props.cluster_id);
         map.easeTo({ center: lngLat, zoom, ...motion() });
       });
@@ -209,7 +215,7 @@ const MapView = ({
           markers.set(key, entry);
         }
 
-        if (props.cluster) updateMarker(entry, clusterLabel(props), compactCount(props.gigs));
+        if (props.cluster) updateMarker(entry, clusterLabel(props), compactCount(props.gigs), clusterClass(props));
         else updateMarker(entry, venueLabel(props), compactCount(props.gigs));
       });
 

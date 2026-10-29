@@ -9,12 +9,12 @@ RSpec.describe 'GET /' do
 
   it 'names the site and describes it' do
     expect(page.at_css('html')['lang']).to eq 'en'
-    expect(page.at_css('title').text).to start_with 'Comedy Gigs'
+    expect(page.at_css('title').text).to start_with 'Gigs'
     expect(meta('description')).to be_present
   end
 
   it 'gives link previews a title, description and absolute image URL' do
-    expect(meta('og:title')).to eq 'Comedy Gigs'
+    expect(meta('og:title')).to eq 'Gigs'
     expect(meta('og:description')).to be_present
     expect(meta('og:image')).to eq 'http://www.example.com/og-image.png'
     expect(meta('twitter:card')).to eq 'summary_large_image'

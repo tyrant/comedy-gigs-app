@@ -129,7 +129,7 @@ body {
 }
 
 .react-select__multi-value__remove {
-  @apply bg-muted text-surface hover:bg-danger;
+  @apply cursor-pointer bg-muted text-surface hover:bg-danger;
 }
 
 /* --- Map markers --------------------------------------------------------------
@@ -156,11 +156,21 @@ body {
   }
 }
 
+/* Size by venues (set in MapView), colour by gigs, cool to hot. Dark enough
+   for white text in either theme. */
 .cluster-marker {
-  @apply flex cursor-pointer items-center justify-center rounded-full bg-accent/85 text-xs font-bold text-on-accent shadow-md ring-4 ring-accent/25 transition-colors duration-100;
+  --cluster: var(--color-teal-600);
+  @apply flex cursor-pointer items-center justify-center rounded-full text-xs font-bold text-white shadow-md transition-[background-color,box-shadow] duration-100;
+  background-color: color-mix(in oklab, var(--cluster) 90%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--cluster) 30%, transparent), var(--tw-shadow);
+
+  &.is-some { --cluster: var(--color-violet-600); }
+  &.is-many { --cluster: var(--color-pink-600); }
+  &.is-lots { --cluster: var(--color-orange-600); }
 
   &:hover, &:focus-visible {
-    @apply bg-accent-strong ring-accent/40;
+    background-color: var(--cluster);
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--cluster) 45%, transparent), var(--tw-shadow);
   }
 }
 

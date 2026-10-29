@@ -16,11 +16,16 @@ const fetchActs = async (query) => {
   return (await response.json()).map(toOption);
 };
 
-// Defined once, at module scope, so react-select doesn't remount them on every render
-const MultiValueLabel = ({ data }) => (
-  <img src={data.image} alt={data.label} title={data.label}
-    width={AVATAR_WIDTH} height={AVATAR_WIDTH} loading="lazy" decoding="async"
-    className="size-8 rounded-full object-cover" />
+// Defined once, at module scope, so react-select doesn't remount them on every render.
+// An avatar opens the act’s view; it keeps its mouse and keys from react-select,
+// which would open the menu instead.
+const MultiValueLabel = ({ data, selectProps }) => (
+  <button type="button" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onClick={() => selectProps.onSelectAct(data.value)}
+    aria-label={`Show ${data.label}’s gigs`} title={data.label} className="block cursor-pointer rounded-full">
+    <img src={data.image} alt={data.label}
+      width={AVATAR_WIDTH} height={AVATAR_WIDTH} loading="lazy" decoding="async"
+      className="size-8 rounded-full object-cover" />
+  </button>
 );
 
 const MultiValue = (props) => {
@@ -67,7 +72,7 @@ const selectStyles = {
 
 // Multi-select of acts, searched on the server as you type. The URL only holds
 // act IDs, so the chosen acts' names and images are fetched once on load.
-const ActFilter = ({ actIds, onChange }) => {
+const ActFilter = ({ actIds, onChange, onSelectAct }) => {
   const containerRef = useRef(null);
   const [ known, setKnown ] = useState(() => new Map()); // act ID -> option
   const [ maxVisible, setMaxVisible ] = useState(4);
@@ -129,6 +134,7 @@ const ActFilter = ({ actIds, onChange }) => {
         styles={selectStyles}
         formatOptionLabel={formatOptionLabel}
         maxVisible={maxVisible}
+        onSelectAct={onSelectAct}
       />
     </div>
   );

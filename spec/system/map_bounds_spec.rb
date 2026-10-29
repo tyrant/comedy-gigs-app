@@ -138,6 +138,7 @@ RSpec.describe 'Map Bounds Functionality', type: :system, js: true do
 
       cluster = find('.cluster-marker[aria-label="2 venues, 2 gigs; zoom in"]')
       expect(cluster).to have_text('2', exact: true)
+      expect(cluster[:class].split).to include('size-9', 'is-few') # few venues, few gigs
       expect(page).not_to have_selector(".venue-marker[title*=\"#{venue_london_name}\"]")
 
       cluster.click

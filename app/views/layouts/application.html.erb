@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title><%= content_for(:title) || "Comedy Gigs · Stand-up shows near you, on a map" %></title>
+    <title><%= content_for(:title) || "Gigs · Stand-up shows near you, on a map" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="description" content="Find stand-up comedy shows on a map. Filter by comedian and dates, then get tickets.">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -13,14 +13,14 @@
     <%= csp_meta_tag %>
 
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Comedy Gigs">
-    <meta property="og:title" content="Comedy Gigs">
+    <meta property="og:site_name" content="Gigs">
+    <meta property="og:title" content="Gigs">
     <meta property="og:description" content="Stand-up shows near you, on a map. Filter by comedian and dates, then get tickets.">
     <meta property="og:url" content="<%= request.base_url %>/">
     <meta property="og:image" content="<%= request.base_url %>/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="A microphone, and the words Comedy Gigs: stand-up shows near you, on a map">
+    <meta property="og:image:alt" content="A microphone, and the word Gigs: stand-up shows near you, on a map">
     <meta name="twitter:card" content="summary_large_image">
 
     <%= yield :head %>

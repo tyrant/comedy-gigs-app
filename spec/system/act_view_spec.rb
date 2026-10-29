@@ -81,6 +81,15 @@ RSpec.describe 'An act’s view', type: :system, js: true do
     expect(page).to have_selector('#venue-list')
   end
 
+  it 'opens from an avatar in the act filter, leaving the menu shut' do
+    visit root_path(act: rose.id)
+    find('button[aria-label="Show Rose Matafeo’s gigs"]').click
+
+    expect(page).to have_selector('#act-details h2', text: 'Rose Matafeo')
+    expect(page).not_to have_selector('.react-select__menu')
+    expect(current_url).to include "comedian=#{rose.id}"
+  end
+
   it 'shows a gig whose venue the act filter leaves off the map' do
     christchurch = create :venue, name: 'The Loons', city: 'Christchurch', latitude: -43.53, longitude: 172.64
     create :gig, name: 'Rose in Christchurch', venue: christchurch, acts: [ rose ], start_time: 4.weeks.from_now, end_time: nil
