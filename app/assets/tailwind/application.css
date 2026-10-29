@@ -218,6 +218,11 @@ body {
 
 /* --- Gig list -------------------------------------------------------------- */
 
+/* Skiddle's black logo, as their white one on dark */
+[data-theme="dark"] .skiddle-logo {
+  filter: invert(1);
+}
+
 [data-role="gig-link"]:hover {
   [data-role="gig-name"] {
     @apply text-accent underline;

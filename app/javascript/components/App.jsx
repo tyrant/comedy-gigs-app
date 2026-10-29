@@ -3,7 +3,7 @@ import MapView from './MapView';
 import ActFilter from './ActFilter';
 import DateRange from './DateRange';
 import ActGigs from './ActGigs';
-import { SKIDDLE_CHIP, SKIDDLE_LOGO } from './PanelBits';
+import { SkiddleLogo } from './PanelBits';
 import VenueGigs from './VenueGigs';
 import VenueList from './VenueList';
 import useJson from '../hooks/useJson';
@@ -232,9 +232,7 @@ const App = ({ mapStyles, terrainTiles }) => {
             <span aria-hidden="true">·</span>{' '}
             <a href="https://www.skiddle.com/" className="inline-flex items-center gap-1 align-middle underline hover:text-accent">
               UK listings from
-              <span className={`${SKIDDLE_CHIP} p-1`}>
-                <img src={SKIDDLE_LOGO} alt="Skiddle" className="h-7 w-auto" />
-              </span>
+              <SkiddleLogo className="h-5" />
             </a>
           </footer>
         </aside>

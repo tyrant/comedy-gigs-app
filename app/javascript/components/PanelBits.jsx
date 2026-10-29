@@ -127,12 +127,12 @@ export const GigActions = ({ gig, venueId }) => (
   </div>
 );
 
-// Skiddle's logo is white, so it sits on a dark chip in either theme. Rows
-// show just its wordmark, cropped from the full logo, which is too small to
-// read at that size.
-export const SKIDDLE_LOGO = '/images/skiddle-logo.svg';
-const SKIDDLE_WORDMARK = '/images/skiddle-wordmark.svg';
-export const SKIDDLE_CHIP = 'inline-flex rounded bg-neutral-900 align-middle';
+// Skiddle's official horizontal logo, black; dark mode turns it to their
+// white version (.skiddle-logo in the stylesheet)
+export const SkiddleLogo = ({ className }) => (
+  <img src="/images/skiddle-logo-horizontal.png" alt="Skiddle" width="796" height="286"
+    className={`skiddle-logo inline-block w-auto align-middle ${className}`} />
+);
 
 // Skiddle's terms: credit it by name and logo wherever its listings show,
 // linking to the event's Skiddle page
@@ -141,10 +141,7 @@ export const SkiddleCredit = ({ gig }) => gig.sources?.includes('skiddle')
     <a href={onSkiddle(gig.ticket_url) ? gig.ticket_url : 'https://www.skiddle.com/'} data-role="skiddle-credit"
       target="_blank" rel="noopener noreferrer" title="Listing from Skiddle"
       className="inline-flex items-center gap-1 hover:underline">
-      via
-      <span className={`${SKIDDLE_CHIP} px-1 py-0.5`}>
-        <img src={SKIDDLE_WORDMARK} alt="Skiddle" className="h-2.5 w-auto" />
-      </span>
+      via <SkiddleLogo className="h-3.5" />
     </a>
   )
   : null;
