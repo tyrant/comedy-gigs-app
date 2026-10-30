@@ -73,7 +73,7 @@ const GigRow = ({ gig, selected, onSelectGig }) => (
 
 // An act's gigs for the current dates, wherever they are. Choosing one shows
 // it on the map; the act's view stays open.
-const ActGigs = ({ actId, query, gigId, tourId, backLabel, focusHeading, onSelectTour, onSelectGig, onBack }) => {
+const ActGigs = ({ actId, query, gigId, tourId, searching, backLabel, focusHeading, onSearchAct, onSelectTour, onSelectGig, onBack }) => {
   const { data, error, loading, retry } = useJson(`/api/acts/${actId}/gigs?${query}`);
   const headingRef = useRef(null);
 
@@ -126,6 +126,15 @@ const ActGigs = ({ actId, query, gigId, tourId, backLabel, focusHeading, onSelec
           </p>
         )}
         {act.links.length > 0 && <OfficialLinks act={act} />}
+        <div className="mt-3 px-1.5">
+          <button type="button" onClick={() => onSearchAct(act.id)} disabled={searching} data-role="search-act"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:cursor-default disabled:bg-accent-soft disabled:text-accent-ink">
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+            </svg>
+            {searching ? 'Searching their gigs' : 'Search their gigs'}
+          </button>
+        </div>
         {tours.length > 0 && <Tours act={act} tours={tours} tourId={tourId} onSelectTour={onSelectTour} />}
         <p className="mt-2 px-1.5 text-xs font-medium text-muted" aria-live="polite">
           {pluralize(gigs.length, 'gig')}{tour ? <> on <span className="text-fg">{tour.name}</span></> : ''} for these dates

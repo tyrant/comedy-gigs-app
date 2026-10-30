@@ -122,8 +122,24 @@ const App = ({ mapStyles, terrainTiles }) => {
     focusVenue.current = true;
     setSelection(prev => ({ ...prev, actId: null, tourId: null }));
   }, []);
+  // Fit the map to the venues once they load after a search or a tour is
+  // chosen (or a tour is linked to): where most of their gigs are
+  const fitAfterLoad = useRef(Boolean(readSelection().tourId));
+  const [ fitTo, setFitTo ] = useState(null); // { bounds: [ [ west, south ], [ east, north ] ] }
+  useEffect(() => {
+    if (!fitAfterLoad.current || loading || !data) return;
+    fitAfterLoad.current = false;
+    if (data.length) setFitTo({ bounds: mainRegionBounds(data) });
+  }, [ data, loading ]);
+
+  // Just this act in the comedian search, keeping the dates
+  const searchAct = useCallback((actId) => {
+    fitAfterLoad.current = true;
+    setFilters(prev => ({ ...prev, actIds: [ actId ] }));
+  }, []);
   // A tour, or null for all the act's gigs. A gig picked out may not be on it.
   const selectTour = useCallback((tourId) => {
+    fitAfterLoad.current = Boolean(tourId);
     setSelection(prev => ({ ...prev, tourId, gigId: null }));
   }, []);
   const selectActGig = useCallback((gig) => {
@@ -145,18 +161,6 @@ const App = ({ mapStyles, terrainTiles }) => {
     return () => document.removeEventListener('keydown', handleKey);
   }, [ selection.venueId, selection.actId, selection.tourId, closeAct, closeVenue, selectTour ]);
 
-  // Fit the map to a newly chosen tour's venues, once they've loaded: where
-  // most of its gigs are, if it spans the world
-  const [ fitTo, setFitTo ] = useState(null); // { bounds: [ [ west, south ], [ east, north ] ] }
-  const fittedTour = useRef(null);
-  useEffect(() => {
-    const tourId = selection.actId ? selection.tourId : null;
-    if (!tourId) fittedTour.current = null;
-    if (!tourId || loading || !data?.length || fittedTour.current === tourId) return;
-
-    fittedTour.current = tourId;
-    setFitTo({ bounds: mainRegionBounds(data) });
-  }, [ data, loading, selection.actId, selection.tourId ]);
 
   // On phones the panel is a sheet over the bottom of the map; the map keeps
   // the selected venue above it
@@ -209,6 +213,7 @@ const App = ({ mapStyles, terrainTiles }) => {
                 <ActGigs key={actId} actId={actId} query={query} gigId={gigId}
                   backLabel={venueId ? 'Back to venue' : 'All venues'} focusHeading={focusAct.current}
                   tourId={selection.tourId} onSelectTour={selectTour}
+                  searching={filters.actIds.length === 1 && filters.actIds[0] === actId} onSearchAct={searchAct}
                   onSelectGig={selectActGig} onBack={closeAct} />
               </section>
             )}

@@ -103,4 +103,34 @@ RSpec.describe 'An act’s view', type: :system, js: true do
     within('#act-details') { click_link 'Rose in Christchurch' }
     expect(page).to have_current_path(/lat=-43\.53\d*&lng=172\.64/, url: true, wait: 10)
   end
+
+  it 'searches just the act’s gigs, keeping the dates' do
+    start, finish = Date.current.iso8601, 5.weeks.from_now.to_date.iso8601
+    visit "#{root_path}?act=#{guy.id}&act=#{rose.id}&start=#{start}&end=#{finish}"
+    expect(page).to have_selector('.react-select__multi-value', count: 2, wait: 10)
+    click_venue_marker_and_wait_for_details('The Classic')
+    within('#venue-details') { click_link 'Rose Matafeo' }
+
+    within('#act-details') { click_button 'Search their gigs' }
+
+    expect(page).to have_selector('.react-select__multi-value', count: 1)
+    expect(page).to have_selector('.react-select__multi-value img[alt="Rose Matafeo"]')
+    expect(page).to have_current_path(/act=#{rose.id}(?!.*act=)/, url: true)
+    expect(current_url).to include("start=#{start}", "end=#{finish}")
+    expect(find('#start_date', visible: :all).value).to eq start
+    expect(page).to have_button('Searching their gigs', disabled: true)
+    expect(page).to have_selector('#act-details h2', text: 'Rose Matafeo') # the act's view stays open
+  end
+
+  it 'brings the act’s gigs into view when searching them' do
+    visit "#{root_path}?lat=51.5&lng=-0.1&zoom=6&comedian=#{rose.id}"
+    wait_for_map_ready
+    within('#act-details') { click_button 'Search their gigs' }
+
+    expect(page).to have_selector('.venue-marker[title^="The Classic"]', wait: 10)
+    page.document.synchronize(10) do
+      lat = page.evaluate_script('window.mapInstance.getCenter().lat')
+      raise Capybara::ExpectationNotMet, "map centre at #{lat}" unless lat.between?(-42, -36)
+    end
+  end
 end
