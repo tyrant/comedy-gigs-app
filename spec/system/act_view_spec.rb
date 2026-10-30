@@ -90,6 +90,19 @@ RSpec.describe 'An act’s view', type: :system, js: true do
     expect(current_url).to include "comedian=#{rose.id}"
   end
 
+  it 'rings an avatar in light blue, and its ×, in light red, on hover' do
+    visit root_path(act: rose.id)
+    outline = ->(selector) { page.evaluate_script("getComputedStyle(document.querySelector('#{selector}')).outline") }
+
+    avatar = find('button[aria-label="Show Rose Matafeo’s gigs"]')
+    expect(outline.('.act-avatar')).to include 'none'
+    avatar.hover
+    expect(outline.('.act-avatar')).to include('3px', 'solid')
+
+    find('.react-select__multi-value__remove').hover
+    expect(outline.('.react-select__multi-value__remove')).to include('2px', 'solid')
+  end
+
   it 'shows a gig whose venue the act filter leaves off the map' do
     christchurch = create :venue, name: 'The Loons', city: 'Christchurch', latitude: -43.53, longitude: 172.64
     create :gig, name: 'Rose in Christchurch', venue: christchurch, acts: [ rose ], start_time: 4.weeks.from_now, end_time: nil

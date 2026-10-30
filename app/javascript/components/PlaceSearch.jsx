@@ -2,8 +2,11 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { debounce } from '../fiddly-bits';
 
 // Towns, cities and regions from Photon (komoot's OpenStreetMap geocoder,
-// built for search-as-you-type), for jumping the map to a place.
+// built for search-as-you-type), for jumping the map to a place. The chosen
+// place's boundary comes from Nominatim, which has OpenStreetMap's shapes:
+// one lookup per place chosen, well inside its usage policy.
 const PHOTON = 'https://photon.komoot.io/api/';
+const NOMINATIM = 'https://nominatim.openstreetmap.org/lookup';
 const LAYERS = [ 'city', 'district', 'county', 'state', 'country' ]; // not locality: farms, allotments, hamlets
 const LANGUAGES = [ 'en', 'de', 'fr', 'it' ]; // Photon's; else places' own names
 const LIMIT = 6;
@@ -12,6 +15,7 @@ const MIN_LENGTH = 2;
 // Photon's extent is [ west, north, east, south ]
 const toPlace = ({ properties: p, geometry }) => ({
   id: `${p.osm_type}${p.osm_id}`,
+  osmId: `${p.osm_type}${p.osm_id}`, // Nominatim's form: R1234
   name: p.name,
   detail: [ p.county, p.state, p.country ].filter((part, i, parts) => part && part !== p.name && parts.indexOf(part) === i).join(', '),
   center: geometry.coordinates,
@@ -38,6 +42,23 @@ const searchPlaces = async (query, near, signal) => {
   return places.filter((place, i) => places.findIndex(other => other.name === place.name && other.detail === place.detail) === i);
 };
 
+// The place as a polygon (or polygons), where OpenStreetMap has its boundary,
+// simplified to suit its size: a country needn't be drawn to the metre. Else
+// null: a place that's only a point, or no answer.
+export const fetchBoundary = async (place, signal) => {
+  if (!place.osmId.startsWith('R') && !place.osmId.startsWith('W')) return null;
+
+  const span = place.bounds ? Math.max(place.bounds[1][0] - place.bounds[0][0], place.bounds[1][1] - place.bounds[0][1]) : 0.1;
+  const params = new URLSearchParams({
+    osm_ids: place.osmId, format: 'geojson', polygon_geojson: 1, polygon_threshold: (span / 2000).toPrecision(2)
+  });
+  const response = await fetch(`${NOMINATIM}?${params}`, { signal });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+
+  const geometry = (await response.json()).features?.[0]?.geometry;
+  return [ 'Polygon', 'MultiPolygon' ].includes(geometry?.type) ? geometry : null;
+};
+
 const SearchIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
@@ -46,7 +67,8 @@ const SearchIcon = () => (
 
 // A combobox: type, arrow through the places, Enter (or a click) to go.
 // near() gives the map's { lat, lng, zoom }, which nearby places are ranked up by.
-const PlaceSearch = ({ near, onChoose }) => {
+// onClear is called once the box is emptied, by its × or otherwise.
+const PlaceSearch = ({ near, onChoose, onClear }) => {
   const listId = useId();
   const [ query, setQuery ] = useState('');
   const [ places, setPlaces ] = useState([]);
@@ -86,6 +108,7 @@ const PlaceSearch = ({ near, onChoose }) => {
     setQuery(text);
     setOpen(true);
     wantedRef.current = text.trim();
+    if (!text) onClear();
     if (text.trim().length < MIN_LENGTH) {
       abortRef.current?.abort();
       setPlaces([]);
@@ -134,7 +157,16 @@ const PlaceSearch = ({ near, onChoose }) => {
           aria-controls={listId} aria-activedescendant={showList && active >= 0 ? `${listId}-${active}` : undefined}
           onChange={(e) => change(e.target.value)} onKeyDown={handleKey}
           onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
-          className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:cursor-pointer" />
+          className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden" />
+        {query && (
+          <button type="button" aria-label="Clear place search" title="Clear"
+            onMouseDown={(e) => e.preventDefault()} onClick={() => { change(''); setOpen(false); }}
+            className="-mr-1 flex size-7 shrink-0 cursor-pointer items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-fg">
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        )}
       </label>
 
       {showList && (

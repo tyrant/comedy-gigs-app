@@ -58,7 +58,7 @@ const Status = ({ loading, error, retry, gigs, venues }) => {
   );
 };
 
-const App = ({ mapStyles, terrainTiles }) => {
+const App = ({ mapStyles, terrainTiles, backdrops }) => {
   // Filters and the selected venue/gig/act live in the URL; the map position
   // is written there by the map itself.
   const [ filters, setFilters ] = useUrlState(readFilters, filtersToParams);
@@ -68,7 +68,10 @@ const App = ({ mapStyles, terrainTiles }) => {
 
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [ theme, toggleTheme ] = useTheme();
-  const [ sheetOpen, setSheetOpen ] = useState(() => Boolean(readSelection().venueId || readSelection().actId));
+  // The panel's shown or hidden by its button: on phones a sheet, open once
+  // something's chosen; on desktops a sidebar, open to start with
+  const [ sheetOpen, setSheetOpen ] = useState(() =>
+    window.matchMedia('(min-width: 768px)').matches || Boolean(readSelection().venueId || readSelection().actId));
   const [ sheetHeight, setSheetHeight ] = useState(0);
   const panelRef = useRef(null);
 
@@ -195,19 +198,22 @@ const App = ({ mapStyles, terrainTiles }) => {
       </header>
 
       <div className="relative flex min-h-0 flex-1">
-        <aside ref={panelRef} aria-label="Gigs"
-          className="absolute inset-x-0 bottom-0 z-10 flex max-h-[65dvh] flex-col rounded-t-2xl border-t border-line bg-surface shadow-[0_-8px_24px_rgb(0_0_0/0.15)] md:static md:z-auto md:max-h-none md:w-[22rem] md:shrink-0 md:rounded-none md:border-t-0 md:border-r md:shadow-none">
+        {/* Hidden on a desktop, the sidebar folds down to its top row, in a card over the map */}
+        <aside ref={panelRef} aria-label="Gigs" data-open={sheetOpen}
+          className={`absolute inset-x-0 bottom-0 z-10 flex max-h-[65dvh] flex-col rounded-t-2xl border-t border-line bg-surface shadow-[0_-8px_24px_rgb(0_0_0/0.15)] md:w-[22rem] ${sheetOpen
+            ? 'md:static md:z-auto md:max-h-none md:shrink-0 md:rounded-none md:border-t-0 md:border-r md:shadow-none'
+            : 'md:inset-x-auto md:bottom-10 md:left-2.5 md:rounded-lg md:border md:shadow-lg'}`}>
           <div className="flex min-h-12 items-center gap-2 border-b border-line px-3 py-2">
             <div className="flex min-w-0 flex-1 items-center" aria-live="polite">
               <Status loading={loading} error={error} retry={retry} gigs={gigsInView} venues={venuesInView.length} />
             </div>
             <button type="button" onClick={() => setSheetOpen(open => !open)} aria-expanded={sheetOpen} aria-controls="panel-body"
-              className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-sm font-medium text-accent hover:bg-surface-2 md:hidden">
+              className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-sm font-medium text-accent hover:bg-surface-2">
               {sheetOpen ? 'Hide' : 'Show'} {actId ? 'act' : venueId ? 'venue' : 'list'}
             </button>
           </div>
 
-          <div id="panel-body" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${sheetOpen ? '' : 'max-md:hidden'}`}>
+          <div id="panel-body" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${sheetOpen ? '' : 'hidden'}`}>
             {actId && (
               <section id="act-details" aria-label="Act">
                 <ActGigs key={actId} actId={actId} query={query} gigId={gigId}
@@ -231,7 +237,7 @@ const App = ({ mapStyles, terrainTiles }) => {
               ))}
           </div>
 
-          <footer className={`border-t border-line px-3 py-2 text-xs text-muted ${sheetOpen ? '' : 'max-md:hidden'}`}>
+          <footer className={`border-t border-line px-3 py-2 text-xs text-muted ${sheetOpen ? '' : 'hidden'}`}>
             Listings from Ticketmaster <span aria-hidden="true">·</span>{' '}
             <a href="https://www.eventfinda.co.nz/" className="underline hover:text-accent">Powered by Eventfinda</a>{' '}
             <span aria-hidden="true">·</span>{' '}
@@ -247,6 +253,7 @@ const App = ({ mapStyles, terrainTiles }) => {
             mapStyle={theme === 'dark' ? mapStyles.dark : mapStyles.light}
             theme={theme}
             terrainTiles={terrainTiles}
+            backdrops={backdrops}
             fitTo={fitTo}
             venues={venues}
             selectedVenueId={venueId}

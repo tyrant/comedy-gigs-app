@@ -3,6 +3,7 @@
         map_style_light: Rails.configuration.x.map_styles[:light],
         map_style_dark: Rails.configuration.x.map_styles[:dark],
         map_terrain: Rails.configuration.x.map_terrain,
+        globe_backdrops: Rails.configuration.x.globe_backdrops.to_json,
         map_worker: asset_path("maplibre-gl-worker.js")
       } %>
 <noscript><p style="padding: 1rem">Gigs needs JavaScript to show its map.</p></noscript>

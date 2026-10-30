@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GeolocateControl, Map as MapLibreMap, Marker, NavigationControl, ScaleControl } from 'maplibre-gl';
 import { inBounds, mapViewToParams, pluralize, readMapView, writeUrlParams } from '../fiddly-bits';
 import { reduceMotion } from '../hooks/useMediaQuery';
-import PlaceSearch from './PlaceSearch';
+import PlaceSearch, { fetchBoundary } from './PlaceSearch';
 
 // MapLibre clusters the venues on the GPU side; the markers themselves are
 // HTML buttons, so they can be focused, tabbed through and clicked in specs.
@@ -13,7 +13,9 @@ const TERRAIN = 'terrain'; // elevation tiles, and the hill shading drawn from t
 const EDGE_MARGIN = 48; // how close to the edge a selected venue may sit before the map recentres
 const NEAR_ME_ZOOM = 12; // about a city's worth of venues around you
 const TOUR_ZOOM = 10; // the most a tour's venues zoom in, for a tour of one city
-const PLACE_ZOOM = 11; // the most a searched-for place zooms in, so a small town still shows its neighbours
+const PLACE_ZOOM = 11; // how far a searched-for place without an extent (a point) zooms in
+const OUTLINED_ZOOM = 14; // the most a searched-for place with an outline zooms in, to fill the map with it
+const OUTLINE = 'place-outline'; // a searched-for place's boundary, and its line
 
 const toGeoJSON = (venues) => ({
   type: 'FeatureCollection',
@@ -43,6 +45,39 @@ const addVenueSource = (map, data) => {
   map.addSource(HEAT, { type: 'geojson', data });
   map.addLayer(heatLayer, firstLabelLayer(map));
 };
+
+// A searched-for place's boundary: a dashed line in the accent colour, over a
+// halo that keeps it clear on any basemap
+const OUTLINE_COLOURS = {
+  light: { line: '#6d28d9', halo: 'rgba(255, 255, 255, 0.85)' },
+  dark: { line: '#a78bfa', halo: 'rgba(17, 17, 20, 0.8)' }
+};
+
+const addOutline = (map, data, theme) => {
+  if (map.getSource(OUTLINE)) return;
+  map.addSource(OUTLINE, { type: 'geojson', data });
+  const before = firstLabelLayer(map);
+  map.addLayer({
+    id: `${OUTLINE}-halo`, type: 'line', source: OUTLINE,
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': OUTLINE_COLOURS[theme].halo, 'line-width': 6 }
+  }, before);
+  map.addLayer({
+    id: OUTLINE, type: 'line', source: OUTLINE,
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': OUTLINE_COLOURS[theme].line, 'line-width': 2.5, 'line-dasharray': [ 3, 1.5 ] }
+  }, before);
+};
+
+// The outline of a bounding box, for a place with no boundary of its own
+const boxPolygon = ([ [ west, south ], [ east, north ] ]) => ({
+  type: 'Polygon',
+  coordinates: [ [ [ west, south ], [ east, south ], [ east, north ], [ west, north ], [ west, south ] ] ]
+});
+
+const NO_BACKDROPS = [];
+const NO_OUTLINE = { type: 'FeatureCollection', features: [] };
+const outlineData = (geometry) => geometry ? { type: 'Feature', geometry, properties: {} } : NO_OUTLINE;
 
 // Under the basemap's place names, so they stay readable
 const firstLabelLayer = (map) => map.getStyle().layers.find(layer => layer.type === 'symbol')?.id;
@@ -139,6 +174,24 @@ const updateMarker = (entry, label, count, classes = []) => {
 
 const motion = () => ({ duration: reduceMotion() ? 0 : 600 });
 
+// Whether the globe is zoomed out far enough to leave space round it: any
+// corner of the map off its surface. MapLibre has no public way to ask, but
+// it takes a point off the globe to the nearest on its horizon, so the
+// corner doesn't come back from there.
+const spaceShowing = (map) => {
+  const { clientWidth: width, clientHeight: height } = map.getContainer();
+  return [ [ 0, 0 ], [ width, 0 ], [ 0, height ], [ width, height ] ].some(([ x, y ]) => {
+    const back = map.project(map.unproject([ x, y ]));
+    return Math.hypot(back.x - x, back.y - y) > 2;
+  });
+};
+
+// A backdrop other than the one showing, where there's a choice
+const pickBackdrop = (backdrops, except) => {
+  const choices = backdrops.length > 1 ? backdrops.filter(backdrop => backdrop !== except) : backdrops;
+  return choices[Math.floor(Math.random() * choices.length)];
+};
+
 // --- The map -------------------------------------------------------------------
 
 // bottomInset is how much of the map's bottom edge something covers (the
@@ -146,8 +199,9 @@ const motion = () => ({ duration: reduceMotion() ? 0 : 600 });
 // fitTo ({ bounds }) fits the map to them: a tour's venues.
 // extraVenue ({ id, lat, lng }) can be selected though the filters leave it
 // off the map; each new revealCount brings the selected venue back into view.
+// backdrops are image URLs for the space round the globe.
 const MapView = ({
-  mapStyle, theme = 'light', terrainTiles, fitTo, venues, selectedVenueId, extraVenue, revealCount = 0, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange
+  mapStyle, theme = 'light', terrainTiles, backdrops = NO_BACKDROPS, fitTo, venues, selectedVenueId, extraVenue, revealCount = 0, hoveredVenueId, bottomInset = 0, onSelectVenue, onViewChange
 }) => {
   const containerRef = useRef(null);
   const [ map, setMap ] = useState(null);
@@ -163,6 +217,8 @@ const MapView = ({
   // The view to restore once a style loads: until the globe is back, the map
   // is flat, and a flat map zoomed right out won't centre far from the equator
   const pendingViewRef = useRef(null);
+  const outlineRef = useRef(NO_OUTLINE); // a searched-for place's boundary, for restyling
+  const placeRef = useRef(null); // the place being outlined, so a late boundary for an older one is dropped
 
   const callbacks = useRef({});
   callbacks.current = { onSelectVenue, onViewChange };
@@ -211,6 +267,7 @@ const MapView = ({
       pendingViewRef.current = null;
       addTerrain(instance, terrainTiles, themeRef.current);
       addVenueSource(instance, dataRef.current);
+      addOutline(instance, outlineRef.current, themeRef.current);
       setMap(instance);
     });
 
@@ -252,6 +309,33 @@ const MapView = ({
     map.on('moveend', handleMove);
     return () => map.off('moveend', handleMove);
   }, [ map ]);
+
+  // Space round the globe, zoomed right out: one of the backdrops, chosen
+  // afresh each time the globe has filled the map and been zoomed out of
+  // again. The globe hides the swap. The next one loads in advance.
+  useEffect(() => {
+    if (!map || !backdrops.length) return;
+    const el = containerRef.current;
+    let showing = false;
+    let next = pickBackdrop(backdrops);
+    const preload = (url) => { new Image().src = url; };
+
+    const check = () => {
+      const space = spaceShowing(map);
+      if (space && !showing) {
+        el.style.backgroundImage = `url("${next}")`;
+        el.dataset.backdrop = next;
+        next = pickBackdrop(backdrops, next);
+        preload(next);
+      }
+      showing = space;
+    };
+
+    preload(next);
+    check();
+    map.on('move', check);
+    return () => map.off('move', check);
+  }, [ map, backdrops ]);
 
   // Hand the venues to the clustering source
   useEffect(() => {
@@ -412,20 +496,45 @@ const MapView = ({
     map.fitBounds(fitTo.bounds, { padding: { top: 72, right: 56, bottom: 56 + bottomInset, left: 56 }, maxZoom: TOUR_ZOOM, ...motion() });
   }, [ map, fitTo ]);
 
-  // A place from the search: its whole extent where it has one, kept clear of the bottom sheet
-  const goToPlace = ({ center, bounds }) => {
+  const showOutline = (geometry) => {
+    outlineRef.current = outlineData(geometry);
+    map?.getSource(OUTLINE)?.setData(outlineRef.current);
+  };
+
+  // A place from the search, outlined and filling the map, kept clear of the
+  // search box and the bottom sheet. Without a boundary from Nominatim, its
+  // extent's box outlines it instead.
+  const goToPlace = (place) => {
     if (!map) return;
+    placeRef.current = place;
+    const { center, bounds } = place;
     const padding = { top: 64, right: 48, bottom: 48 + bottomInset, left: 48 };
-    if (bounds) map.fitBounds(bounds, { padding, maxZoom: PLACE_ZOOM, ...motion() });
+    if (bounds) map.fitBounds(bounds, { padding, maxZoom: OUTLINED_ZOOM, ...motion() });
     else map.easeTo({ center, zoom: PLACE_ZOOM, offset: [ 0, -bottomInset / 2 ], ...motion() });
+    showOutline(null);
+
+    const outline = (geometry) => {
+      if (placeRef.current === place) showOutline(geometry || (bounds && boxPolygon(bounds)));
+    };
+    fetchBoundary(place)
+      .then(outline)
+      .catch(error => {
+        console.error('Place boundary failed:', error);
+        outline(null);
+      });
+  };
+
+  const clearPlace = () => {
+    placeRef.current = null;
+    showOutline(null);
   };
 
   return (
     <div className="relative size-full">
-      <div ref={containerRef} className="size-full" role="region" aria-label="Map of venues"
+      <div ref={containerRef} className="size-full bg-cover bg-center" role="region" aria-label="Map of venues"
         aria-busy={!map || syncedVenues !== venues} />
       <div className="absolute top-2.5 left-2.5 z-10 w-[calc(100%-4.5rem)] max-w-72">
-        <PlaceSearch near={() => map && { ...map.getCenter(), zoom: map.getZoom() }} onChoose={goToPlace} />
+        <PlaceSearch near={() => map && { ...map.getCenter(), zoom: map.getZoom() }} onChoose={goToPlace} onClear={clearPlace} />
       </div>
     </div>
   );

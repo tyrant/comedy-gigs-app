@@ -132,6 +132,18 @@ body {
 
 .react-select__multi-value__remove {
   @apply cursor-pointer bg-muted text-surface hover:bg-danger;
+
+  &:hover { outline: 2px solid var(--color-red-300); }
+}
+
+/* An act's avatar opens its view: a light blue ring on hover. The hovered
+   chip comes forward, so its ring isn't under the next avatar's overlap. */
+.react-select__multi-value:hover {
+  z-index: 1;
+}
+
+.act-avatar:hover {
+  outline: 3px solid var(--color-sky-300);
 }
 
 /* --- Map markers --------------------------------------------------------------

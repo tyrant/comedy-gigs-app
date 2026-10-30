@@ -38,5 +38,10 @@ module ComedyGigsApp
     # Elevation tiles for hill shading (Terrarium-encoded PNGs; AWS Open Data,
     # made by Mapzen), or nil for none
     config.x.map_terrain = "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png"
+
+    # Images for the space round the globe when it's zoomed right out: every
+    # one in public/images/backdrops, one picked at random each time
+    config.x.globe_backdrops = Dir[File.expand_path("../public/images/backdrops/*.{jpg,jpeg,png,webp,avif}", __dir__)]
+      .sort.map { |file| "/images/backdrops/#{File.basename(file)}" }
   end
 end

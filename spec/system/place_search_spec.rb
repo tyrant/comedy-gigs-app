@@ -16,16 +16,41 @@ RSpec.describe 'Searching for a place', type: :system, js: true do
     ]
   }.freeze
 
+  # Nominatim's boundary for Wellington: a triangle will do
+  WELLINGTON_BOUNDARY = {
+    type: 'FeatureCollection',
+    features: [
+      { type: 'Feature', properties: { osm_id: 1 },
+        geometry: { type: 'Polygon', coordinates: [ [ [ 174.6, -41.4 ], [ 174.95, -41.4 ], [ 174.8, -41.1 ], [ 174.6, -41.4 ] ] ] } }
+    ]
+  }.freeze
+
   def stub_photon
-    page.execute_script(<<~JS, PHOTON_ANSWER.to_json)
-      const answer = arguments[0];
+    page.execute_script(<<~JS, PHOTON_ANSWER.to_json, WELLINGTON_BOUNDARY.to_json)
+      const [ answer, boundary ] = arguments;
       const realFetch = window.fetch;
       window.photonQueries = [];
+      window.nominatimQueries = [];
+      const json = (body) => Promise.resolve(new Response(body, { headers: { 'Content-Type': 'application/json' } }));
       window.fetch = (url, options) => {
-        if (!String(url).startsWith('https://photon.komoot.io/')) return realFetch(url, options);
-        window.photonQueries.push(String(url));
-        return Promise.resolve(new Response(answer, { headers: { 'Content-Type': 'application/json' } }));
+        if (String(url).startsWith('https://photon.komoot.io/')) {
+          window.photonQueries.push(String(url));
+          return json(answer);
+        }
+        if (String(url).startsWith('https://nominatim.openstreetmap.org/')) {
+          window.nominatimQueries.push(String(url));
+          return json(boundary);
+        }
+        return realFetch(url, options);
       };
+    JS
+  end
+
+  # The outline's geometry type, or nil for none
+  def outline_type
+    page.evaluate_async_script(<<~JS)
+      const done = arguments[0];
+      window.mapInstance.getSource('place-outline').getData().then(data => done(data.geometry?.type || null));
     JS
   end
 
@@ -51,6 +76,21 @@ RSpec.describe 'Searching for a place', type: :system, js: true do
     lat, lng = map_center
     expect(lat).to be_within(0.2).of(-41.25)
     expect(lng).to be_within(0.2).of(174.78)
+  end
+
+  it 'outlines the chosen place, until the box’s × clears both' do
+    input = find('input[aria-label="Search places"]')
+    input.send_keys('Wellington')
+    find('[role="option"]', text: 'New Zealand').click
+
+    page.document.synchronize(10) { raise Capybara::ExpectationNotMet, 'no outline' unless outline_type == 'Polygon' }
+    expect(page.evaluate_script('window.nominatimQueries.at(-1)')).to include('osm_ids=R1', 'polygon_geojson=1')
+    expect(page.evaluate_script('window.mapInstance.getZoom()')).to be > 9 # filling the map with it
+
+    find('button[aria-label="Clear place search"]').click
+    expect(input.value).to eq ''
+    expect(outline_type).to be_nil
+    expect(page).to have_no_selector('button[aria-label="Clear place search"]')
   end
 
   it 'goes to a clicked place, and Escape clears the box' do

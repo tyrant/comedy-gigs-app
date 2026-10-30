@@ -21,7 +21,7 @@ const fetchActs = async (query) => {
 // which would open the menu instead.
 const MultiValueLabel = ({ data, selectProps }) => (
   <button type="button" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onClick={() => selectProps.onSelectAct(data.value)}
-    aria-label={`Show ${data.label}’s gigs`} title={data.label} className="block cursor-pointer rounded-full">
+    aria-label={`Show ${data.label}’s gigs`} title={data.label} className="act-avatar block cursor-pointer rounded-full">
     <img src={data.image} alt={data.label}
       width={AVATAR_WIDTH} height={AVATAR_WIDTH} loading="lazy" decoding="async"
       className="size-8 rounded-full object-cover" />
