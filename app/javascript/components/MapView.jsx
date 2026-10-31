@@ -449,7 +449,6 @@ const MapView = ({
 
     // The cluster holding the venue, if it's in one: check the nearest first
     const clusterHolding = async () => {
-      const source = map.getSource(SOURCE);
       const target = map.project([ lng, lat ]);
       const clusters = map.querySourceFeatures(SOURCE, { filter: [ 'has', 'point_count' ] })
         .map(feature => ({ feature, distance: map.project(feature.geometry.coordinates).dist(target) }))
@@ -457,19 +456,43 @@ const MapView = ({
         .slice(0, 5);
 
       for (const { feature } of clusters) {
-        const leaves = await source.getClusterLeaves(feature.properties.cluster_id, Infinity, 0);
-        if (leaves.some(leaf => leaf.properties.id === id)) return feature.properties.cluster_id;
+        if (await holds(feature.properties.cluster_id)) return feature.properties.cluster_id;
       }
       return null;
     };
 
+    const holds = async (clusterId) =>
+      (await map.getSource(SOURCE).getClusterLeaves(clusterId, Infinity, 0)).some(leaf => leaf.properties.id === id);
+
+    // The zoom the venue comes out of its clusters at: each cluster splits at
+    // its expansion zoom, so follow the venue down through them, then go
+    // there in one move rather than a level at a time
+    const unclusteredZoom = async (clusterId) => {
+      const source = map.getSource(SOURCE);
+      for (;;) {
+        const zoom = await source.getClusterExpansionZoom(clusterId);
+        const children = await source.getClusterChildren(clusterId);
+        let next = null;
+        for (const child of children) {
+          if (child.properties.cluster && await holds(child.properties.cluster_id)) {
+            next = child.properties.cluster_id;
+            break;
+          }
+        }
+        if (next === null || cancelled) return zoom;
+        clusterId = next;
+      }
+    };
+
+    // A venue off in a cluster out of view is found once the map's there, so
+    // that can take a second move
     const reveal = async (attempt = 0) => {
       if (cancelled) return;
       const clustered = !markersRef.current.has(`v${id}`) && await clusterHolding();
       if (cancelled) return;
 
-      if (clustered !== null && clustered !== false && attempt < 4) {
-        const zoom = await map.getSource(SOURCE).getClusterExpansionZoom(clustered);
+      if (clustered !== null && clustered !== false && attempt < 2) {
+        const zoom = await unclusteredZoom(clustered);
         if (cancelled) return;
         map.once('idle', () => reveal(attempt + 1));
         map.easeTo({ center: [ lng, lat ], zoom, offset: [ 0, -bottomInset / 2 ], ...motion() });
