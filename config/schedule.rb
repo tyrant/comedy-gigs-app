@@ -10,7 +10,13 @@ set :output, { error: "/home/noob/comedy-gigs-app/shared/log/cron_error.log", st
 # Set job template to include the correct environment and path
 set :job_template, '/bin/bash -l -c ":job"'
 
-# Every source's import (Ticketmaster, then Eventfinda), then a prune of old gigs
+# Ruby through rbenv by its full path: the server sets rbenv up in .bashrc,
+# which a cron job's login shell doesn't read, so plain `bundle` isn't found.
+# rbenv picks the release's .ruby-version.
+job_type :rake, "cd :path && :environment_variable=:environment /home/noob/.rbenv/bin/rbenv exec bundle exec rake :task --silent :output"
+
+# Every source's import (Ticketmaster, Eventfinda, Skiddle), bios, a prune
+# of old gigs, then tours
 every 1.day, at: "2:00 am" do
   rake "import:all"
 end
