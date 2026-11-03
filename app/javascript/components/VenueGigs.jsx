@@ -19,6 +19,18 @@ const groupByLineup = (gigs) => {
   return [ ...groups.values() ];
 };
 
+// A lineup's gigs of the same name (a run of shows) go together, in the
+// order of their first gig: [ { name, gigs: [...] }, ... ]
+const groupByName = (gigs) => {
+  const runs = new Map();
+  gigs.forEach(gig => {
+    const name = gig.name.trim();
+    if (!runs.has(name)) runs.set(name, { name, gigs: [] });
+    runs.get(name).gigs.push(gig);
+  });
+  return [ ...runs.values() ];
+};
+
 // By date, lineups come in the order of their first gig (the API sends gigs
 // by date). By act, lineups go A–Z by their first act, and gigs without a
 // lineup go last.
@@ -117,28 +129,47 @@ const ActChip = ({ act, onSelectAct }) => (
   </li>
 );
 
-const GigRow = ({ gig, venue, onSelectGig }) => (
-  <li data-gig-id={gig.id}
-    className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors duration-700 data-[flash]:bg-accent-soft data-[flash]:duration-0">
-    <div className="min-w-0 flex-1">
-      <h4 data-role="gig-link" className="truncate text-sm font-medium">
-        <a href={gigHref(venue.id, gig.id)} data-role="gig-name"
-          onClick={(e) => { e.preventDefault(); onSelectGig(gig.id); }}>
-          {gig.name}
-        </a>
-      </h4>
-      <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-        <time dateTime={gig.start_time}>{formatGigTime(gig.start_time, venue.timezone)}</time>
-        <GigPrice gig={gig} />
-        <StatusBadge status={gig.status} />
-        <SkiddleCredit gig={gig} />
-      </p>
-      <TicketTiers gig={gig} />
-    </div>
+// A gig in a run is named by its time: the run's heading has its name
+const GigRow = ({ gig, venue, inRun = false, onSelectGig }) => {
+  const time = <time dateTime={gig.start_time}>{formatGigTime(gig.start_time, venue.timezone)}</time>;
+  const Title = inRun ? 'p' : 'h4';
 
-    <GigActions gig={gig} venueId={venue.id} />
-  </li>
-);
+  return (
+    <li data-gig-id={gig.id}
+      className={`flex items-center gap-3 rounded-md px-2 ${inRun ? 'py-1' : 'py-1.5'} transition-colors duration-700 data-[flash]:bg-accent-soft data-[flash]:duration-0`}>
+      <div className="min-w-0 flex-1">
+        <Title data-role="gig-link" className="truncate text-sm font-medium">
+          <a href={gigHref(venue.id, gig.id)} data-role={inRun ? 'gig-time' : 'gig-name'}
+            aria-label={inRun ? `${gig.name}, ${formatGigTime(gig.start_time, venue.timezone)}` : undefined}
+            onClick={(e) => { e.preventDefault(); onSelectGig(gig.id); }}>
+            {inRun ? time : gig.name}
+          </a>
+        </Title>
+        <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted empty:hidden">
+          {!inRun && time}
+          <GigPrice gig={gig} />
+          <StatusBadge status={gig.status} />
+          <SkiddleCredit gig={gig} />
+        </p>
+        <TicketTiers gig={gig} />
+      </div>
+
+      <GigActions gig={gig} venueId={venue.id} />
+    </li>
+  );
+};
+
+// Gigs sharing a name show it once, above their times
+const GigRun = ({ run, venue, onSelectGig }) => run.gigs.length === 1
+  ? <GigRow gig={run.gigs[0]} venue={venue} onSelectGig={onSelectGig} />
+  : (
+    <li data-role="gig-run">
+      <h4 data-role="gig-run-name" className="px-2 pt-1.5 pb-0.5 text-sm font-semibold">{run.name}</h4>
+      <ul>
+        {run.gigs.map(gig => <GigRow key={gig.id} gig={gig} venue={venue} inRun onSelectGig={onSelectGig} />)}
+      </ul>
+    </li>
+  );
 
 // "60 Kent Terrace, Te Aro, Wellington" already names its city; others need it adding
 const placeLine = ({ address, city }) => {
@@ -226,7 +257,7 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onSelectA
               </ul>
             )}
             <ul>
-              {group.gigs.map(gig => <GigRow key={gig.id} gig={gig} venue={venue} onSelectGig={onSelectGig} />)}
+              {groupByName(group.gigs).map(run => <GigRun key={run.gigs[0].id} run={run} venue={venue} onSelectGig={onSelectGig} />)}
             </ul>
           </section>
         ))}

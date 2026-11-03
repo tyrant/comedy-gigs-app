@@ -71,6 +71,24 @@ RSpec.describe 'A venue’s details', type: :system, js: true do
     expect(gig_order).to eq [ 'Abe Live', 'Zed Live', 'Open Mic' ]
   end
 
+  it 'names a run of same-named gigs once, each by its time' do
+    second = create :gig, venue:, name: 'Zed Live ', acts: [ zed ], start_time: 10.days.from_now, end_time: nil
+    open_venue
+
+    within '#venue-details' do
+      run = find('[data-role="gig-run"]')
+      expect(run.find('[data-role="gig-run-name"]').text).to eq 'Zed Live'
+      expect(run).to have_no_selector('[data-role="gig-name"]')
+      times = run.all('[data-role="gig-time"]')
+      expect(times.size).to eq 2
+      expect(times.first['aria-label']).to start_with 'Zed Live, '
+      expect(gig_order).to eq [ 'Open Mic', 'Abe Live' ] # gigs of their own keep their names
+
+      times.last.click
+    end
+    expect(current_url).to include "gig=#{second.id}"
+  end
+
   it 'gives each gig a compact ticket link' do
     open_venue
     link = find("[data-gig-id='#{soonest.id}'] [data-role='ticket-url']")
