@@ -136,9 +136,9 @@ const GigRow = ({ gig, venue, inRun = false, onSelectGig }) => {
 
   return (
     <li data-gig-id={gig.id}
-      className={`flex items-center gap-3 rounded-md px-2 ${inRun ? 'py-1' : 'py-1.5'} transition-colors duration-700 data-[flash]:bg-accent-soft data-[flash]:duration-0`}>
+      className={`flex items-center gap-3 rounded-md ${inRun ? 'py-1 pr-2 pl-3.5' : 'px-2 py-1.5'} transition-colors duration-700 data-[flash]:bg-accent-soft data-[flash]:duration-0`}>
       <div className="min-w-0 flex-1">
-        <Title data-role="gig-link" className="truncate text-sm font-medium">
+        <Title data-role="gig-link" className={`truncate font-medium ${inRun ? 'text-[0.8125rem]' : 'text-sm'}`}>
           <a href={gigHref(venue.id, gig.id)} data-role={inRun ? 'gig-time' : 'gig-name'}
             aria-label={inRun ? `${gig.name}, ${formatGigTime(gig.start_time, venue.timezone)}` : undefined}
             onClick={(e) => { e.preventDefault(); onSelectGig(gig.id); }}>
