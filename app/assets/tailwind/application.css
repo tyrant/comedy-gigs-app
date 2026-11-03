@@ -138,6 +138,12 @@ body {
 
 /* An act's avatar opens its view: a light blue ring on hover. The hovered
    chip comes forward, so its ring isn't under the next avatar's overlap. */
+/* While the panel's edge is dragged: no text selection, and the resize
+   cursor everywhere, not just over the edge */
+body.is-resizing {
+  @apply cursor-col-resize select-none;
+}
+
 .react-select__multi-value:hover {
   z-index: 1;
 }

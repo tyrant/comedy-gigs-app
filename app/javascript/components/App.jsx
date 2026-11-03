@@ -8,6 +8,7 @@ import VenueGigs from './VenueGigs';
 import VenueList from './VenueList';
 import useJson from '../hooks/useJson';
 import useMediaQuery from '../hooks/useMediaQuery';
+import usePanelWidth, { DEFAULT_WIDTH } from '../hooks/usePanelWidth';
 import useTheme from '../hooks/useTheme';
 import useUrlState from '../hooks/useUrlState';
 import {
@@ -37,6 +38,51 @@ const ThemeButton = ({ theme, onToggle }) => {
           : <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />}
       </svg>
     </button>
+  );
+};
+
+const RESIZE_STEP = 16; // pixels per arrow key press
+
+// The sidebar's right edge, dragged (or arrowed) to resize it; a double
+// click puts it back
+const ResizeHandle = ({ width, limits, onResize }) => {
+  const drag = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const startX = e.clientX;
+    const startWidth = width;
+    handle.setPointerCapture(e.pointerId);
+    handle.dataset.dragging = '';
+    document.body.classList.add('is-resizing');
+
+    const move = (event) => onResize(startWidth + event.clientX - startX);
+    const stop = () => {
+      handle.removeEventListener('pointermove', move);
+      delete handle.dataset.dragging;
+      document.body.classList.remove('is-resizing');
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('lostpointercapture', stop, { once: true });
+  };
+
+  const handleKey = (e) => {
+    const change = { ArrowLeft: -RESIZE_STEP, ArrowRight: RESIZE_STEP }[e.key];
+    if (e.key === 'Home') onResize(limits.min);
+    else if (e.key === 'End') onResize(limits.max);
+    else if (change) onResize(width + change);
+    else return;
+    e.preventDefault();
+  };
+
+  return (
+    <div role="separator" aria-orientation="vertical" aria-label="Resize the panel" tabIndex={0}
+      aria-valuenow={width} aria-valuemin={limits.min} aria-valuemax={limits.max}
+      title="Drag to resize; double-click to reset" data-role="panel-resize"
+      onPointerDown={drag} onKeyDown={handleKey} onDoubleClick={() => onResize(DEFAULT_WIDTH)}
+      className="group absolute inset-y-0 -right-1.5 z-20 hidden w-3 cursor-col-resize touch-none justify-center focus:outline-none md:flex">
+      <span className="h-full w-0.5 bg-transparent transition-colors group-hover:bg-accent/60 group-focus-visible:bg-accent group-data-[dragging]:bg-accent" />
+    </div>
   );
 };
 
@@ -73,6 +119,7 @@ const App = ({ mapStyles, terrainTiles, backdrops }) => {
   const [ sheetOpen, setSheetOpen ] = useState(() =>
     window.matchMedia('(min-width: 768px)').matches || Boolean(readSelection().venueId || readSelection().actId));
   const [ sheetHeight, setSheetHeight ] = useState(0);
+  const [ panelWidth, setPanelWidth, widthLimits ] = usePanelWidth();
   const panelRef = useRef(null);
 
   // Focus follows a venue or act chosen by hand: to its name, and back after
@@ -199,10 +246,13 @@ const App = ({ mapStyles, terrainTiles, backdrops }) => {
 
       <div className="relative flex min-h-0 flex-1">
         {/* Hidden on a desktop, the sidebar folds down to its top row, in a card over the map */}
+        {/* Open on a desktop, it's as wide as the viewer's dragged it */}
         <aside ref={panelRef} aria-label="Gigs" data-open={sheetOpen}
+          style={isDesktop && sheetOpen ? { width: panelWidth } : undefined}
           className={`absolute inset-x-0 bottom-0 z-10 flex max-h-[65dvh] flex-col rounded-t-2xl border-t border-line bg-surface shadow-[0_-8px_24px_rgb(0_0_0/0.15)] md:w-[22rem] ${sheetOpen
-            ? 'md:static md:z-auto md:max-h-none md:shrink-0 md:rounded-none md:border-t-0 md:border-r md:shadow-none'
+            ? 'md:relative md:max-h-none md:shrink-0 md:rounded-none md:border-t-0 md:border-r md:shadow-none'
             : 'md:inset-x-auto md:bottom-10 md:left-2.5 md:rounded-lg md:border md:shadow-lg'}`}>
+          {isDesktop && sheetOpen && <ResizeHandle width={panelWidth} limits={widthLimits} onResize={setPanelWidth} />}
           <div className="flex min-h-12 items-center gap-2 border-b border-line px-3 py-2">
             <div className="flex min-w-0 flex-1 items-center" aria-live="polite">
               <Status loading={loading} error={error} retry={retry} gigs={gigsInView} venues={venuesInView.length} />
