@@ -10,14 +10,14 @@ module Api
     MAX_RETRIES = 3
     RETRY_DELAY = 1 # seconds
 
-    def initialize(api_key = nil)
+    def initialize(api_key = nil, adapter: nil)
       @api_key = api_key || fetch_api_key
       raise AuthenticationError, "Missing Ticketmaster API key" unless @api_key
 
       @client = Faraday.new(url: BASE_URL) do |f|
         f.request :json
         f.response :json
-        f.adapter Faraday.default_adapter
+        f.adapter(*(adapter || Faraday.default_adapter))
       end
 
       @rate_limiter = RateLimiter.new("ticketmaster_api", max_requests: 5, interval: 1.second)
@@ -46,6 +46,9 @@ module Api
         countryCode: country_code,
         segmentId: COMEDY_SEGMENT_ID,
         genreId: COMEDY_GENRE_ID,
+        # Without it the API only returns events listed in English, which
+        # leaves out nearly all of France and most of Scandinavia
+        locale: "*",
         size: size,
         page: page,
         sort: "date,asc",

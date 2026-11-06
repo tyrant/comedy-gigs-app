@@ -82,6 +82,59 @@ RSpec.describe Api::TicketmasterImporter do
     end
   end
 
+  describe 'importing a comedy event' do
+    def comedy_event(id:, name:, attractions: nil)
+      {
+        'id' => id, 'name' => name, 'url' => "https://www.ticketmaster.fr/event/#{id}",
+        'classifications' => [ { 'segment' => { 'id' => Api::TicketmasterClient::COMEDY_SEGMENT_ID },
+                                 'genre' => { 'id' => Api::TicketmasterClient::COMEDY_GENRE_ID } } ],
+        'dates' => { 'start' => { 'dateTime' => '2030-03-07T19:30:00Z' }, 'status' => { 'code' => 'onsale' } },
+        '_embedded' => {
+          'venues' => [ { 'id' => 'KovZpZA1', 'name' => 'Paname Art Café', 'address' => { 'line1' => '14 Rue de la Fontaine au Roi' },
+                          'city' => { 'name' => 'Paris' }, 'country' => { 'name' => 'France', 'countryCode' => 'FR' },
+                          'location' => { 'latitude' => '48.8686', 'longitude' => '2.3730' }, 'timezone' => 'Europe/Paris' } ],
+          'attractions' => attractions
+        }.compact
+      }
+    end
+
+    let(:events) { [] }
+
+    before do
+      allow(client).to receive(:fetch_comedy_events)
+        .and_return('_embedded' => { 'events' => events }, 'page' => { 'totalPages' => 1 })
+    end
+
+    context 'with a lineup' do
+      let(:events) { [ comedy_event(id: 'G1', name: 'Paul Taylor', attractions: [ { 'id' => 'K8vZ917', 'name' => 'Paul Taylor' } ]) ] }
+
+      it 'adds the gig with its acts' do
+        expect(stats).to include(successful: 1, skipped: 0)
+        expect(Gig.sole.acts.map(&:name)).to eq [ 'Paul Taylor' ]
+      end
+    end
+
+    context 'without a lineup' do
+      let(:events) { [ comedy_event(id: 'G2', name: 'PANAME COMEDY CLUB') ] }
+
+      it 'still adds the gig, with no acts' do
+        expect(stats).to include(successful: 1, skipped: 0)
+        expect(Gig.sole).to have_attributes(name: 'PANAME COMEDY CLUB', acts: [])
+        expect(Venue.sole).to have_attributes(name: 'Paname Art Café', country: 'France')
+      end
+    end
+
+    context 'without a lineup, but naming a known comedian' do
+      let!(:act) { create(:act, name: 'Fabrice Éboué') }
+      let(:events) { [ comedy_event(id: 'G3', name: 'FABRICE EBOUE') ] }
+
+      it 'links the comedian, whatever the case and accents' do
+        stats
+        expect(Gig.sole.acts).to eq [ act ]
+      end
+    end
+  end
+
   describe 'a fatal API error' do
     before { allow(client).to receive(:fetch_comedy_events).and_raise(Api::AuthenticationError, 'Invalid API key') }
 

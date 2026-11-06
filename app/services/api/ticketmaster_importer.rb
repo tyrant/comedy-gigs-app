@@ -60,6 +60,11 @@ module Api
       response.dig("page", "totalElements").to_i > TicketmasterClient::MAX_RESULTS
     end
 
+    # Built on the first event without a lineup, so most runs index acts once
+    def act_matcher = @act_matcher ||= ActMatcher.new
+
+    # Most events list their performers. Many in France don't (club nights,
+    # plays); like Eventfinda's, those get the known comedians their title names.
     def import_event(event_data)
       ActiveRecord::Base.transaction do
         transformed_data = TicketmasterTransformer.transform_event(event_data)
@@ -68,10 +73,10 @@ module Api
         venue = upsert_venue(transformed_data[:venue]) if transformed_data[:venue]
         return false unless venue
 
-        acts = transformed_data[:acts].map { |act_data| upsert_act(act_data) }.compact.uniq
-        return false unless acts.any?
-
         gig_data = transformed_data[:gig]
+        acts = transformed_data[:acts].map { |act_data| upsert_act(act_data) }.compact.uniq
+        acts = act_matcher.acts_in(gig_data[:name]) if acts.empty?
+
         gig_data[:venue] = venue
         gig_data[:acts] = acts
         upsert_gig(gig_data)
