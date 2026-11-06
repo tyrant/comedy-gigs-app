@@ -85,11 +85,15 @@ module Api
     def split_id(data) = [ data.dig(:external_ids, @source).to_s, data.except(:external_ids) ]
 
     # Keeps what's already known about a venue when the source leaves it out,
-    # and looks up the rest: coordinates from the address, city from the coordinates
+    # and looks up the rest: coordinates from the address, city from the
+    # coordinates. Coordinates that are a placeholder or in the wrong country
+    # (CountryBounds) count as left out, whether they're the source's or stored.
     LOCATION_FIELDS = %i[latitude longitude city country].freeze
 
     def located(venue, data)
-      data = data.merge(LOCATION_FIELDS.filter_map { |field| [ field, venue[field] ] if data[field].blank? && venue[field].present? }.to_h)
+      data = unplaced_if_misplaced(data, data[:country_code])
+      known = unplaced_if_misplaced(LOCATION_FIELDS.index_with { |field| venue[field] }, data[:country_code])
+      data = data.merge(known.select { |field, value| data[field].blank? && value.present? })
 
       if LOCATION_FIELDS.any? { |field| data[field].blank? }
         @venue_locator ||= VenueLocator.new
@@ -97,6 +101,12 @@ module Api
       else
         data.except(:postcode, :country_code)
       end
+    end
+
+    def unplaced_if_misplaced(place, country_code)
+      return place unless CountryBounds.misplaced?(place[:latitude], place[:longitude], country_code)
+
+      place.merge(latitude: nil, longitude: nil)
     end
 
     # Only the record's leading listing updates its details; any other just

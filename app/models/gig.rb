@@ -39,6 +39,15 @@ class Gig < ApplicationRecord
   # How long a gig with no end time is taken to run
   ASSUMED_LENGTH = 2.hours
 
+  # Listings that aren't a show: a refund-protection add-on, a meet & greet
+  # "(NOT A TICKET TO SHOW)", a venue's club seating, and Ticketmaster's own
+  # test and training events. Phrases, not words: "Test Your Mic" is an open
+  # mic and Gustave Parking a comedian, and a show's "| Premium Seats" package
+  # is still the show (MatchKey.package_listing?).
+  NOT_A_SHOW = /\b(?:booking protect|not a ticket to (?:the )?show|club premium seating|(?:test|training) (?:event|gcp))\b/i
+
+  def self.not_a_show?(name) = NOT_A_SHOW.match?(name.to_s)
+
   # Gigs still to finish. One with no end time counts as over ASSUMED_LENGTH
   # after it starts, plus an hour's grace for late starts and long sets.
   scope :not_over, ->(now = Time.current) {

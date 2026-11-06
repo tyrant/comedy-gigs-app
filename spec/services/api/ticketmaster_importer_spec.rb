@@ -133,6 +133,18 @@ RSpec.describe Api::TicketmasterImporter do
         expect(Gig.sole.acts).to eq [ act ]
       end
     end
+
+    context 'that isn’t a show' do
+      let(:events) do
+        [ comedy_event(id: 'G4', name: 'Booking Protect - General Admission'),
+          comedy_event(id: 'G5', name: 'Test Your Mic') ]
+      end
+
+      it 'skips it, keeping the real one' do
+        expect(stats).to include(successful: 1, skipped: 1)
+        expect(Gig.sole.name).to eq 'Test Your Mic'
+      end
+    end
   end
 
   describe 'a fatal API error' do

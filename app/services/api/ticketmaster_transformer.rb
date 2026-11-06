@@ -15,6 +15,11 @@ module Api
         return nil
       end
 
+      if Gig.not_a_show?(event_data["name"])
+        Rails.logger.debug "Skipping a listing that isn't a show: #{event_data['name']}"
+        return nil
+      end
+
       transformed = {
         gig: build_gig(event_data),
         venue: build_venue(event_data.dig("_embedded", "venues", 0)),

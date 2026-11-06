@@ -277,6 +277,19 @@ RSpec.describe Gig, type: :model do
   end
 
   # Test private class methods
+  describe '.not_a_show?' do
+    [ 'Booking Protect - General Admission', 'Evelyn Test GCP', 'Armory GA Training Event',
+      'Loft or TriStar Club Premium Seating - January 8, 2027',
+      'ADD ON MEET&GREET: AN EVENING WITH ROB SCHNEIDER(NOT A TICKET TO SHOW)' ].each do |name|
+      it("knows #{name.inspect} isn’t a show") { expect(described_class.not_a_show?(name)).to be true }
+    end
+
+    [ 'Test Your Mic', 'Mick Øgendahl ”Testshow”', 'GUSTAVE PARKING', 'Bill Bailey | Premium Seats',
+      'HELENE VEZIER - TESTOSTRONE', 'PRO NiGHT... Next Level Premium Live Comedy in 2027' ].each do |name|
+      it("takes #{name.inspect} for a show") { expect(described_class.not_a_show?(name)).to be false }
+    end
+  end
+
   describe 'private class methods' do
     describe '.parse_date' do
       context 'with valid date string' do

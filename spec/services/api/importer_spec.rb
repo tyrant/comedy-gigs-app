@@ -44,6 +44,39 @@ RSpec.describe Api::Importer do
     end
   end
 
+  describe 'a venue whose coordinates can’t be right' do
+    def stub_address(query, latitude, longitude, address)
+      Geocoder::Lookup::Test.add_stub(query, [ { 'latitude' => latitude, 'longitude' => longitude, 'place_rank' => 30, 'address' => address } ])
+    end
+
+    it 'is placed from its address when the source gives 0,0' do
+      stub_address('30 Stamford St, London, SE1 9LQ', 51.5076, -0.108, 'Stamford St, London')
+
+      venue = importer.upsert_venue(unplaced.merge(latitude: 0.0, longitude: 0.0))
+      expect([ venue.latitude.to_f, venue.longitude.to_f ]).to eq [ 51.5076, -0.108 ]
+    end
+
+    it 'is moved from the wrong country, though it was stored there' do
+      misplaced = { latitude: 48.00641, longitude: 0.19035 } # Le Mans, France
+      create :venue, name: 'La Scène - Malmedy', **misplaced, sources: { 'ticketmaster' => 'Z598x' }
+      stub_address('Avenue de la Libération 1, Malmedy, 4960', 50.4330, 6.0290, 'Avenue de la Libération, Malmedy, Belgique')
+
+      venue = importer.upsert_venue(
+        name: 'La Scène - Malmedy', address: 'Avenue de la Libération 1', city: 'Malmedy', country: 'Belgium', **misplaced,
+        timezone: 'Europe/Brussels', external_ids: { 'ticketmaster' => 'Z598x' }, postcode: '4960', country_code: 'BE'
+      )
+      expect([ venue.latitude.to_f, venue.longitude.to_f ]).to eq [ 50.4330, 6.0290 ]
+    end
+
+    it 'keeps where it was found on an earlier night, without looking again' do
+      create :venue, latitude: 51.5076, longitude: -0.108, sources: { 'ticketmaster' => 'KovZ9' }
+      allow(Geocoder).to receive(:search)
+
+      expect(importer.upsert_venue(unplaced.merge(latitude: 0.0, longitude: 0.0)).latitude.to_f).to eq 51.5076
+      expect(Geocoder).not_to have_received(:search)
+    end
+  end
+
   describe 'two sources describing one venue' do
     let!(:venue) do
       create :venue, name: 'The Fringe Bar', address: '26 Cuba St', description: nil, latitude: -41.2935, longitude: 174.7787,
