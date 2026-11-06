@@ -66,6 +66,7 @@ module Api
     def upsert_venue(venue_data)
       external_id, data = split_id(venue_data)
       venue = matcher.venue(@source, external_id, data) || Venue.new
+      data = data.merge(images: image_check.loading(data[:images], known: venue.images)) if data[:images].present?
       save_merged(venue, located(venue, data), external_id)
     end
 
@@ -77,6 +78,8 @@ module Api
     end
 
     def matcher = @matcher ||= RecordMatcher.new
+
+    def image_check = @image_check ||= ImageCheck.new
 
     # Transformers give { external_ids: { source => id } }
     def split_id(data) = [ data.dig(:external_ids, @source).to_s, data.except(:external_ids) ]

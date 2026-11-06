@@ -33,6 +33,16 @@ RSpec.describe 'A venue’s details', type: :system, js: true do
     end
   end
 
+  it 'leaves out a photo that doesn’t load, rather than showing it broken' do
+    venue.update!(images: { 'medium' => '/images/no-such-venue-photo.jpg' })
+    open_venue
+
+    within '#venue-details' do
+      expect(page).to have_css('h2', text: 'The Laugh Shack')
+      expect(page).to have_no_css('.venue-gigs > img')
+    end
+  end
+
   it 'says when the link is to the venue’s page on a listings site' do
     venue.update!(website: 'https://www.ticketmaster.co.nz/the-laugh-shack-tickets-wellington/venue/1')
     open_venue

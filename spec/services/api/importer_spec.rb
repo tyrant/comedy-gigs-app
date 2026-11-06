@@ -108,4 +108,32 @@ RSpec.describe Api::Importer do
       expect(Gig.first).to have_attributes(ticket_url: 'https://ef.example/1', source_ids: { 'eventfinda' => %w[1 2] })
     end
   end
+
+  describe 'a venue photo' do
+    let(:dead) { 'https://website.tmaster.org/statics/salle/s_483_4.jpg' }
+    let(:live) { 'https://s1.ticketm.net/dam/v/venue.jpg' }
+    let(:paris) do
+      { name: 'Versailles Palais des Congres', address: '10 Rue de la Chancellerie', city: 'Versailles', country: 'France',
+        latitude: 48.8031, longitude: 2.1266, timezone: 'Europe/Paris', external_ids: { 'ticketmaster' => 'rZFSnyZ7Fdk' } }
+    end
+    let(:image_check) { instance_double(ImageCheck) }
+
+    before do
+      allow(ImageCheck).to receive(:new).and_return(image_check)
+      allow(image_check).to receive(:loading) { |images, known:| images.select { |_, url| url == live || known.value?(url) } }
+    end
+
+    it "is left out when it doesn't load" do
+      venue = importer.upsert_venue(paris.merge(images: { 'large' => dead, 'thumb' => dead }))
+      expect(venue.reload.images).to eq({})
+    end
+
+    it 'is kept when it loads, and trusted on the next import' do
+      importer.upsert_venue(paris.merge(images: { 'large' => live }))
+      venue = importer_for('ticketmaster').upsert_venue(paris.merge(images: { 'large' => live }))
+
+      expect(venue.reload.images).to eq('large' => live)
+      expect(image_check).to have_received(:loading).with({ 'large' => live }, known: { 'large' => live })
+    end
+  end
 end

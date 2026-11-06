@@ -187,6 +187,8 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onSelectA
   const headingRef = useRef(null);
   const highlighted = useRef(null);
   const [ sortBy, setSortBy ] = useSortBy();
+  // A photo that stopped loading after import is left out rather than shown broken
+  const [ brokenImage, setBrokenImage ] = useState(null);
 
   // While switching venues, don't show the previous venue's gigs
   const current = data?.venue?.id === venueId ? data : null;
@@ -220,7 +222,7 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onSelectA
   }
 
   const { venue, gigs } = current;
-  const hasImage = venue.image && !PLACEHOLDER_IMAGE.test(venue.image);
+  const hasImage = venue.image && !PLACEHOLDER_IMAGE.test(venue.image) && venue.image !== brokenImage;
 
   return (
     <div className="venue-gigs" aria-busy={loading}>
@@ -230,6 +232,7 @@ const VenueGigs = ({ venueId, query, gigId, focusHeading, onSelectGig, onSelectA
 
       {hasImage && (
         <img src={venue.image} alt="" width="352" height="128" decoding="async"
+          onError={() => setBrokenImage(venue.image)}
           className="h-32 w-full bg-surface-2 object-cover" />
       )}
 

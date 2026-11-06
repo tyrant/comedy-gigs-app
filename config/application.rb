@@ -43,5 +43,8 @@ module ComedyGigsApp
     # one in public/images/backdrops, one picked at random each time
     config.x.globe_backdrops = Dir[File.expand_path("../public/images/backdrops/*.{jpg,jpeg,png,webp,avif}", __dir__)]
       .sort.map { |file| "/images/backdrops/#{File.basename(file)}" }
+
+    # Imports check that a venue's new photo loads before storing it (ImageCheck)
+    config.x.check_images = true
   end
 end

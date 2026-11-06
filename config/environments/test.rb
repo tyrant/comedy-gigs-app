@@ -45,4 +45,5 @@ Rails.application.configure do
   config.x.map_styles = { light: blank_style.("#f4f4f2"), dark: blank_style.("#1b1b20") }
   config.x.map_terrain = nil
   config.x.globe_backdrops = [] # specs set their own
+  config.x.check_images = false # ImageCheck's spec turns it on, with a stubbed adapter
 end
